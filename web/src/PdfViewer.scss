@@ -1,0 +1,87 @@
+.pdf-container {
+  position: relative;
+  display: inline-block;
+}
+
+.annotation-layer {
+  background-color: rgba(red,0.1);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+canvas {
+  border: 1px solid black;
+}
+
+.annotation {
+  box-sizing: border-box;
+  &.point {
+    background-color: rgba(red,0.5);
+    width: 10px;
+    height: 10px;
+    position: absolute;
+    transform: translate(-5px,-5px);
+  }
+  &.rect {
+    background-color: rgba(black,0.5);
+    position: absolute;
+    left: 0;
+    top: 0;
+    .control {
+      position: absolute;
+      border-radius: 5px;
+      background-color: white;
+      border: 1px solid black;
+      width: 10px;
+      height: 10px;
+      transform: translate(-5px,-5px);
+      &.nw {
+        cursor: nw-resize;
+        top:0;
+        left:0;
+      }
+      &.n {
+        cursor: n-resize;
+        top:0;
+        left:50%;
+      }
+      &.ne {
+        cursor: ne-resize;
+        top:0;
+        left:100%;
+      }
+      &.sw {
+        cursor: sw-resize;
+        top:100%;
+        left:0;
+      }
+      &.s {
+        cursor: s-resize;
+        top:100%;
+        left:50%;
+      }
+      &.se {
+        cursor: se-resize;
+        top:100%;
+        left:100%;
+      }
+      &.w {
+        cursor: w-resize;
+        top:50%;
+        left:0;
+      }
+      &.e {
+        cursor: e-resize;
+        top:50%;
+        left:100%;
+      }
+    }
+  }
+  &.selected {
+    border: 1px solid black;
+    cursor: move;
+  }
+}
