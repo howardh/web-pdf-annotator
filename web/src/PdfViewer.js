@@ -472,6 +472,25 @@ export function PdfAnnotationContainer(props) {
 
   // Tools
   const tools = {
+    read: {
+      initState: function() {
+        return {
+          type: 'read'
+        };
+      },
+      eventHandlers: {
+        pdf: {
+          onClick: function(event,data) {
+            setActiveId(null);
+          }
+        },
+        annotation: {
+          onClick: function(event,data) {
+            setActiveId(data.id);
+          }
+        }
+      }
+    },
     select: {
       initState: function() {
         return {
@@ -746,6 +765,9 @@ export function PdfAnnotationContainer(props) {
           />
     })}
     <div className='controls'>
+      <button onClick={()=>setToolState(tools.read.initState())}>
+        Read
+      </button>
       <button onClick={()=>setToolState(tools.select.initState())}>
         Select
       </button>
