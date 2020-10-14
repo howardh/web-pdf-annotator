@@ -5,14 +5,14 @@ import './PdfViewer.scss';
 
 function PdfViewer(props) {
   const [pdf,setPdf] = useState(null);
-  const [page,setPage] = useState(null);
+  const [pages,setPages] = useState({});
   const ref = useRef(null)
 
   // Render PDF
   useEffect(()=>{
     window.pdfjsLib.getDocument(
       'http://proceedings.mlr.press/v89/song19b/song19b.pdf'
-    ).promise.then(pdf => {
+    ).promise .then(pdf => {
       setPdf(pdf);
     }).catch(error => {
       console.error(error);
@@ -22,33 +22,47 @@ function PdfViewer(props) {
     if (!pdf) {
       return;
     }
-    pdf.getPage(1).then(p => {
-      setPage(p);
-    });
+    for (let i = 1; i <= pdf.numPages; i++) {
+      pdf.getPage(i).then(p => {
+        setPages({...pages,[i]:p});
+      });
+    }
   }, [pdf]);
   useEffect(() => {
-    if (!ref.current || !page) {
+    if (!ref.current || !pdf) {
       return;
     }
     var scale = 2;
-    var viewport = page.getViewport({ scale: scale, });
-    var canvas = ref.current;
-    var context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      let page = pages[i];
+      if (!page) {
+        continue;
+      }
+      var viewport = page.getViewport({ scale: scale, });
 
-    var renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
-    page.render(renderContext);
-    // TODO: Render text layer
-  }, [page, ref.current]);
+      var canvas = ref.current.childNodes[i-1];
+      console.log(canvas);
+      var context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      var renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      page.render(renderContext);
+      // TODO: Render text layer
+    }
+  }, [pages, ref.current]);
 
   return (
-    <canvas ref={ref}>
-    </canvas>
-  )
+    <div ref={ref}>
+    { 
+      pdf && 
+      Array(pdf.numPages).fill(null).map((x,i)=><canvas key={i}></canvas>)
+    }
+    </div>
+  );
 }
 
 function AnnotationLayer(props) {
