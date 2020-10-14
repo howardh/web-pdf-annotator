@@ -4,7 +4,6 @@
 }
 
 .annotation-layer {
-  background-color: rgba(red,0.1);
   position: absolute;
   top: 0;
   left: 0;
@@ -83,5 +82,36 @@ canvas {
   &.selected {
     border: 1px solid black;
     cursor: move;
+  }
+}
+
+.annotation-text-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(black,0.1);
+
+  .card {
+    position: absolute;
+    width: 500px;
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 5px;
+    padding: 10px;
+    text-align: left;
+    box-shadow: 3px 3px rgba(black,0.1);
+    transform: translate(-400px,-50%);
+    transition: 0.2s ease;
+    &:hover {
+      transform: translate(0,-50%);
+      z-index: 1;
+    }
+
+    .controls {
+      text-align: right;
+      a {
+        margin-left: 5px;
+      }
+    }
   }
 }
