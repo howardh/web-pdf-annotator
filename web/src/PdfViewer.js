@@ -4,64 +4,33 @@ import { useEffect, useState, useRef } from 'react';
 import './PdfViewer.scss';
 
 function PdfViewer(props) {
-  const [pdf,setPdf] = useState(null);
-  const [pages,setPages] = useState({});
-  const ref = useRef(null)
+  const {
+    page
+  } = props;
+  const ref = useRef(null);
 
   // Render PDF
-  useEffect(()=>{
-    window.pdfjsLib.getDocument(
-      'http://proceedings.mlr.press/v89/song19b/song19b.pdf'
-    ).promise .then(pdf => {
-      setPdf(pdf);
-    }).catch(error => {
-      console.error(error);
-    });
-  },[]);
   useEffect(() => {
-    if (!pdf) {
-      return;
-    }
-    for (let i = 1; i <= pdf.numPages; i++) {
-      pdf.getPage(i).then(p => {
-        setPages({...pages,[i]:p});
-      });
-    }
-  }, [pdf]);
-  useEffect(() => {
-    if (!ref.current || !pdf) {
+    if (!ref.current || !page) {
       return;
     }
     var scale = 2;
-    for (let i = 1; i <= pdf.numPages; i++) {
-      let page = pages[i];
-      if (!page) {
-        continue;
-      }
-      var viewport = page.getViewport({ scale: scale, });
+    var viewport = page.getViewport({ scale: scale, });
+    var canvas = ref.current;
+    var context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
 
-      var canvas = ref.current.childNodes[i-1];
-      console.log(canvas);
-      var context = canvas.getContext('2d');
-      canvas.height = viewport.height;
-      canvas.width = viewport.width;
-
-      var renderContext = {
-        canvasContext: context,
-        viewport: viewport
-      };
-      page.render(renderContext);
-      // TODO: Render text layer
-    }
-  }, [pages, ref.current]);
+    var renderContext = {
+      canvasContext: context,
+      viewport: viewport
+    };
+    page.render(renderContext);
+    // TODO: Render text layer
+  }, [page, ref.current]);
 
   return (
-    <div ref={ref}>
-    { 
-      pdf && 
-      Array(pdf.numPages).fill(null).map((x,i)=><canvas key={i}></canvas>)
-    }
-    </div>
+    <canvas ref={ref}></canvas>
   );
 }
 
@@ -71,7 +40,8 @@ function AnnotationLayer(props) {
     updateAnnotation,
     annotations,
     eventHandlers,
-    toolState
+    toolState,
+    page
   } = props;
 
   const ref = useRef(null);
@@ -98,11 +68,15 @@ function AnnotationLayer(props) {
   }
   function onClick(event) {
     const coords = getCoordsFromEvent(event);
+    const data = {
+      page,
+      coords
+    };
     // Clicked on PDF
     if (event.target === ref.current) {
       let callback = eventHandlers.pdf.onClick;
       if (callback) {
-        callback(event, {coords});
+        callback(event, data);
       }
     } else {
       // TODO
@@ -111,29 +85,34 @@ function AnnotationLayer(props) {
   function onMouseDown(event) {
     const coords = getCoordsFromEvent(event);
     setStartMouseCoord(coords);
+    const data = {
+      page,
+      coords
+    };
 
     const classNames = event.target.className.split(' ');
     // Target = pdf document
     if (event.target === ref.current) {
       let callback = eventHandlers.pdf.onMouseDown;
       if (callback) {
-        callback(event, {coords});
+        callback(event, data);
       }
     } else if (classNames.indexOf('annotation') !== -1) {
       let callback = eventHandlers.annotation.onMouseDown;
       if (callback) {
-        callback(event, {coords});
+        callback(event, data);
       }
     } else if (classNames.indexOf('control') !== -1) {
       let callback = eventHandlers.controlPoint.onMouseDown;
       if (callback) {
-        callback(event, {coords});
+        callback(event, data);
       }
     }
   }
   function onMouseUp(event) {
     const coords = getCoordsFromEvent(event);
     const data = {
+      page,
       coords,
       mouseMoved,
       startMouseCoord
@@ -154,6 +133,7 @@ function AnnotationLayer(props) {
       return;
     }
     const data = {
+      page,
       coords,
       startMouseCoord,
     };
@@ -165,7 +145,9 @@ function AnnotationLayer(props) {
   function onKeyPress(event) {
     console.log('keypress');
     const classNames = event.target.className.split(' ');
-    const data = {};
+    const data = {
+      page,
+    };
     // Target = pdf document
     if (event.target === ref.current) {
       let callback = eventHandlers.pdf.onKeyPress;
@@ -261,47 +243,177 @@ function AnnotationLayer(props) {
   </div>;
 }
 
-function AnnotationTextContainer(props) {
+function AnnotationTextCard(props) {
   const {
-    annotations,
-    focusedId, setFocusedId
+    annotation,
+    isActive, setActive,
+    updateAnnotation
   } = props;
-  function renderTextCard(ann) {
-    let style = {};
-    // Align card with annotation
-    let yCoord = null;
-    if (ann.type === 'point') {
-      yCoord = ann.coords[1];
-    } else if (ann.type === 'rect') {
-      yCoord = (ann.box[0]+ann.box[2])/2;
-    }
-    style['top'] = yCoord+'px';
-    // Make sure card is visible if it's focused
-    if (ann.id === focusedId) {
-      style['transform'] = 'translate(0px,-50%)';
-    }
+  // Stores changes before they're saved
+  const [updatedBlob,setUpdatedBlob] = useState(null);
+  const [isEditing,setIsEditing] = useState(false);
 
-    return <div className='card' style={style}
-        onClick={()=>setFocusedId(ann.id)}>
-      {ann.blob}
+  function startEditing() {
+    setUpdatedBlob(annotation.blob);
+    setIsEditing(true);
+  }
+  function saveChanges() {
+    updateAnnotation(annotation.id, {...annotation, blob: updatedBlob});
+    setUpdatedBlob(null);
+    setIsEditing(false);
+  }
+  function onChange(e) {
+    setUpdatedBlob(e.target.value);
+  }
+
+  let style = {};
+  let classNames = ['card'];
+  // Align card with annotation
+  let yCoord = null;
+  if (annotation.type === 'point') {
+    yCoord = annotation.coords[1];
+  } else if (annotation.type === 'rect') {
+    yCoord = (annotation.box[0]+annotation.box[2])/2;
+  }
+  style['top'] = yCoord+'px';
+  // Make sure card is visible if it's the current active card
+  if (isActive) {
+    classNames.push('active');
+  }
+
+  if (isEditing) {
+    return <div className={classNames.join(' ')} style={style}
+        onClick={()=>setActive(true)}>
+      <textarea onChange={onChange} value={updatedBlob} />
       <div className='controls'>
-        <a href='#'>Edit</a>
-        <a href='#'>Delete</a>
+        <span onClick={()=>setActive(!isActive)}>
+          <i className='material-icons'>
+            {isActive ? 'navigate_before' : 'navigate_next'}
+          </i>
+        </span>
+        <span onClick={saveChanges}>
+          <i className='material-icons'>save</i>
+        </span>
+        <span>
+          <i className='material-icons'>delete</i>
+        </span>
+      </div>
+    </div>;
+  } else {
+    return <div className={classNames.join(' ')} style={style}
+        onClick={()=>isActive?null:setActive(true)}>
+      { annotation.blob }
+      <div className='controls'>
+        <span onClick={()=>setActive(!isActive)}>
+          <i className='material-icons'>
+            {isActive ? 'navigate_before' : 'navigate_next'}
+          </i>
+        </span>
+        <span onClick={startEditing}>
+          <i className='material-icons'>create</i>
+        </span>
+        <span>
+          <i className='material-icons'>delete</i>
+        </span>
       </div>
     </div>;
   }
+}
+
+function AnnotationTextContainer(props) {
+  const {
+    annotations,
+    activeId, setActiveId,
+    updateAnnotation
+  } = props;
+  function renderTextCard(ann) {
+  }
   return (<div className='annotation-text-container'>
     {
-      Object.values(annotations).map(renderTextCard)
+      Object.values(annotations).map(function(ann){
+        return (
+          <AnnotationTextCard
+              key={ann.id}
+              isActive={ann.id === activeId}
+              setActive={(f)=>setActiveId(f ? ann.id : null)}
+              annotation={ann}
+              updateAnnotation={updateAnnotation} />
+        );
+      })
     }
   </div>)
 }
 
+function PdfPageContainer(props) {
+  const {
+    activeId, setActiveId,
+    toolState,
+    eventHandlers,
+    createAnnotation,
+    updateAnnotation,
+    annotations,
+    page, pageNum
+  } = props;
+  const relevantAnnotations = Object.values(annotations).filter(
+    ann => ann.page === pageNum
+  ).reduce(function(acc,ann){
+    acc[ann.id] = ann;
+    return acc;
+  },{});
+  return (
+    <div className='pdf-page-container'>
+      <div className='pdf-container'>
+        <PdfViewer page={page} />
+        <AnnotationLayer
+            eventHandlers={eventHandlers}
+            toolState={toolState}
+            createAnnotation={createAnnotation}
+            updateAnnotation={updateAnnotation}
+            annotations={relevantAnnotations}
+            page={pageNum} />
+      </div>
+      <AnnotationTextContainer
+          createAnnotation={createAnnotation}
+          updateAnnotation={updateAnnotation}
+          activeId={activeId}
+          setActiveId={setActiveId}
+          annotations={relevantAnnotations} />
+    </div>
+  );
+}
+
 export function PdfAnnotationContainer(props) {
+  const [pdf,setPdf] = useState(null);
+  const [pages,setPages] = useState({});
+
   const [annotations, setAnnotations] = useState({});
   const nextAnnotationId = useRef(0);
-  const [focusedId, setFocusedId] = useState(null);
+  const [activeId, setActiveId] = useState(null);
   const [toolState, setToolState] = useState(null);
+
+  // Load PDF
+  useEffect(()=>{
+    window.pdfjsLib.getDocument(
+      'http://proceedings.mlr.press/v89/song19b/song19b.pdf'
+    ).promise .then(pdf => {
+      setPdf(pdf);
+    }).catch(error => {
+      console.error(error);
+    });
+  },[]);
+  useEffect(()=>{
+    if (!pdf) {
+      return;
+    }
+    // Have to load one page at a time. If setPage is called twice in one cycle, only one page from that cycle is saved
+    const nextPage = Object.entries(pages).length+1;
+    if (nextPage > pdf.numPages) {
+      return;
+    }
+    pdf.getPage(nextPage).then(p => {
+      setPages({...pages,[nextPage]:p});
+    });
+  },[pdf,pages]);
 
   // CRUD Functions
   function createAnnotation(ann) {
@@ -501,7 +613,8 @@ export function PdfAnnotationContainer(props) {
           onClick: function(event,data) {
             createAnnotation({
               type: 'point',
-              coords: data.coords
+              coords: data.coords,
+              page: data.page
             });
           }
         },
@@ -551,7 +664,8 @@ export function PdfAnnotationContainer(props) {
           const bottom = Math.max(coords[1],startMouseCoord[1]);
           createAnnotation({
             type: 'rect',
-            box: [top,right,bottom,left]
+            box: [top,right,bottom,left],
+            page: data.page
           });
           setToolState({
             ...toolState,
@@ -571,23 +685,22 @@ export function PdfAnnotationContainer(props) {
   if (toolState === null) {
     return null;
   }
+  if (pdf && Object.entries(pages).length !== pdf.numPages) {
+    return null;
+  }
 
   return (<div className='annotation-container'>
-    <div className='pdf-container'>
-      <PdfViewer />
-      <AnnotationLayer
-          eventHandlers={tools[toolState.type].eventHandlers}
+    {Object.entries(pages).map(([pageNum,page],i)=>{
+      return <PdfPageContainer key={pageNum}
+          activeId={activeId} setActiveId={setActiveId}
           toolState={toolState}
+          eventHandlers={tools[toolState.type].eventHandlers}
           createAnnotation={createAnnotation}
           updateAnnotation={updateAnnotation}
-          annotations={annotations} />
-    </div>
-    <AnnotationTextContainer
-        createAnnotation={createAnnotation}
-        updateAnnotation={updateAnnotation}
-        focusedId={focusedId}
-        setFocusedId={setFocusedId}
-        annotations={annotations} />
+          annotations={annotations}
+          page={page} pageNum={pageNum}
+          />
+    })}
     <div className='controls'>
       <button onClick={()=>setToolState(tools.select.initState())}>
         Select
