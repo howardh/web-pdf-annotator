@@ -150,6 +150,25 @@ function AnnotationLayer(props) {
   }
   function onKeyPress(event) {
     console.log('keypress');
+    const classNames = event.target.className.split(' ');
+    const data = {};
+    // Target = pdf document
+    if (event.target === ref.current) {
+      let callback = eventHandlers.pdf.onKeyPress;
+      if (callback) {
+        callback(event, data);
+      }
+    } else if (classNames.indexOf('annotation') !== -1) {
+      let callback = eventHandlers.annotation.onKeyPress;
+      if (callback) {
+        callback(event, data);
+      }
+    } else if (classNames.indexOf('control') !== -1) {
+      let callback = eventHandlers.controlPoint.onKeyPress;
+      if (callback) {
+        callback(event, data);
+      }
+    }
   }
 
   // Rendering
@@ -180,6 +199,7 @@ function AnnotationLayer(props) {
         };
         classNames.push('point');
         return <div className={classNames.join(' ')}
+          tabIndex={-1}
           key={key}
           style={style}
           onClick={onClick}>
@@ -193,6 +213,7 @@ function AnnotationLayer(props) {
         };
         classNames.push('rect');
         return <div className={classNames.join(' ')}
+          tabIndex={-1}
           key={key}
           style={style}
           onClick={onClick}>
@@ -263,7 +284,7 @@ function AnnotationTextContainer(props) {
 }
 
 export function PdfAnnotationContainer(props) {
-  const [annotations, setAnnotation] = useState({});
+  const [annotations, setAnnotations] = useState({});
   const nextAnnotationId = useRef(0);
   const [focusedId, setFocusedId] = useState(null);
   const [toolState, setToolState] = useState(null);
@@ -273,19 +294,23 @@ export function PdfAnnotationContainer(props) {
     const id = nextAnnotationId.current++;
     ann['id'] = id;
     ann['blob'] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum lectus lacus, sodales in ipsum eget, dapibus consequat sapien. Nam eu vestibulum ante, egestas pharetra lacus. Pellentesque sodales finibus dolor, at blandit lacus dictum ac. Maecenas vel mattis leo, nec rhoncus augue. Vestibulum eget fermentum nunc. Sed laoreet, est quis ullamcorper dignissim, risus ante dictum nisl, vel posuere erat erat eu dui. Suspendisse gravida euismod nunc ut tincidunt. Vivamus id vehicula diam, a rhoncus mauris. Phasellus mattis nibh et justo finibus ultricies."; // Temporary blurb
-    setAnnotation({
+    setAnnotations({
       ...annotations,
       [id]: ann
     });
   }
   function updateAnnotation(id, ann) {
-    setAnnotation({
+    setAnnotations({
       ...annotations,
       [id]: ann
     });
   }
   function deleteAnnotation(id) {
-    // TODO
+    const {
+      [id]: deleted,
+      ...rest
+    } = annotations;
+    setAnnotations(rest);
   }
 
   // Tools
@@ -337,7 +362,18 @@ export function PdfAnnotationContainer(props) {
                 dragAction: 'move'
               });
             }
-          }
+          },
+          onKeyPress: function(event,data) {
+            const DELETE = 46;
+            if (event.which === DELETE) {
+              deleteAnnotation(toolState.selectedAnnotationId);
+              setToolState({
+                ...toolState,
+                selectedAnnotationId: null,
+                tempUpdatedAnnotation: null
+              });
+            }
+          },
         },
         // Handles events on the annotation's control points
         controlPoint: {
