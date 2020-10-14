@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEffect, useState, useRef } from 'react';
+import * as commonmark from 'commonmark';
 
 import './PdfViewer.scss';
 
@@ -262,8 +263,30 @@ function AnnotationTextCard(props) {
     setUpdatedBlob(null);
     setIsEditing(false);
   }
+  // Event Handlers
   function onChange(e) {
     setUpdatedBlob(e.target.value);
+  }
+  function onKeyPress(e) {
+    const ENTER = 13;
+    if (e.ctrlKey && e.which === ENTER) {
+      saveChanges();
+    }
+  }
+
+  function parseBlob(annotation) {
+    switch (annotation.blobProperties.parser) {
+      case 'plaintext':
+        return annotation.blob;
+      case 'commonmark':
+        let reader = new commonmark.Parser();
+        let writer = new commonmark.HtmlRenderer({safe: true});
+        let parsed = reader.parse(annotation.blob); // parsed is a 'Node' tree
+        let parsedBlob = writer.render(parsed);
+        return parsedBlob;
+      default:
+        return 'Error: Invalid Parser';
+    }
   }
 
   let style = {};
@@ -284,7 +307,9 @@ function AnnotationTextCard(props) {
   if (isEditing) {
     return <div className={classNames.join(' ')} style={style}
         onClick={()=>setActive(true)}>
-      <textarea onChange={onChange} value={updatedBlob} />
+      <textarea onChange={onChange}
+          onKeyPress={onKeyPress}
+          value={updatedBlob} />
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -300,9 +325,10 @@ function AnnotationTextCard(props) {
       </div>
     </div>;
   } else {
+    let parsedBlob = parseBlob(annotation);
     return <div className={classNames.join(' ')} style={style}
         onClick={()=>isActive?null:setActive(true)}>
-      { annotation.blob }
+      <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -419,7 +445,12 @@ export function PdfAnnotationContainer(props) {
   function createAnnotation(ann) {
     const id = nextAnnotationId.current++;
     ann['id'] = id;
-    ann['blob'] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum lectus lacus, sodales in ipsum eget, dapibus consequat sapien. Nam eu vestibulum ante, egestas pharetra lacus. Pellentesque sodales finibus dolor, at blandit lacus dictum ac. Maecenas vel mattis leo, nec rhoncus augue. Vestibulum eget fermentum nunc. Sed laoreet, est quis ullamcorper dignissim, risus ante dictum nisl, vel posuere erat erat eu dui. Suspendisse gravida euismod nunc ut tincidunt. Vivamus id vehicula diam, a rhoncus mauris. Phasellus mattis nibh et justo finibus ultricies."; // Temporary blurb
+    ann['blob'] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum lectus lacus, sodales in ipsum eget, dapibus consequat sapien. Nam eu vestibulum ante, egestas pharetra lacus. Pellentesque sodales finibus dolor, at blandit lacus dictum ac. Maecenas vel mattis leo, nec rhoncus augue. Vestibulum eget fermentum nunc. Sed laoreet, est quis ullamcorper dignissim, risus ante dictum nisl, vel posuere erat erat eu dui. Suspendisse gravida euismod nunc ut tincidunt. Vivamus id vehicula diam, a rhoncus mauris. Phasellus mattis nibh et justo finibus ultricies.\n# Heading!\n## Subheading\n\nList?\n- thing\n- other thing\n\n```\nif a==b:\n    return c\n```\n\n[Google Link](http://www.google.ca)"; // Temporary blurb
+    ann['blobProperties'] = {
+      // Parser to convert blob into HTML
+      // Possible values: text, commonmark
+      parser: 'commonmark',
+    };
     setAnnotations({
       ...annotations,
       [id]: ann
@@ -684,6 +715,16 @@ export function PdfAnnotationContainer(props) {
     setToolState(tools.point.initState());
   }, []);
 
+  // Misc
+  function activateAnnotation(annId) {
+    setActiveId(annId);
+    setToolState({
+      ...tools.select.initState(),
+      selectedAnnotationId: annId,
+      tempUpdatedAnnotation: annotations[annId]
+    });
+  }
+
   // Can't render until everything is initialized
   if (toolState === null) {
     return null;
@@ -695,7 +736,7 @@ export function PdfAnnotationContainer(props) {
   return (<div className='annotation-container'>
     {Object.entries(pages).map(([pageNum,page],i)=>{
       return <PdfPageContainer key={pageNum}
-          activeId={activeId} setActiveId={setActiveId}
+          activeId={activeId} setActiveId={activateAnnotation}
           toolState={toolState}
           eventHandlers={tools[toolState.type].eventHandlers}
           createAnnotation={createAnnotation}
