@@ -662,11 +662,14 @@ export function PdfAnnotationContainer(props) {
           const right  = Math.max(coords[0],startMouseCoord[0]);
           const top    = Math.min(coords[1],startMouseCoord[1]);
           const bottom = Math.max(coords[1],startMouseCoord[1]);
-          createAnnotation({
-            type: 'rect',
-            box: [top,right,bottom,left],
-            page: data.page
-          });
+          // Don't create a size 0 rectangle
+          if (left !== right && top !== bottom) {
+            createAnnotation({
+              type: 'rect',
+              box: [top,right,bottom,left],
+              page: data.page
+            });
+          }
           setToolState({
             ...toolState,
             tempAnnotation: null
