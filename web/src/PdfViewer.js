@@ -408,7 +408,11 @@ function PdfPageContainer(props) {
   );
 }
 
-export function PdfAnnotationContainer(props) {
+export default function PdfAnnotationContainer(props) {
+  const {
+    pdfUrl = 'http://proceedings.mlr.press/v89/song19b/song19b.pdf',
+  } = props;
+
   const [pdf,setPdf] = useState(null);
   const [pages,setPages] = useState({});
 
@@ -420,7 +424,7 @@ export function PdfAnnotationContainer(props) {
   // Load PDF
   useEffect(()=>{
     window.pdfjsLib.getDocument(
-      'http://proceedings.mlr.press/v89/song19b/song19b.pdf'
+      pdfUrl
     ).promise .then(pdf => {
       setPdf(pdf);
     }).catch(error => {
