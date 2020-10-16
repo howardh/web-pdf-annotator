@@ -12,6 +12,7 @@ import PdfAnnotationContainer from './PdfViewer.js';
 import LoginPage from './Login.js';
 import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
+import DocumentsPage from './Documents.js';
 
 function App() {
   return (
@@ -22,6 +23,9 @@ function App() {
         </Route>
         <Route path="/login">
           <LoginPage />
+        </Route>
+        <Route path="/docs">
+          <DocumentsPage />
         </Route>
         <Route path="/annotate">
           <PdfAnnotationContainer />

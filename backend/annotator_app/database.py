@@ -4,16 +4,19 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import Column, Integer, String, Float, Date, Time, DateTime, Boolean, Enum, LargeBinary
+from sqlalchemy.dialects.postgresql import UUID
 
 import enum
 import datetime
 import os
+import uuid
 
 from annotator_app.extensions import db
 
 class User(db.Model):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, unique=True, nullable=False)
     email = Column(String)
     password = Column(LargeBinary)
     verified_email = Column(Boolean)
@@ -35,15 +38,18 @@ class User(db.Model):
 
 class Document(db.Model):
     __tablename__ = 'document'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, unique=True, nullable=False)
+    user_id = Column(UUID(as_uuid=True))
     url = Column(String)
     hash = Column(String)
 
 class Annotation(db.Model):
     __tablename__ = 'annotation'
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    id = Column(UUID(as_uuid=True), primary_key=True,
+                default=uuid.uuid4, unique=True, nullable=False)
+    user_id = Column(UUID(as_uuid=True))
+    doc_id = Column(UUID(as_uuid=True))
     type = Column(String)
     blob = Column(String)
     parser = Column(String)
