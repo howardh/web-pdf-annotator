@@ -83,9 +83,16 @@ function DocumentsTable(props) {
   const {
     documents
   } = props;
+  const dispatch = useDispatch();
 
   if (documents.length === 0) {
     return null;
+  }
+
+  function deleteDoc(doc) {
+    if (window.confirm('Are you sure you want to delete document '+doc.url+'?')) {
+      dispatch(documentActions['deleteSingle'](doc.id));
+    }
   }
 
   return (
@@ -100,12 +107,19 @@ function DocumentsTable(props) {
       <tbody>
         {
           Object.values(documents).map(doc=>{
+            if (!doc) {
+              return null;
+            }
             return (<tr key={doc.id}>
               <td> {doc.title} </td>
               <td><Link to={'/annotate/'+doc.id}>{doc.url}</Link></td>
               <td>
-                <i className='material-icons'>create</i>
-                <i className='material-icons'>delete</i>
+                <Link to={'/annotate/'+doc.id}>
+                  <i className='material-icons'>create</i>
+                </Link>
+                <i className='material-icons' onClick={()=>deleteDoc(doc)}>
+                  delete
+                </i>
               </td>
             </tr>);
           })

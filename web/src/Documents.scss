@@ -12,12 +12,25 @@
       }
     }
     tbody {
+      text-align: left;
       tr{
         &:nth-child(even) {
           background-color: #ffe6e6;
         }
         &:hover {
           background-color: #ffcaca;
+        }
+        td {
+          padding: 5px 10px;
+        }
+        td:nth-child(3) {
+          i.material-icons {
+            color: black;
+            cursor: pointer;
+            &:hover {
+              color: #9a1f1f;
+            }
+          }
         }
       }
     }

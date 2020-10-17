@@ -89,6 +89,27 @@ function AnnotationLayer(props) {
       // TODO
     }
   }
+  function onDoubleClick(event,ann) {
+    const coords = getCoordsFromEvent(event);
+    const data = {
+      page,
+      coords,
+      ann
+    };
+
+    const classNames = event.target.className.split(' ');
+    let callback = null;
+    if (event.target === ref.current) {
+      callback = eventHandlers.pdf.onDoubleClick;
+    } else if (classNames.indexOf('annotation') !== -1) {
+      callback = eventHandlers.annotation.onDoubleClick;
+    } else if (classNames.indexOf('control') !== -1) {
+      callback = eventHandlers.controlPoint.onDoubleClick;
+    }
+    if (callback) {
+      callback(event, data);
+    }
+  }
   function onMouseDown(event) {
     const coords = getCoordsFromEvent(event);
     setStartMouseCoord(coords);
@@ -98,22 +119,16 @@ function AnnotationLayer(props) {
     };
 
     const classNames = event.target.className.split(' ');
-    // Target = pdf document
+    let callback = null;
     if (event.target === ref.current) {
-      let callback = eventHandlers.pdf.onMouseDown;
-      if (callback) {
-        callback(event, data);
-      }
+      callback = eventHandlers.pdf.onMouseDown;
     } else if (classNames.indexOf('annotation') !== -1) {
-      let callback = eventHandlers.annotation.onMouseDown;
-      if (callback) {
-        callback(event, data);
-      }
+      callback = eventHandlers.annotation.onMouseDown;
     } else if (classNames.indexOf('control') !== -1) {
-      let callback = eventHandlers.controlPoint.onMouseDown;
-      if (callback) {
-        callback(event, data);
-      }
+      callback = eventHandlers.controlPoint.onMouseDown;
+    }
+    if (callback) {
+      callback(event, data);
     }
   }
   function onMouseUp(event) {
@@ -207,7 +222,8 @@ function AnnotationLayer(props) {
           tabIndex={-1}
           key={key}
           style={style}
-          onClick={onClick}>
+          onClick={onClick}
+          onDoubleClick={e => onDoubleClick(e,ann)}>
         </div>;
       case 'rect':
         style = {
@@ -221,7 +237,8 @@ function AnnotationLayer(props) {
           tabIndex={-1}
           key={key}
           style={style}
-          onClick={onClick}>
+          onClick={onClick}
+          onDoubleClick={e => onDoubleClick(e,ann)}>
           {
             selected &&
             <>
@@ -259,6 +276,7 @@ function AnnotationTextCard(props) {
     updateAnnotation,
     scale
   } = props;
+  const dispatch = useDispatch();
   // Stores changes before they're saved
   const [updatedBlob,setUpdatedBlob] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
@@ -271,6 +289,16 @@ function AnnotationTextCard(props) {
     updateAnnotation(annotation.id, {...annotation, blob: updatedBlob});
     setUpdatedBlob(null);
     setIsEditing(false);
+  }
+  function discardChanges() {
+    setUpdatedBlob(null);
+    setIsEditing(false);
+  }
+  function deleteAnnotation() {
+    let c = window.confirm('Are you sure you want to delete this annotation?');
+    if (c) {
+      dispatch(annotationActions['deleteSingle'](annotation.id));
+    }
   }
   // Event Handlers
   function onChange(e) {
@@ -329,7 +357,10 @@ function AnnotationTextCard(props) {
         <span onClick={saveChanges}>
           <i className='material-icons'>save</i>
         </span>
-        <span>
+        <span onClick={discardChanges}>
+          <i className='material-icons'>cancel</i>
+        </span>
+        <span onClick={deleteAnnotation}>
           <i className='material-icons'>delete</i>
         </span>
       </div>
@@ -348,7 +379,7 @@ function AnnotationTextCard(props) {
         <span onClick={startEditing}>
           <i className='material-icons'>create</i>
         </span>
-        <span>
+        <span onClick={deleteAnnotation}>
           <i className='material-icons'>delete</i>
         </span>
       </div>
@@ -491,6 +522,7 @@ export default function PdfAnnotationContainer(props) {
   );
   const [activeId, setActiveId] = useState(null);
   const [toolState, setToolState] = useState(null);
+  const [toolStateStack, setToolStateStack] = useState([]);
 
   // Load PDF URL and annotations
   useEffect(()=>{
@@ -518,6 +550,17 @@ export default function PdfAnnotationContainer(props) {
   }
 
   // Tools
+  function handleDoubleClick(event,data) {
+    switch (data.ann.type) {
+      case 'rect':
+      case 'point':
+        let newState = tools['resize'].initState();
+        newState.selectedAnnotationId = data.ann.id;
+        newState.tempPosition = data.ann.position;
+        pushTool(newState);
+        break;
+    }
+  }
   const tools = {
     read: {
       initState: function() {
@@ -529,12 +572,14 @@ export default function PdfAnnotationContainer(props) {
         pdf: {
           onClick: function(event,data) {
             setActiveId(null);
+            popTool();
           }
         },
         annotation: {
           onClick: function(event,data) {
             setActiveId(data.id);
-          }
+          },
+          onDoubleClick: handleDoubleClick,
         }
       }
     },
@@ -561,6 +606,7 @@ export default function PdfAnnotationContainer(props) {
               ...toolState,
               selectedAnnotationId: null
             });
+            popTool();
           },
           onMouseDown: function() {},
           onMouseMove: function() {},
@@ -685,7 +731,7 @@ export default function PdfAnnotationContainer(props) {
         },
         onMouseUp: function(event,data) {
           const selId = toolState.selectedAnnotationId;
-          if (selId !== null &&
+          if (selId !== null && annotations[selId] &&
               annotations[selId].position !== toolState.tempPosition) {
             updateAnnotation(selId, {
               ...annotations[selId],
@@ -715,9 +761,11 @@ export default function PdfAnnotationContainer(props) {
               },
               page: data.page
             });
+            popTool();
           }
         },
         annotation: {
+          onDoubleClick: handleDoubleClick,
         },
         controlPoint: {
         },
@@ -734,9 +782,13 @@ export default function PdfAnnotationContainer(props) {
       },
       eventHandlers: {
         pdf: {
+          onClick: function() {
+            popTool();
+          },
           onMouseDown: function() {},
         },
         annotation: {
+          onDoubleClick: handleDoubleClick,
         },
         controlPoint: {
         },
@@ -804,6 +856,24 @@ export default function PdfAnnotationContainer(props) {
   function zoomOut() {
     setPdfScale(Math.max(pdfScale-0.2,1));
   }
+  function pushTool(newState) {
+    setToolStateStack([...toolStateStack, toolState]);
+    setToolState(newState);
+  }
+  function popTool() {
+    if (toolStateStack.length === 0) {
+      return;
+    }
+    let newStack = toolStateStack.slice(0,-1);
+    let poppedState = toolStateStack.slice(-1)[0];
+    setToolStateStack(newStack);
+    setToolState(poppedState);
+  }
+  function selectTool(toolType) {
+    let newState = tools[toolType].initState();
+    setToolStateStack([]);
+    setToolState(newState);
+  }
 
   // Can't render until everything is initialized
   if (toolState === null) {
@@ -827,16 +897,16 @@ export default function PdfAnnotationContainer(props) {
           />
     })}
     <div className='controls'>
-      <button onClick={()=>setToolState(tools.read.initState())}>
+      <button onClick={()=>selectTool('read')}>
         Read
       </button>
-      <button onClick={()=>setToolState(tools.resize.initState())}>
+      <button onClick={()=>selectTool('resize')}>
         Resize
       </button>
-      <button onClick={()=>setToolState(tools.point.initState())}>
+      <button onClick={()=>selectTool('point')}>
         Point
       </button>
-      <button onClick={()=>setToolState(tools.rect.initState())}>
+      <button onClick={()=>selectTool('rect')}>
         Rect
       </button>
       <button onClick={zoomIn}>
