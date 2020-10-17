@@ -1,4 +1,6 @@
 import React from 'react';
+import {useDispatch,useSelector} from 'react-redux';
+import {useEffect, useState} from 'react';
 import {
     BrowserRouter as Router,
     Switch,
@@ -6,16 +8,29 @@ import {
     Link
 } from "react-router-dom";
 
-import './App.css';
+import {updateSession} from './actions/index.js';
 
 import PdfAnnotationContainer from './PdfViewer.js';
 import LoginPage from './Login.js';
 import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
+import DocumentsPage from './Documents.js';
+
+import './App.css';
 
 function App() {
+  const dispatch = useDispatch();
+  const userId = useSelector(state => state.session.uid);
+
+  useEffect(()=>{
+    dispatch(updateSession());
+  },[]);
+
   return (
     <Router>
+      <div>
+        { userId ? 'Currently logged in as '+userId : 'Not Logged in'}
+      </div>
       <Switch>
         <Route path="/signup">
           <SignupPage />
@@ -23,9 +38,10 @@ function App() {
         <Route path="/login">
           <LoginPage />
         </Route>
-        <Route path="/annotate">
-          <PdfAnnotationContainer />
+        <Route path="/docs">
+          <DocumentsPage />
         </Route>
+        <Route path="/annotate/:docId" component={PdfAnnotationContainer} />
         <Route path="/">
           <LandingPage />
         </Route>

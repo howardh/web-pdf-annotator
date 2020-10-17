@@ -1,8 +1,21 @@
 import React from 'react';
 import { useEffect, useState, useRef } from 'react';
+import {useDispatch,useSelector} from 'react-redux';
+import { useParams } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
+import {documentActions,annotationActions} from './actions/index.js';
+
 import './PdfViewer.scss';
+
+function filterDict(dict,filterCondition) {
+  return Object.entries(dict).filter(function([k,v]) {
+    return filterCondition(v);
+  }).reduce((acc,[k,v]) => {
+    acc[k] = v;
+    return acc;
+  }, {});
+}
 
 function PdfViewer(props) {
   const {
@@ -191,8 +204,8 @@ function AnnotationLayer(props) {
     switch (ann.type) {
       case 'point':
         style = {
-          left: ann.coords[0],
-          top: ann.coords[1],
+          left: ann.position.coords[0],
+          top: ann.position.coords[1],
         };
         classNames.push('point');
         return <div className={classNames.join(' ')}
@@ -203,10 +216,10 @@ function AnnotationLayer(props) {
         </div>;
       case 'rect':
         style = {
-          top: ann.box[0],
-          left: ann.box[3],
-          height: ann.box[2]-ann.box[0],
-          width: ann.box[1]-ann.box[3],
+          top: ann.position.box[0],
+          left: ann.position.box[3],
+          height: ann.position.box[2]-ann.position.box[0],
+          width: ann.position.box[1]-ann.position.box[3],
         };
         classNames.push('rect');
         return <div className={classNames.join(' ')}
@@ -275,7 +288,7 @@ function AnnotationTextCard(props) {
   }
 
   function parseBlob(annotation) {
-    switch (annotation.blobProperties.parser) {
+    switch (annotation.parser) {
       case 'plaintext':
         return annotation.blob;
       case 'commonmark':
@@ -285,7 +298,7 @@ function AnnotationTextCard(props) {
         let parsedBlob = writer.render(parsed);
         return parsedBlob;
       default:
-        return 'Error: Invalid Parser';
+        return 'Error: Invalid Parser ('+(annotation.parser)+')';
     }
   }
 
@@ -294,9 +307,9 @@ function AnnotationTextCard(props) {
   // Align card with annotation
   let yCoord = null;
   if (annotation.type === 'point') {
-    yCoord = annotation.coords[1];
+    yCoord = annotation.position.coords[1];
   } else if (annotation.type === 'rect') {
-    yCoord = (annotation.box[0]+annotation.box[2])/2;
+    yCoord = (annotation.position.box[0]+annotation.position.box[2])/2;
   }
   style['top'] = yCoord+'px';
   // Make sure card is visible if it's the current active card
@@ -381,7 +394,7 @@ function PdfPageContainer(props) {
     page, pageNum
   } = props;
   const relevantAnnotations = Object.values(annotations).filter(
-    ann => ann.page === pageNum
+    ann => ann && ann.page === pageNum
   ).reduce(function(acc,ann){
     acc[ann.id] = ann;
     return acc;
@@ -410,19 +423,47 @@ function PdfPageContainer(props) {
 
 export default function PdfAnnotationContainer(props) {
   const {
-    pdfUrl = 'http://proceedings.mlr.press/v89/song19b/song19b.pdf',
   } = props;
+  const {
+    docId
+  } = useParams();
+
+  const dispatch = useDispatch();
+  const pdfUrl = useSelector(state => state.documents.entities[docId]);
+  //const pdfUrl = 'http://proceedings.mlr.press/v89/song19b/song19b.pdf';
 
   const [pdf,setPdf] = useState(null);
   const [pages,setPages] = useState({});
 
-  const [annotations, setAnnotations] = useState({});
-  const nextAnnotationId = useRef(0);
+  const annotations = useSelector(
+    state => filterDict( 
+      state.annotations.entities,
+      ann => ann.doc_id === parseInt(docId)
+    )
+  );
+  //const annotations = filterDict(
+  //  useSelector(state => state.annotations.entities),
+  //  ann => ann.doc_id === docId
+  //);
+  //const annotations = useSelector(state => state.annotations.entities);
+  console.log(annotations);
   const [activeId, setActiveId] = useState(null);
   const [toolState, setToolState] = useState(null);
 
+  // Load PDF URL and annotations
+  useEffect(()=>{
+    if (!docId) {
+      return;
+    }
+    dispatch(documentActions['fetchSingle'](docId));
+    dispatch(annotationActions['fetchMultiple']({doc_id: docId}));
+  },[docId]);
+
   // Load PDF
   useEffect(()=>{
+    if (!pdfUrl) {
+      return;
+    }
     window.pdfjsLib.getDocument(
       pdfUrl
     ).promise .then(pdf => {
@@ -430,7 +471,7 @@ export default function PdfAnnotationContainer(props) {
     }).catch(error => {
       console.error(error);
     });
-  },[]);
+  },[pdfUrl]);
   useEffect(()=>{
     if (!pdf) {
       return;
@@ -447,31 +488,18 @@ export default function PdfAnnotationContainer(props) {
 
   // CRUD Functions
   function createAnnotation(ann) {
-    const id = nextAnnotationId.current++;
-    ann['id'] = id;
     ann['blob'] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum lectus lacus, sodales in ipsum eget, dapibus consequat sapien. Nam eu vestibulum ante, egestas pharetra lacus. Pellentesque sodales finibus dolor, at blandit lacus dictum ac. Maecenas vel mattis leo, nec rhoncus augue. Vestibulum eget fermentum nunc. Sed laoreet, est quis ullamcorper dignissim, risus ante dictum nisl, vel posuere erat erat eu dui. Suspendisse gravida euismod nunc ut tincidunt. Vivamus id vehicula diam, a rhoncus mauris. Phasellus mattis nibh et justo finibus ultricies.\n# Heading!\n## Subheading\n\nList?\n- thing\n- other thing\n\n```\nif a==b:\n    return c\n```\n\n[Google Link](http://www.google.ca)"; // Temporary blurb
-    ann['blobProperties'] = {
-      // Parser to convert blob into HTML
-      // Possible values: text, commonmark
-      parser: 'commonmark',
-    };
-    setAnnotations({
-      ...annotations,
-      [id]: ann
-    });
+    // Parser to convert blob into HTML
+    // Possible values: text, commonmark
+    ann['parser'] = 'commonmark';
+    ann['doc_id'] = docId;
+    dispatch(annotationActions['create'](ann));
   }
   function updateAnnotation(id, ann) {
-    setAnnotations({
-      ...annotations,
-      [id]: ann
-    });
+    dispatch(annotationActions['update'](ann));
   }
   function deleteAnnotation(id) {
-    const {
-      [id]: deleted,
-      ...rest
-    } = annotations;
-    setAnnotations(rest);
+    dispatch(annotationActions['deleteSingle'](id));
   }
 
   // Tools
@@ -591,10 +619,12 @@ export default function PdfAnnotationContainer(props) {
                   ...toolState,
                   tempUpdatedAnnotation: {
                     ...annotations[selId],
-                    coords: [
-                      annotations[selId].coords[0]+deltaX,
-                      annotations[selId].coords[1]+deltaY
-                    ]
+                    position: {
+                      coords: [
+                        annotations[selId].position.coords[0]+deltaX,
+                        annotations[selId].position.coords[1]+deltaY
+                      ]
+                    }
                   }
                 });
                 break;
@@ -603,12 +633,14 @@ export default function PdfAnnotationContainer(props) {
                   ...toolState,
                   tempUpdatedAnnotation: {
                     ...annotations[selId],
-                    box: [
-                      annotations[selId].box[0]+deltaY,
-                      annotations[selId].box[1]+deltaX,
-                      annotations[selId].box[2]+deltaY,
-                      annotations[selId].box[3]+deltaX
-                    ]
+                    position: {
+                      box: [
+                        annotations[selId].position.box[0]+deltaY,
+                        annotations[selId].position.box[1]+deltaX,
+                        annotations[selId].position.box[2]+deltaY,
+                        annotations[selId].position.box[3]+deltaX
+                      ]
+                    }
                   }
                 });
                 break;
@@ -621,7 +653,7 @@ export default function PdfAnnotationContainer(props) {
               top: action.indexOf('n') !== -1,
               bottom: action.indexOf('s') !== -1,
             };
-            let box = [...annotations[selId].box];
+            let box = [...annotations[selId].position.box];
             if (resizableDirs.left) {
               box[3] += deltaX;
             }
@@ -638,7 +670,9 @@ export default function PdfAnnotationContainer(props) {
               ...toolState,
               tempUpdatedAnnotation: {
                 ...annotations[selId],
-                box: box
+                position: {
+                  box: box
+                }
               }
             });
           }
@@ -667,7 +701,9 @@ export default function PdfAnnotationContainer(props) {
           onClick: function(event,data) {
             createAnnotation({
               type: 'point',
-              coords: data.coords,
+              position: {
+                coords: data.coords,
+              },
               page: data.page
             });
           }
@@ -706,7 +742,9 @@ export default function PdfAnnotationContainer(props) {
             tempAnnotation: {
               id: 'temp',
               type: 'rect',
-              box: [top,right,bottom,left]
+              position: {
+                box: [top,right,bottom,left]
+              }
             }
           });
         },
@@ -720,7 +758,9 @@ export default function PdfAnnotationContainer(props) {
           if (left !== right && top !== bottom) {
             createAnnotation({
               type: 'rect',
-              box: [top,right,bottom,left],
+              position: {
+                box: [top,right,bottom,left],
+              },
               page: data.page
             });
           }

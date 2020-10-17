@@ -66,7 +66,8 @@ def login():
     """
     data = request.get_json()
     email = data['email']
-    session.permanent = False
+    #session.permanent = False
+    session.permanent = True
     if 'permanent' in data:
         permanent = data['permanent']
         session.permanent = permanent
@@ -76,7 +77,7 @@ def login():
     if bcrypt.checkpw(data['password'].encode('utf-8'), user.password):
         flask_login.login_user(user)
         print("successful login")
-        return json.dumps(user.id), 200
+        return json.dumps({'id': user.id}), 200
     print("failed login")
     return json.dumps({'error': 'Bad login'}), 403
 
@@ -91,13 +92,14 @@ def get_current_session():
         schema:
           type: object
     """
+    print('GETTING CURRENT SESSION')
     try:
-        print(current_user)
+        #print(current_user)
         if current_user.get_id() is not None:
-            return "%s" % current_user.get_id(), 200
+            return json.dumps({'id': current_user.get_id()}), 200
     except:
         pass
-    return "{}", 200
+    return "{id: null}", 200
 
 @auth_bp.route('/logout', methods=['GET', 'POST'])
 @login_required
