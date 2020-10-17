@@ -423,6 +423,52 @@ function PdfPageContainer(props) {
   );
 }
 
+function usePdfPages(pdfUrl) {
+  const [pdf,setPdf] = useState(null);
+  const [pages,setPages] = useState({});
+  const [progress,setProgress] = useState(null);
+  const pagesRef = useRef({}); // Ref is needed because multiple setPages in one update cycle will overwrite each other.
+  useEffect(()=>{
+    if (!pdfUrl) {
+      return;
+    }
+    window.pdfjsLib.getDocument(
+      pdfUrl
+    ).promise .then(pdf => {
+      setPdf(pdf);
+      setProgress({
+        totalPages: pdf.numPages,
+        loadedPages: 0
+      });
+    }).catch(error => {
+      console.error(error);
+    });
+  },[pdfUrl]);
+  useEffect(()=>{
+    if (!pdf) {
+      return;
+    }
+    for (let i = 1; i <= pdf.numPages; i++) {
+      pdf.getPage(i).then(p => {
+        pagesRef.current[i] = p;
+        let loadedPages = Object.values(pagesRef.current).length;
+        setProgress({
+          totalPages: pdf.numPages,
+          loadedPages
+        });
+        if (loadedPages === pdf.numPages) {
+          setPages(pagesRef.current);
+        }
+      });
+    }
+  },[pdf]);
+  return {
+    pdf,
+    pages,
+    progress
+  }
+}
+
 export default function PdfAnnotationContainer(props) {
   const {
   } = props;
@@ -431,11 +477,10 @@ export default function PdfAnnotationContainer(props) {
   } = useParams();
 
   const dispatch = useDispatch();
-  const pdfUrl = useSelector(state => state.documents.entities[docId]);
-  //const pdfUrl = 'http://proceedings.mlr.press/v89/song19b/song19b.pdf';
+  const doc = useSelector(state => state.documents.entities[docId]);
+  const pdfUrl = doc ? doc.url : null;
 
-  const [pdf,setPdf] = useState(null);
-  const [pages,setPages] = useState({});
+  const {pdf,pages,progress:pagesLoadingProgress} = usePdfPages(pdfUrl);
 
   const annotations = useSelector(
     state => filterDict( 
@@ -454,33 +499,6 @@ export default function PdfAnnotationContainer(props) {
     dispatch(documentActions['fetchSingle'](docId));
     dispatch(annotationActions['fetchMultiple']({doc_id: docId}));
   },[docId]);
-
-  // Load PDF
-  useEffect(()=>{
-    if (!pdfUrl) {
-      return;
-    }
-    window.pdfjsLib.getDocument(
-      pdfUrl
-    ).promise .then(pdf => {
-      setPdf(pdf);
-    }).catch(error => {
-      console.error(error);
-    });
-  },[pdfUrl]);
-  useEffect(()=>{
-    if (!pdf) {
-      return;
-    }
-    // Have to load one page at a time. If setPage is called twice in one cycle, only one page from that cycle is saved
-    const nextPage = Object.entries(pages).length+1;
-    if (nextPage > pdf.numPages) {
-      return;
-    }
-    pdf.getPage(nextPage).then(p => {
-      setPages({...pages,[nextPage]:p});
-    });
-  },[pdf,pages]);
 
   // CRUD Functions
   function createAnnotation(ann) {
