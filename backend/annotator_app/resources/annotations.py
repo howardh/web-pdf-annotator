@@ -13,10 +13,6 @@ api = Api(blueprint)
 def to_object(data):
     entity = Annotation(**data)
     entity.user_id = current_user.get_id()
-    #entity.type = data.get('type')
-    #entity.blob = data.get('blob')
-    #entity.parser = data.get('parser')
-    #entity.position = data.get('box',data.get('coords'))
     entity.position = json.dumps(data['position'])
     return entity
 

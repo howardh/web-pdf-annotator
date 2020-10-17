@@ -157,7 +157,6 @@ function AnnotationLayer(props) {
     }
   }
   function onKeyPress(event) {
-    console.log('keypress');
     const classNames = event.target.className.split(' ');
     const data = {
       page,
@@ -190,7 +189,10 @@ function AnnotationLayer(props) {
     if (key === toolState.selectedAnnotationId) {
       classNames.push('selected');
       selected = true;
-      ann = toolState.tempUpdatedAnnotation;
+      ann = {
+        ...ann,
+        position: toolState.tempPosition
+      }
     }
     function onClick(event) {
       if (key === 'temp') {
@@ -441,12 +443,6 @@ export default function PdfAnnotationContainer(props) {
       ann => ann.doc_id === parseInt(docId)
     )
   );
-  //const annotations = filterDict(
-  //  useSelector(state => state.annotations.entities),
-  //  ann => ann.doc_id === docId
-  //);
-  //const annotations = useSelector(state => state.annotations.entities);
-  console.log(annotations);
   const [activeId, setActiveId] = useState(null);
   const [toolState, setToolState] = useState(null);
 
@@ -523,16 +519,16 @@ export default function PdfAnnotationContainer(props) {
         }
       }
     },
-    select: {
+    resize: {
       initState: function() {
         return {
-          type: 'select',
+          type: 'resize',
           // ID of the selected annotation
           selectedAnnotationId: null,
           // If the selected annotation is changed (e.g. moved, resized, etc),
           // then the intermediate annotation is stored here before it's
           // updated in the store.
-          tempUpdatedAnnotation: null,
+          tempPosition: null,
           // Type of action being performed from a click and drag.
           // Possible values: move, resize-n, resize-ne, resize-nw, etc.
           dragAction: null,
@@ -558,7 +554,7 @@ export default function PdfAnnotationContainer(props) {
             setToolState({
               ...toolState,
               selectedAnnotationId: data.id,
-              tempUpdatedAnnotation: annotations[data.id]
+              tempPosition: annotations[data.id].position
             });
           },
           onMouseDown: function(event, data) {
@@ -578,7 +574,7 @@ export default function PdfAnnotationContainer(props) {
               setToolState({
                 ...toolState,
                 selectedAnnotationId: null,
-                tempUpdatedAnnotation: null
+                tempPosition: null
               });
             }
           },
@@ -617,30 +613,24 @@ export default function PdfAnnotationContainer(props) {
               case 'point':
                 setToolState({
                   ...toolState,
-                  tempUpdatedAnnotation: {
-                    ...annotations[selId],
-                    position: {
-                      coords: [
-                        annotations[selId].position.coords[0]+deltaX,
-                        annotations[selId].position.coords[1]+deltaY
-                      ]
-                    }
+                  tempPosition: {
+                    coords: [
+                      annotations[selId].position.coords[0]+deltaX,
+                      annotations[selId].position.coords[1]+deltaY
+                    ]
                   }
                 });
                 break;
               case 'rect':
                 setToolState({
                   ...toolState,
-                  tempUpdatedAnnotation: {
-                    ...annotations[selId],
-                    position: {
-                      box: [
-                        annotations[selId].position.box[0]+deltaY,
-                        annotations[selId].position.box[1]+deltaX,
-                        annotations[selId].position.box[2]+deltaY,
-                        annotations[selId].position.box[3]+deltaX
-                      ]
-                    }
+                  tempPosition: {
+                    box: [
+                      annotations[selId].position.box[0]+deltaY,
+                      annotations[selId].position.box[1]+deltaX,
+                      annotations[selId].position.box[2]+deltaY,
+                      annotations[selId].position.box[3]+deltaX
+                    ]
                   }
                 });
                 break;
@@ -668,11 +658,8 @@ export default function PdfAnnotationContainer(props) {
             }
             setToolState({
               ...toolState,
-              tempUpdatedAnnotation: {
-                ...annotations[selId],
-                position: {
-                  box: box
-                }
+              tempPosition: {
+                box: box
               }
             });
           }
@@ -680,8 +667,11 @@ export default function PdfAnnotationContainer(props) {
         onMouseUp: function(event,data) {
           const selId = toolState.selectedAnnotationId;
           if (selId !== null &&
-              annotations[selId] !== toolState.tempUpdatedAnnotation) {
-            updateAnnotation(selId, toolState.tempUpdatedAnnotation);
+              annotations[selId].position !== toolState.tempPosition) {
+            updateAnnotation(selId, {
+              ...annotations[selId],
+              position: toolState.tempPosition
+            });
           }
           setToolState({
             ...toolState,
@@ -781,11 +771,13 @@ export default function PdfAnnotationContainer(props) {
   // Misc
   function activateAnnotation(annId) {
     setActiveId(annId);
-    setToolState({
-      ...tools.select.initState(),
-      selectedAnnotationId: annId,
-      tempUpdatedAnnotation: annotations[annId]
-    });
+    if (annId) { // Check if we're activating or deactivating
+      setToolState({
+        ...tools.resize.initState(),
+        selectedAnnotationId: annId,
+        tempPosition: annotations[annId].position
+      });
+    }
   }
 
   // Can't render until everything is initialized
@@ -812,8 +804,8 @@ export default function PdfAnnotationContainer(props) {
       <button onClick={()=>setToolState(tools.read.initState())}>
         Read
       </button>
-      <button onClick={()=>setToolState(tools.select.initState())}>
-        Select
+      <button onClick={()=>setToolState(tools.resize.initState())}>
+        Resize
       </button>
       <button onClick={()=>setToolState(tools.point.initState())}>
         Point
