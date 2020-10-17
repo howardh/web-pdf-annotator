@@ -19,7 +19,8 @@ function filterDict(dict,filterCondition) {
 
 function PdfViewer(props) {
   const {
-    page
+    page,
+    scale
   } = props;
   const ref = useRef(null);
 
@@ -28,7 +29,6 @@ function PdfViewer(props) {
     if (!ref.current || !page) {
       return;
     }
-    var scale = 2;
     var viewport = page.getViewport({ scale: scale, });
     var canvas = ref.current;
     var context = canvas.getContext('2d');
@@ -41,7 +41,7 @@ function PdfViewer(props) {
     };
     page.render(renderContext);
     // TODO: Render text layer
-  }, [page, ref.current]);
+  }, [page, ref.current, scale]);
 
   return (
     <canvas ref={ref}></canvas>
@@ -55,18 +55,11 @@ function AnnotationLayer(props) {
     annotations,
     eventHandlers,
     toolState,
-    page
+    page,
+    scale
   } = props;
 
   const ref = useRef(null);
-
-  /*
-   * Tool types:
-   *  - select: Selection tool
-   *  - point: Point annotation
-   *  - rect: Rectangle annotation
-   */
-  const [tool,setTool] = useState('rect')
 
   const [startMouseCoord,setStartMouseCoord] = useState(null);
   const [mouseCoord,setMouseCoord] = useState(null);
@@ -76,8 +69,8 @@ function AnnotationLayer(props) {
   function getCoordsFromEvent(event) {
     // Ensure that the coordinates are relative to the correct element
     const rect = ref.current.getBoundingClientRect();
-    const offsetX = event.clientX - rect.left;
-    const offsetY = event.clientY - rect.top;
+    const offsetX = (event.clientX - rect.left)/scale;
+    const offsetY = (event.clientY - rect.top)/scale;
     return [offsetX,offsetY];
   }
   function onClick(event) {
@@ -206,8 +199,8 @@ function AnnotationLayer(props) {
     switch (ann.type) {
       case 'point':
         style = {
-          left: ann.position.coords[0],
-          top: ann.position.coords[1],
+          left: ann.position.coords[0]*scale,
+          top: ann.position.coords[1]*scale,
         };
         classNames.push('point');
         return <div className={classNames.join(' ')}
@@ -218,10 +211,10 @@ function AnnotationLayer(props) {
         </div>;
       case 'rect':
         style = {
-          top: ann.position.box[0],
-          left: ann.position.box[3],
-          height: ann.position.box[2]-ann.position.box[0],
-          width: ann.position.box[1]-ann.position.box[3],
+          top: ann.position.box[0]*scale,
+          left: ann.position.box[3]*scale,
+          height: (ann.position.box[2]-ann.position.box[0])*scale,
+          width: (ann.position.box[1]-ann.position.box[3])*scale,
         };
         classNames.push('rect');
         return <div className={classNames.join(' ')}
@@ -263,7 +256,8 @@ function AnnotationTextCard(props) {
   const {
     annotation,
     isActive, setActive,
-    updateAnnotation
+    updateAnnotation,
+    scale
   } = props;
   // Stores changes before they're saved
   const [updatedBlob,setUpdatedBlob] = useState(null);
@@ -313,6 +307,7 @@ function AnnotationTextCard(props) {
   } else if (annotation.type === 'rect') {
     yCoord = (annotation.position.box[0]+annotation.position.box[2])/2;
   }
+  yCoord *= scale;
   style['top'] = yCoord+'px';
   // Make sure card is visible if it's the current active card
   if (isActive) {
@@ -365,7 +360,8 @@ function AnnotationTextContainer(props) {
   const {
     annotations,
     activeId, setActiveId,
-    updateAnnotation
+    updateAnnotation,
+    scale
   } = props;
   function renderTextCard(ann) {
   }
@@ -375,6 +371,7 @@ function AnnotationTextContainer(props) {
         return (
           <AnnotationTextCard
               key={ann.id}
+              scale={scale}
               isActive={ann.id === activeId}
               setActive={(f)=>setActiveId(f ? ann.id : null)}
               annotation={ann}
@@ -393,7 +390,8 @@ function PdfPageContainer(props) {
     createAnnotation,
     updateAnnotation,
     annotations,
-    page, pageNum
+    page, pageNum,
+    scale
   } = props;
   const relevantAnnotations = Object.values(annotations).filter(
     ann => ann && ann.page === pageNum
@@ -404,21 +402,23 @@ function PdfPageContainer(props) {
   return (
     <div className='pdf-page-container'>
       <div className='pdf-container'>
-        <PdfViewer page={page} />
+        <PdfViewer page={page} scale={scale}/>
         <AnnotationLayer
             eventHandlers={eventHandlers}
             toolState={toolState}
             createAnnotation={createAnnotation}
             updateAnnotation={updateAnnotation}
             annotations={relevantAnnotations}
-            page={pageNum} />
+            page={pageNum}
+            scale={scale} />
       </div>
       <AnnotationTextContainer
           createAnnotation={createAnnotation}
           updateAnnotation={updateAnnotation}
           activeId={activeId}
           setActiveId={setActiveId}
-          annotations={relevantAnnotations} />
+          annotations={relevantAnnotations}
+          scale={scale} />
     </div>
   );
 }
@@ -482,10 +482,11 @@ export default function PdfAnnotationContainer(props) {
 
   const {pdf,pages,progress:pagesLoadingProgress} = usePdfPages(pdfUrl);
 
+  const [pdfScale,setPdfScale] = useState(2);
   const annotations = useSelector(
     state => filterDict( 
       state.annotations.entities,
-      ann => ann.doc_id === parseInt(docId)
+      ann => ann && ann.doc_id === parseInt(docId)
     )
   );
   const [activeId, setActiveId] = useState(null);
@@ -797,6 +798,12 @@ export default function PdfAnnotationContainer(props) {
       });
     }
   }
+  function zoomIn() {
+    setPdfScale(Math.min(pdfScale+0.2,3));
+  }
+  function zoomOut() {
+    setPdfScale(Math.max(pdfScale-0.2,1));
+  }
 
   // Can't render until everything is initialized
   if (toolState === null) {
@@ -816,6 +823,7 @@ export default function PdfAnnotationContainer(props) {
           updateAnnotation={updateAnnotation}
           annotations={annotations}
           page={page} pageNum={pageNum}
+          scale={pdfScale}
           />
     })}
     <div className='controls'>
@@ -830,6 +838,12 @@ export default function PdfAnnotationContainer(props) {
       </button>
       <button onClick={()=>setToolState(tools.rect.initState())}>
         Rect
+      </button>
+      <button onClick={zoomIn}>
+        +
+      </button>
+      <button onClick={zoomOut}>
+        -
       </button>
     </div>
   </main>);
