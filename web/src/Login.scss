@@ -1,0 +1,12 @@
+.login-page {
+  text-align: center;
+  .login-form-container {
+    display: inline-block;
+    border: 1px solid black;
+    padding: 30px;
+    label {
+      display: block;
+      margin: 10px;
+    }
+  }
+}

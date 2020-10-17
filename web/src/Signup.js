@@ -1,41 +1,59 @@
 import React from 'react';
 import {useState} from 'react';
+import { useHistory } from "react-router-dom";
 import axios from 'axios';
 
+import './Signup.scss';
+
 export default function SignupPage(props) {
-  const [email,setEmail] = useState('foo@email.com');
-  const [password1,setPassword1] = useState('asdf');
-  const [password2,setPassword2] = useState('asdf');
+  const history = useHistory();
+  const [email,setEmail] = useState('');
+  const [password1,setPassword1] = useState('');
+  const [password2,setPassword2] = useState('');
+  const [error,setError] = useState('');
 
   function submit() {
     if (password1 !== password2) {
-      window.alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
-    let url = 'http://localhost:5000/api/data/users';
     let data = {
       email: email,
       password: password1
     };
     axios.post(
-      url, data, {withCredentials: true}
+      process.env.REACT_APP_SERVER_ADDRESS+"/data/users",
+      data,
+      {withCredentials: true}
     ).then(response => {
-      console.log('RESPONSE RECEIVED');
-      // TODO: Redirect to login page
+      console.log('Successful signup');
+      setEmail('');
+      setPassword1('');
+      setPassword2('');
+      history.push('/'); // Redirect to home page
     }).catch(error => {
-      console.log('ERROR RECEIVED')
-      // TODO: Display error message
+      console.error(error);
+      setError('Unspecified error');
     });
   }
+  function handleKeyPress(e) {
+    if (e.which === 13) {
+      submit();
+    }
+  }
 
-  return (<div>
-    Signup Page
-    <div>
+  return (<div className='signup-page'>
+    <h1>Signup Page</h1>
+    <div className='signup-form-container'>
+      <div className='error-message'>
+        {error}
+      </div>
       <label>
         Username:
         <input type='text'
             name='email'
             value={email}
+            onKeyPress={handleKeyPress}
             onChange={e=>setEmail(e.target.value)}/>
       </label>
       <label>
@@ -43,6 +61,7 @@ export default function SignupPage(props) {
         <input type='password'
             name='password1'
             value={password1}
+            onKeyPress={handleKeyPress}
             onChange={e=>setPassword1(e.target.value)}/>
       </label>
       <label>
@@ -50,6 +69,7 @@ export default function SignupPage(props) {
         <input type='password'
             name='password2'
             value={password2}
+            onKeyPress={handleKeyPress}
             onChange={e=>setPassword2(e.target.value)}/>
       </label>
       <input type='submit' value='Submit' onClick={submit}/>

@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 
 import {documentActions} from './actions/index.js';
 
+import './Documents.scss';
+
 function useDocuments(uid) {
 }
 
@@ -21,27 +23,10 @@ export default function DocumentsPage(props) {
     dispatch(documentActions['fetchMultiple']());
   },[]);
 
-  return (<div>
+  return (<div className='documents-page'>
     <h1>Documents Page</h1>
     <NewDocumentForm />
-    <table>
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>URL</th>
-        </tr>
-      </thead>
-      <tbody>
-        {
-          Object.values(documents).map(doc=>{
-            return (<tr key={doc.id}>
-              <td> {doc.title} </td>
-              <td><Link to={'/annotate/'+doc.id}>{doc.url}</Link></td>
-            </tr>);
-          })
-        }
-      </tbody>
-    </table>
+    <DocumentsTable documents={documents} />
   </div>);
 }
 
@@ -74,9 +59,8 @@ function NewDocumentForm(props) {
     }
   }
 
-
   return (
-    <div>
+    <div className='new-doc-form-container'>
       New Doc
       <label>
         URL
@@ -87,5 +71,36 @@ function NewDocumentForm(props) {
       </label>
       <input type='submit' value='Create' onClick={createDoc} />
     </div>
+  );
+}
+
+function DocumentsTable(props) {
+  const {
+    documents
+  } = props;
+
+  if (documents.length === 0) {
+    return null;
+  }
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {
+          Object.values(documents).map(doc=>{
+            return (<tr key={doc.id}>
+              <td> {doc.title} </td>
+              <td><Link to={'/annotate/'+doc.id}>{doc.url}</Link></td>
+            </tr>);
+          })
+        }
+      </tbody>
+    </table>
   );
 }

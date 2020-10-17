@@ -143,9 +143,7 @@ function sessionReducer(state = {}, action) {
     case 'LOGIN_SUCCESS': {
       return {
         ...state,
-        session: {
-          uid: action.payload.id
-        }
+        uid: action.payload.id
       };
     }
     case 'LOGIN_FAILURE': {
