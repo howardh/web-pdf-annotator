@@ -1,16 +1,18 @@
 .signup-page {
   text-align: center;
-  .signup-form-container {
-    display: inline-block;
-    border: 1px solid black;
-    padding: 30px;
-    label {
+}
+
+.signup-form-container {
+  display: inline-block;
+  border: 1px solid black;
+  padding: 30px;
+  background-color: rgba(white,0.5);
+  label {
+    display: block;
+    margin: 10px;
+    text-align: left;
+    input {
       display: block;
-      margin: 10px;
-      text-align: left;
-      input {
-        display: block;
-      }
     }
   }
 }

@@ -806,7 +806,7 @@ export default function PdfAnnotationContainer(props) {
     return null;
   }
 
-  return (<div className='annotation-container'>
+  return (<main className='annotation-container'>
     {Object.entries(pages).map(([pageNum,page],i)=>{
       return <PdfPageContainer key={pageNum}
           activeId={activeId} setActiveId={activateAnnotation}
@@ -832,5 +832,5 @@ export default function PdfAnnotationContainer(props) {
         Rect
       </button>
     </div>
-  </div>);
+  </main>);
 }

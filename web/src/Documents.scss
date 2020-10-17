@@ -3,7 +3,23 @@
 
   table {
     display: inline-block;
-    border: 1px solid black;
     margin: 20px;
+    thead {
+      background-color: #9a1f1f;
+      color: #ffcaca;
+      th {
+        padding: 5px 20px;
+      }
+    }
+    tbody {
+      tr{
+        &:nth-child(even) {
+          background-color: #ffe6e6;
+        }
+        &:hover {
+          background-color: #ffcaca;
+        }
+      }
+    }
   }
 }

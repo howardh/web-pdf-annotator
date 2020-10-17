@@ -13,7 +13,7 @@ function useDocuments(uid) {
 export default function DocumentsPage(props) {
   const dispatch = useDispatch();
   const {
-    uid
+    userId
   } = props;
   // All documents, including those owned by someone else
   const documents = useSelector(state => state.documents.entities);
@@ -23,11 +23,17 @@ export default function DocumentsPage(props) {
     dispatch(documentActions['fetchMultiple']());
   },[]);
 
-  return (<div className='documents-page'>
-    <h1>Documents Page</h1>
+  if (!userId) {
+    return (<main className='documents-page'>
+      <h1>Page not found</h1>
+    </main>);
+  }
+
+  return (<main className='documents-page'>
+    <h1>Documents</h1>
     <NewDocumentForm />
     <DocumentsTable documents={documents} />
-  </div>);
+  </main>);
 }
 
 function formChangeHandler(state,setState) {
@@ -61,9 +67,8 @@ function NewDocumentForm(props) {
 
   return (
     <div className='new-doc-form-container'>
-      New Doc
       <label>
-        URL
+        URL: 
         <input type='text' name='url'
             value={values['url']}
             onKeyPress={handleKeyPress}
@@ -89,6 +94,7 @@ function DocumentsTable(props) {
         <tr>
           <th>Title</th>
           <th>URL</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -97,6 +103,10 @@ function DocumentsTable(props) {
             return (<tr key={doc.id}>
               <td> {doc.title} </td>
               <td><Link to={'/annotate/'+doc.id}>{doc.url}</Link></td>
+              <td>
+                <i className='material-icons'>create</i>
+                <i className='material-icons'>delete</i>
+              </td>
             </tr>);
           })
         }

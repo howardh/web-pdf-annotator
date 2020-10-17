@@ -1,5 +1,35 @@
 .landing-page {
+  background-image: url('./landingbg.jpg');
+  background-size: cover;
+  min-height: 100vh;
+  margin: 0;
+  padding: 10px;
   text-align: center;
+
+  .row {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    flex-flow: row wrap;
+    height: 100%;
+    > div {
+      color: #9a1f1f;
+      display: inline-block;
+      margin: 10px;
+    }
+    .description {
+      padding: 50px 30px;
+      background-color: rgba(#ffcaca,0.9);
+      max-width: 500px;
+      flex-basis: 500px;
+      text-align: left;
+    }
+    .signup-form-container {
+      background-color: rgba(#ffcaca,0.5);
+      border-color: rgba(#9a1f1f,0.5);
+    }
+  }
+
   a {
     margin: 0 10px;
   }

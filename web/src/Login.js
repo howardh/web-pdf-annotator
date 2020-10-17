@@ -29,7 +29,7 @@ export default function LoginPage(props) {
     }
   }
 
-  return (<div className='login-page'>
+  return (<main className='login-page'>
     <h1>Login Page</h1>
     <div className='login-form-container'>
       <label>
@@ -50,7 +50,7 @@ export default function LoginPage(props) {
       </label>
       <input type='submit' value='Login' onClick={submit}/>
     </div>
-  </div>);
+  </main>);
 }
 
 export function LogoutPage(props) {
@@ -63,7 +63,7 @@ export function LogoutPage(props) {
     });
   },[]);
 
-  return (<div className='logout-page'>
+  return (<main className='logout-page'>
     <h1>Logout Page</h1>
-  </div>);
+  </main>);
 }

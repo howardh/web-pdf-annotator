@@ -6,6 +6,13 @@ import axios from 'axios';
 import './Signup.scss';
 
 export default function SignupPage(props) {
+  return (<main className='signup-page'>
+    <h1>Signup Page</h1>
+    <SignupForm />
+  </main>);
+}
+
+export function SignupForm(props) {
   const history = useHistory();
   const [email,setEmail] = useState('');
   const [password1,setPassword1] = useState('');
@@ -42,8 +49,7 @@ export default function SignupPage(props) {
     }
   }
 
-  return (<div className='signup-page'>
-    <h1>Signup Page</h1>
+  return (
     <div className='signup-form-container'>
       <div className='error-message'>
         {error}
@@ -74,6 +80,5 @@ export default function SignupPage(props) {
       </label>
       <input type='submit' value='Submit' onClick={submit}/>
     </div>
-  </div>);
+  );
 }
-

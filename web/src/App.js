@@ -17,7 +17,7 @@ import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
 import DocumentsPage from './Documents.js';
 
-import './App.css';
+import './App.scss';
 
 function App() {
   const dispatch = useDispatch();
@@ -29,29 +29,53 @@ function App() {
 
   return (
     <Router>
-      <div>
-        { userId ? 'Currently logged in as '+userId : 'Not Logged in'}
-      </div>
       <Switch>
         <Route path="/signup">
+          <Navigation userId={userId} />
           <SignupPage />
         </Route>
         <Route path="/login">
+          <Navigation userId={userId} />
           <LoginPage />
         </Route>
         <Route path="/logout">
           <LogoutPage />
         </Route>
         <Route path="/docs">
-          <DocumentsPage />
+          <Navigation userId={userId} />
+          <DocumentsPage userId={userId} />
         </Route>
         <Route path="/annotate/:docId" component={PdfAnnotationContainer} />
         <Route path="/">
+          <Navigation userId={userId} />
           <LandingPage />
         </Route>
       </Switch>
     </Router>
   );
+}
+
+function Navigation(props) {
+  const {
+    userId
+  } = props;
+  if (userId) {
+    return (<nav>
+      <Link to='/docs'>Documents</Link>
+      <Link to='/logout'>Logout</Link>
+      <span>
+        Currently logged in as {userId}
+      </span>
+    </nav>);
+  } else {
+    return (<nav>
+      <Link to='/signup'>Signup</Link>
+      <Link to='/login'>Login</Link>
+      <span>
+        Not logged in
+      </span>
+    </nav>);
+  }
 }
 
 export default App;
