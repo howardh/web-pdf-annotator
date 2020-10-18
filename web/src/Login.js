@@ -20,7 +20,7 @@ export default function LoginPage(props) {
       password: password
     };
     dispatch(login(email,password,true)).then(()=>{
-      history.push('/');
+      history.push('/docs');
     });
   }
   function handleKeyPress(e) {

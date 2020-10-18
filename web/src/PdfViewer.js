@@ -535,12 +535,16 @@ export default function PdfAnnotationContainer(props) {
 
   // CRUD Functions
   function createAnnotation(ann) {
-    ann['blob'] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum lectus lacus, sodales in ipsum eget, dapibus consequat sapien. Nam eu vestibulum ante, egestas pharetra lacus. Pellentesque sodales finibus dolor, at blandit lacus dictum ac. Maecenas vel mattis leo, nec rhoncus augue. Vestibulum eget fermentum nunc. Sed laoreet, est quis ullamcorper dignissim, risus ante dictum nisl, vel posuere erat erat eu dui. Suspendisse gravida euismod nunc ut tincidunt. Vivamus id vehicula diam, a rhoncus mauris. Phasellus mattis nibh et justo finibus ultricies.\n# Heading!\n## Subheading\n\nList?\n- thing\n- other thing\n\n```\nif a==b:\n    return c\n```\n\n[Google Link](http://www.google.ca)"; // Temporary blurb
+    ann['blob'] = "# Notes\nWrite your notes here";
     // Parser to convert blob into HTML
     // Possible values: text, commonmark
     ann['parser'] = 'commonmark';
     ann['doc_id'] = docId;
-    dispatch(annotationActions['create'](ann));
+    dispatch(annotationActions['create'](ann)).then(response => {
+      let newAnnotations = response.data.entities.annotations;
+      let newKeys = Object.keys(newAnnotations);
+      setActiveId(parseInt(newKeys[0]));
+    });
   }
   function updateAnnotation(id, ann) {
     dispatch(annotationActions['update'](ann));
