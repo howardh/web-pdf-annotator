@@ -70,13 +70,22 @@ class EntityEndpoint(Resource):
                 .filter_by(user_id=current_user.get_id()) \
                 .first()
 
+        if getattr(self.Meta,'update_object',None) is not None:
+            entity = self.Meta.update_object(entity,data)
+        else:
+            for k,v in data.items():
+                entity.__setattr__(k,v)
+
         if entity is None:
             return {'error': 'No entity found with this ID.'}, 404
 
         db.session.flush()
         db.session.commit()
 
-        return {'message': 'Updated successfully'}, 200
+        return {
+            'message': 'Updated successfully',
+            'entities': entities_to_dict([entity])
+        }, 200
     def delete(self, entity_id):
         entity = db.session.query(self.Meta.model) \
                 .filter_by(id=entity_id) \

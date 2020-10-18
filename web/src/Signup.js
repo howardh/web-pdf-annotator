@@ -78,7 +78,7 @@ export function SignupForm(props) {
             onKeyPress={handleKeyPress}
             onChange={e=>setPassword2(e.target.value)}/>
       </label>
-      <input type='submit' value='Submit' onClick={submit}/>
+      <input type='submit' value='Sign Up' onClick={submit}/>
     </div>
   );
 }

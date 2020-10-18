@@ -16,15 +16,25 @@ def to_object(data):
     entity.position = json.dumps(data['position'])
     return entity
 
+def update_object(entity,data):
+    for k in ['doc_id','page','type','blob','parser']:
+        if k in data:
+            entity.__setattr__(k,data[k])
+    if 'position' in data:
+        entity.position = json.dumps(data['position'])
+    return entity
+
 class AnnotationList(ListEndpoint):
     class Meta:
         model = Annotation
         to_object = to_object
+        update_object = update_object
 
 class AnnotationEndpoint(EntityEndpoint):
     class Meta:
         model = Annotation
         to_object = to_object
+        update_object = update_object
 
 api.add_resource(AnnotationList, '/annotations')
 api.add_resource(AnnotationEndpoint, '/annotations/<int:entity_id>')
