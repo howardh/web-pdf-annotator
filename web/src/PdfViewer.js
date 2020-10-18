@@ -4,18 +4,10 @@ import {useDispatch,useSelector} from 'react-redux';
 import { useParams } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
+import {filterDict} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
 import './PdfViewer.scss';
-
-function filterDict(dict,filterCondition) {
-  return Object.entries(dict).filter(function([k,v]) {
-    return filterCondition(v);
-  }).reduce((acc,[k,v]) => {
-    acc[k] = v;
-    return acc;
-  }, {});
-}
 
 function PdfViewer(props) {
   const {
@@ -888,7 +880,7 @@ export default function PdfAnnotationContainer(props) {
   }
 
   return (<main className='annotation-container'>
-    {Object.entries(pages).map(([pageNum,page],i)=>{
+    {Object.entries(pages).map(function([pageNum,page],i){
       return <PdfPageContainer key={pageNum}
           activeId={activeId} setActiveId={activateAnnotation}
           toolState={toolState}
@@ -901,16 +893,16 @@ export default function PdfAnnotationContainer(props) {
           />
     })}
     <div className='controls'>
-      <button onClick={()=>selectTool('read')}>
+      <button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
         Read
       </button>
-      <button onClick={()=>selectTool('resize')}>
+      <button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
         Resize
       </button>
-      <button onClick={()=>selectTool('point')}>
+      <button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
         Point
       </button>
-      <button onClick={()=>selectTool('rect')}>
+      <button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
         Rect
       </button>
       <button onClick={zoomIn}>

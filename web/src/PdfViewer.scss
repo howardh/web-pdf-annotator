@@ -103,14 +103,14 @@ body {
 
     .card {
       position: absolute;
-      min-width: 500px;
+      width: 500px;
       background-color: white;
       border: 1px solid rgb(200,200,200);
       border-radius: 5px;
       padding: 10px;
       text-align: left;
       box-shadow: 3px 3px rgba(black,0.1);
-      transform: translate(-400px,-50%);
+      transform: translate(-500px,-50%);
       transition: 0.2s ease;
 
       &.active, &:hover {
@@ -140,5 +140,13 @@ body {
     top: 0;
     left: 50%;
     transform: translateX(-50%);
+
+    button {
+      padding: 5px;
+    }
+
+    .active {
+      background-color: white;
+    }
   }
 }

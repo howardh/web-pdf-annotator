@@ -1,3 +1,12 @@
+// Dict utils
+export function filterDict(dict,filterCondition) {
+  return Object.entries(dict).filter(function([k,v]) {
+    return filterCondition(v);
+  }).reduce((acc,[k,v]) => {
+    acc[k] = v;
+    return acc;
+  }, {});
+}
 // Store reducer utils
 class StatusTreeNode {
   constructor(key, children) {
