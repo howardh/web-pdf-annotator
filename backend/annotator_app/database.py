@@ -5,6 +5,9 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from sqlalchemy import Column, Integer, String, Float, Date, Time, DateTime, Boolean, Enum, LargeBinary
 
+from flask_security import Security, SQLAlchemyUserDatastore, \
+    UserMixin, RoleMixin, login_required
+
 import json
 import enum
 import datetime
@@ -12,27 +15,26 @@ import os
 
 from annotator_app.extensions import db
 
-class User(db.Model):
+roles_users = db.Table('roles_users',
+        db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
+        db.Column('role_id', db.Integer(), db.ForeignKey('roles.id')))
+
+class Role(db.Model, RoleMixin):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer(), primary_key=True)
+    name = db.Column(db.String(80), unique=True)
+    description = db.Column(db.String(255))
+
+class User(db.Model, UserMixin):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     email = Column(String)
     password = Column(LargeBinary)
     verified_email = Column(Boolean)
-
-    active = False
-    authenticated = False
-
-    def is_authenticated(self):
-        return self.authenticated
-
-    def is_active(self):
-        return self.active
-
-    def is_anonymous(self):
-        return False
-
-    def get_id(self):
-        return self.id
+    active = db.Column(db.Boolean())
+    confirmed_at = db.Column(db.DateTime())
+    roles = db.relationship('Role', secondary=roles_users,
+                            backref=db.backref('users', lazy='dynamic'))
 
 class Document(db.Model):
     __tablename__ = 'documents'
@@ -76,3 +78,6 @@ class Annotation(db.Model):
                 'position': json.loads(self.position),
                 'parser': self.parser
         }
+
+# Setup Flask-Security
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)

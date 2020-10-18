@@ -10,6 +10,7 @@ import './Login.scss';
 export default function LoginPage(props) {
   const history = useHistory();
   const dispatch = useDispatch();
+  const [error,setError] = useState('');
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
 
@@ -19,8 +20,19 @@ export default function LoginPage(props) {
       email: email,
       password: password
     };
-    dispatch(login(email,password,true)).then(()=>{
-      history.push('/docs');
+    dispatch(login(email,password,true)).then(response=>{
+      window.response = response;
+      console.log(response);
+      if (response.data.error) {
+        setError(response.data.error);
+      } else {
+        history.push('/docs');
+      }
+    }).catch(error => {
+      window.error = error;
+      if (error.data.error) {
+        setError(error.data.error);
+      }
     });
   }
   function handleKeyPress(e) {
@@ -32,6 +44,7 @@ export default function LoginPage(props) {
   return (<main className='login-page'>
     <h1>Login</h1>
     <div className='login-form-container'>
+      <div className='error-message'>{error}</div>
       <label>
         Username:
         <input type='text'

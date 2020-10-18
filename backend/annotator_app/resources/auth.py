@@ -3,35 +3,16 @@ from flask import render_template
 from flask import Blueprint
 from flask import request
 from flask import session
-import flask_login
-from flask_login import login_required, current_user, login_user
+import flask_security
+from flask_security import current_user, login_required
 
-import json
 import bcrypt
+import json
 
 from annotator_app.database import User
 from annotator_app.extensions import login_manager, db
 
 auth_bp = Blueprint('auth', __name__)
-
-@login_manager.user_loader
-def load_user(user_id):
-    return db.session.query(User).filter_by(id=user_id).first()
-
-@login_manager.request_loader
-def request_loader(request):
-    email = request.form.get('email')
-    password = request.form.get('password')
-    if email is None or password is None:
-        return
-
-    user = db.session.query(User).filter_by(email=email)
-    if user is None:
-        return
-    user.authenticated = password == user.password
-    print(user.id)
-
-    return user
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -66,7 +47,6 @@ def login():
     """
     data = request.get_json()
     email = data['email']
-    #session.permanent = False
     session.permanent = True
     if 'permanent' in data:
         permanent = data['permanent']
@@ -75,7 +55,7 @@ def login():
     if user is None:
         return json.dumps({'error': "Incorrect email/password"}), 403
     if bcrypt.checkpw(data['password'].encode('utf-8'), user.password):
-        flask_login.login_user(user)
+        flask_security.utils.login_user(user, remember=permanent)
         print("successful login")
         return json.dumps({'id': user.id}), 200
     print("failed login")
@@ -92,11 +72,10 @@ def get_current_session():
         schema:
           type: object
     """
-    print('GETTING CURRENT SESSION')
     try:
-        #print(current_user)
-        if current_user.get_id() is not None:
-            return json.dumps({'id': current_user.get_id()}), 200
+        print(current_user)
+        if current_user.id is not None:
+            return json.dumps({'id': current_user.id}), 200
     except:
         pass
     return "{id: null}", 200
@@ -113,5 +92,5 @@ def logout():
         schema:
           type: object
     """
-    flask_login.logout_user()
+    flask_security.utils.logout_user()
     return '{}', 200

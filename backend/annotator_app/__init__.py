@@ -4,14 +4,15 @@ from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
-from annotator_app.extensions import login_manager, cors, db
-#import annotator_app.database # Import to initialize databases
+from annotator_app.extensions import login_manager, cors, db, security
+from annotator_app.database import user_datastore
 
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 cors.init_app(app, supports_credentials=True)
 login_manager.init_app(app)
 db.init_app(app)
+security.init_app(app,user_datastore)
 app.app_context().push()
 
 @app.route('/')

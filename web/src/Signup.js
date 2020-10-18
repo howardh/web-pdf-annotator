@@ -33,14 +33,17 @@ export function SignupForm(props) {
       data,
       {withCredentials: true}
     ).then(response => {
+      window.response = response;
       console.log('Successful signup');
+      setError('');
       setEmail('');
       setPassword1('');
       setPassword2('');
-      history.push('/'); // Redirect to home page
+      history.push('/docs'); // Redirect to documents page
     }).catch(error => {
+      window.error = error;
       console.error(error);
-      setError('Unspecified error');
+      setError(error.response.data.error);
     });
   }
   function handleKeyPress(e) {
