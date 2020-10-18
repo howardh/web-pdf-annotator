@@ -1,5 +1,5 @@
 import sqlalchemy
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -35,16 +35,18 @@ class User(db.Model, UserMixin):
     confirmed_at = db.Column(db.DateTime())
     roles = db.relationship('Role', secondary=roles_users,
                             backref=db.backref('users', lazy='dynamic'))
+    documents = db.relationship('Document', lazy='dynamic')
 
 class Document(db.Model):
     __tablename__ = 'documents'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(Integer, ForeignKey('users.id'))
     url = Column(String)
     hash = Column(String)
     title = Column(String)
     author = Column(String)
     bibtex = Column(String)
+    annotations = db.relationship('Annotation', lazy='dynamic')
 
     def to_dict(self):
         return {
@@ -59,8 +61,8 @@ class Document(db.Model):
 class Annotation(db.Model):
     __tablename__ = 'annotations'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer)
-    doc_id = Column(Integer)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    doc_id = Column(Integer, ForeignKey('documents.id'))
     page = Column(String)
     type = Column(String)
     blob = Column(String)

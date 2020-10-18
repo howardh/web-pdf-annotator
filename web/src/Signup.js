@@ -39,7 +39,7 @@ export function SignupForm(props) {
       setEmail('');
       setPassword1('');
       setPassword2('');
-      history.push('/docs'); // Redirect to documents page
+      history.push('/login'); // Redirect to login
     }).catch(error => {
       window.error = error;
       console.error(error);
