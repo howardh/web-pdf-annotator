@@ -1,3 +1,20 @@
+// React Utils
+export function generateClassNames(cn) {
+  return Object.entries(cn).filter(
+    ([k,v]) => v
+  ).map(
+    ([k,v]) => k
+  ).join(' ');
+}
+// Forms
+export function formChangeHandler(state,setState) {
+  return function(event) {
+    setState({
+      ...state,
+      [event.target.name]: event.target.value
+    });
+  }
+}
 // Dict utils
 export function filterDict(dict,filterCondition) {
   return Object.entries(dict).filter(function([k,v]) {

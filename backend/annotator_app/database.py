@@ -49,7 +49,9 @@ class Document(db.Model):
                 'id': self.id,
                 'user_id': self.user_id,
                 'url': self.url,
-                'title': self.title
+                'title': self.title,
+                'author': self.author,
+                'bibtex': self.bibtex,
         }
 
 class Annotation(db.Model):

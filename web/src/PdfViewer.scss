@@ -95,7 +95,7 @@ body {
     }
   }
 
-  .annotation-text-container {
+  .annotation-cards-container {
     position: absolute;
     top: 0;
     left: 0;
@@ -147,6 +147,41 @@ body {
 
     .active {
       background-color: white;
+    }
+  }
+
+  .doc-info-container {
+    position: fixed;
+    right: -15px; /*Hide scrollbar*/
+    top: 0;
+    height: 100vh;
+    width: 250px;
+    box-sizing: border-box;
+    background-color: white;
+    padding: 42px;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    text-align: left;
+    transition: 0.2s ease;
+    box-shadow: -3px 5px 5px rgba(0,0,0,0.2);
+    &.hidden {
+      right: calc(32px - 250px);
+    }
+    .controls {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      cursor: pointer;
+      width: 32px;
+      > * {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+      &:hover {
+        background-color: grey;
+      }
     }
   }
 }

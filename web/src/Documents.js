@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link } from "react-router-dom";
 
+import {formChangeHandler} from './Utils.js';
 import {documentActions} from './actions/index.js';
 
 import './Documents.scss';
@@ -34,15 +35,6 @@ export default function DocumentsPage(props) {
     <NewDocumentForm />
     <DocumentsTable documents={documents} />
   </main>);
-}
-
-function formChangeHandler(state,setState) {
-  return function(event) {
-    setState({
-      ...state,
-      [event.target.name]: event.target.value
-    });
-  }
 }
 
 function NewDocumentForm(props) {

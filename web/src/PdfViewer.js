@@ -4,41 +4,14 @@ import {useDispatch,useSelector} from 'react-redux';
 import { useParams } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
-import {filterDict} from './Utils.js';
+import {filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
 import './PdfViewer.scss';
 
-function PdfViewer(props) {
-  const {
-    page,
-    scale
-  } = props;
-  const ref = useRef(null);
-
-  // Render PDF
-  useEffect(() => {
-    if (!ref.current || !page) {
-      return;
-    }
-    var viewport = page.getViewport({ scale: scale, });
-    var canvas = ref.current;
-    var context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-
-    var renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
-    page.render(renderContext);
-    // TODO: Render text layer
-  }, [page, ref.current, scale]);
-
-  return (
-    <canvas ref={ref}></canvas>
-  );
-}
+//////////////////////////////////////////////////
+// Annotations
+//////////////////////////////////////////////////
 
 function AnnotationLayer(props) {
   const {
@@ -335,7 +308,7 @@ function AnnotationTextCard(props) {
   }
 
   if (isEditing) {
-    return <div className={classNames.join(' ')} style={style}
+    return (<div className={classNames.join(' ')} style={style}
         onClick={()=>setActive(true)}>
       <textarea onChange={onChange}
           onKeyPress={onKeyPress}
@@ -356,10 +329,10 @@ function AnnotationTextCard(props) {
           <i className='material-icons'>delete</i>
         </span>
       </div>
-    </div>;
+    </div>);
   } else {
     let parsedBlob = parseBlob(annotation);
-    return <div className={classNames.join(' ')} style={style}
+    return (<div className={classNames.join(' ')} style={style}
         onClick={()=>isActive?null:setActive(true)}>
       <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
       <div className='controls'>
@@ -375,20 +348,18 @@ function AnnotationTextCard(props) {
           <i className='material-icons'>delete</i>
         </span>
       </div>
-    </div>;
+    </div>);
   }
 }
 
-function AnnotationTextContainer(props) {
+function AnnotationCardsContainer(props) {
   const {
     annotations,
     activeId, setActiveId,
     updateAnnotation,
     scale
   } = props;
-  function renderTextCard(ann) {
-  }
-  return (<div className='annotation-text-container'>
+  return (<div className='annotation-cards-container'>
     {
       Object.values(annotations).map(function(ann){
         return (
@@ -403,6 +374,41 @@ function AnnotationTextContainer(props) {
       })
     }
   </div>)
+}
+
+//////////////////////////////////////////////////
+// PDF Rendering
+//////////////////////////////////////////////////
+
+function PdfViewer(props) {
+  const {
+    page,
+    scale
+  } = props;
+  const ref = useRef(null);
+
+  // Render PDF
+  useEffect(() => {
+    if (!ref.current || !page) {
+      return;
+    }
+    var viewport = page.getViewport({ scale: scale, });
+    var canvas = ref.current;
+    var context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    var renderContext = {
+      canvasContext: context,
+      viewport: viewport
+    };
+    page.render(renderContext);
+    // TODO: Render text layer
+  }, [page, ref.current, scale]);
+
+  return (
+    <canvas ref={ref}></canvas>
+  );
 }
 
 function PdfPageContainer(props) {
@@ -435,7 +441,7 @@ function PdfPageContainer(props) {
             page={pageNum}
             scale={scale} />
       </div>
-      <AnnotationTextContainer
+      <AnnotationCardsContainer
           createAnnotation={createAnnotation}
           updateAnnotation={updateAnnotation}
           activeId={activeId}
@@ -492,7 +498,69 @@ function usePdfPages(pdfUrl) {
   }
 }
 
-export default function PdfAnnotationContainer(props) {
+//////////////////////////////////////////////////
+// Doc Info
+//////////////////////////////////////////////////
+
+function DocInfoContainer(props) {
+  const {
+    doc,
+    updateDoc
+  } = props;
+  const [hidden,setHidden] = useState(false);
+  let classNames = generateClassNames({
+    'doc-info-container': true,
+    'hidden': hidden
+  })
+  return (<div className={classNames}>
+    <div className='controls' onClick={()=>setHidden(!hidden)}>
+    {
+      hidden ?
+      <i className='material-icons'>navigate_before</i> :
+      <i className='material-icons'>navigate_next</i>
+    }
+    </div>
+    <h1>DOC INFO</h1>
+    <DocInfoForm doc={doc} updateDoc={updateDoc} />
+  </div>);
+}
+
+function DocInfoForm(props) {
+  const {
+    doc,
+    updateDoc
+  } = props;
+  const handleChange = formChangeHandler(doc, x=>updateDoc(doc.id,x));
+
+  if (!doc) {
+    return null;
+  }
+
+  return (<div className='doc-info-form'>
+    <label>
+      <span>Title</span>
+      <input type='text' name='title' value={doc['title']} onChange={handleChange} />
+    </label>
+    <label>
+      <span>Authors</span>
+      <input type='text' name='author' value={doc['author']} onChange={handleChange} />
+    </label>
+    <label>
+      <span>URL</span>
+      <input type='text' name='url' value={doc['url']} onChange={handleChange} />
+    </label>
+    <label>
+      <span>Bibtex</span>
+      <textarea name='bibtex' value={doc['bibtex']} onChange={handleChange} />
+    </label>
+  </div>);
+}
+
+//////////////////////////////////////////////////
+// Full Page
+//////////////////////////////////////////////////
+
+export default function PdfAnnotationPage(props) {
   const {
   } = props;
   const {
@@ -500,6 +568,7 @@ export default function PdfAnnotationContainer(props) {
   } = useParams();
 
   const dispatch = useDispatch();
+
   const doc = useSelector(state => state.documents.entities[docId]);
   const pdfUrl = doc ? doc.url : null;
 
@@ -543,6 +612,9 @@ export default function PdfAnnotationContainer(props) {
   }
   function deleteAnnotation(id) {
     dispatch(annotationActions['deleteSingle'](id));
+  }
+  function updateDoc(id, doc) {
+    dispatch(documentActions['update'](doc));
   }
 
   // Tools
@@ -832,7 +904,7 @@ export default function PdfAnnotationContainer(props) {
 
   // Initialize State
   useEffect(() => {
-    setToolState(tools.point.initState());
+    setToolState(tools.rect.initState());
   }, []);
 
   // Misc
@@ -892,6 +964,7 @@ export default function PdfAnnotationContainer(props) {
           scale={pdfScale}
           />
     })}
+    <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     <div className='controls'>
       <button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
         Read

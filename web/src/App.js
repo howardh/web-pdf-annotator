@@ -10,7 +10,7 @@ import {
 
 import {updateSession} from './actions/index.js';
 
-import PdfAnnotationContainer from './PdfViewer.js';
+import PdfAnnotationPage from './PdfViewer.js';
 import LoginPage from './Login.js';
 import { LogoutPage } from './Login.js';
 import SignupPage from './Signup.js';
@@ -45,7 +45,7 @@ function App() {
           <Navigation userId={userId} />
           <DocumentsPage userId={userId} />
         </Route>
-        <Route path="/annotate/:docId" component={PdfAnnotationContainer} />
+        <Route path="/annotate/:docId" component={PdfAnnotationPage} />
         <Route path="/">
           <Navigation userId={userId} />
           <LandingPage />
