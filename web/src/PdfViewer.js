@@ -507,7 +507,7 @@ function DocInfoContainer(props) {
     doc,
     updateDoc
   } = props;
-  const [hidden,setHidden] = useState(false);
+  const [hidden,setHidden] = useState(true);
   let classNames = generateClassNames({
     'doc-info-container': true,
     'hidden': hidden
@@ -520,7 +520,7 @@ function DocInfoContainer(props) {
       <i className='material-icons'>navigate_next</i>
     }
     </div>
-    <h1>DOC INFO</h1>
+    <h1>Details</h1>
     <DocInfoForm doc={doc} updateDoc={updateDoc} />
   </div>);
 }

@@ -92,6 +92,9 @@ body {
     &.selected {
       border: 1px solid black;
       cursor: move;
+      &.point {
+        box-shadow: 0 0 5px black;
+      }
     }
   }
 

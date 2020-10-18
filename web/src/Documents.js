@@ -92,7 +92,6 @@ function DocumentsTable(props) {
       <thead>
         <tr>
           <th>Title</th>
-          <th>URL</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -103,8 +102,7 @@ function DocumentsTable(props) {
               return null;
             }
             return (<tr key={doc.id}>
-              <td> {doc.title} </td>
-              <td><Link to={'/annotate/'+doc.id}>{doc.url}</Link></td>
+              <td> {doc.title || doc.url} </td>
               <td>
                 <Link to={'/annotate/'+doc.id}>
                   <i className='material-icons'>create</i>

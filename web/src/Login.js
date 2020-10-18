@@ -30,11 +30,12 @@ export default function LoginPage(props) {
   }
 
   return (<main className='login-page'>
-    <h1>Login Page</h1>
+    <h1>Login</h1>
     <div className='login-form-container'>
       <label>
         Username:
         <input type='text'
+            autoFocus={true}
             name='email'
             value={email}
             onKeyPress={handleKeyPress}
@@ -64,6 +65,6 @@ export function LogoutPage(props) {
   },[]);
 
   return (<main className='logout-page'>
-    <h1>Logout Page</h1>
+    <h1>Logging Out...</h1>
   </main>);
 }

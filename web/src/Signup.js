@@ -7,7 +7,7 @@ import './Signup.scss';
 
 export default function SignupPage(props) {
   return (<main className='signup-page'>
-    <h1>Signup Page</h1>
+    <h1>Signup</h1>
     <SignupForm />
   </main>);
 }
@@ -57,6 +57,7 @@ export function SignupForm(props) {
       <label>
         Username:
         <input type='text'
+            autoFocus={true}
             name='email'
             value={email}
             onKeyPress={handleKeyPress}
