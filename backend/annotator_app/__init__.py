@@ -15,10 +15,6 @@ db.init_app(app)
 security.init_app(app,user_datastore)
 app.app_context().push()
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
-
 from annotator_app.resources.auth import auth_bp
 from annotator_app.resources.users import blueprint as user_bp
 from annotator_app.resources.documents import blueprint as doc_bp
