@@ -206,17 +206,21 @@ function sessionReducer(state = {}, action) {
     }
     case 'LOGIN_START': {
       return {
-        loggingIn: true
+        ...state,
+        loggingIn: true,
       };
     }
     case 'LOGIN_SUCCESS': {
       return {
         ...state,
-        uid: action.payload.id
+        uid: action.payload.id,
+        error: null
       };
     }
     case 'LOGIN_FAILURE': {
       return {
+        ...state,
+        uid: null,
         error: action.payload.error
       };
     }

@@ -43,7 +43,13 @@ export function SignupForm(props) {
     }).catch(error => {
       window.error = error;
       console.error(error);
-      setError(error.response.data.error);
+      let message = "Unspecified error.";
+      if (error.response && error.response.data) {
+        message = error.response.data.error || message;
+      } else {
+        message = error.message || message;
+      }
+      setError(message);
     });
   }
   function handleKeyPress(e) {

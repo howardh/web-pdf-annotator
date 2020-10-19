@@ -1,6 +1,6 @@
 import React from 'react';
 import {useState,useEffect} from 'react';
-import {useDispatch} from 'react-redux';
+import {useDispatch,useSelector} from 'react-redux';
 import { useHistory } from "react-router-dom";
 
 import {login,logout} from './actions/index.js';
@@ -10,7 +10,7 @@ import './Login.scss';
 export default function LoginPage(props) {
   const history = useHistory();
   const dispatch = useDispatch();
-  const [error,setError] = useState('');
+  const error = useSelector(state => state.session.error);
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
 
@@ -20,18 +20,9 @@ export default function LoginPage(props) {
       email: email,
       password: password
     };
-    dispatch(login(email,password,true)).then(response=>{
-      window.response = response;
-      console.log(response);
-      if (response.data.error) {
-        setError(response.data.error);
-      } else {
+    dispatch(login(email,password,true)).then(success => {
+      if (success) {
         history.push('/docs');
-      }
-    }).catch(error => {
-      window.error = error;
-      if (error.data.error) {
-        setError(error.data.error);
       }
     });
   }

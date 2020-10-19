@@ -3,7 +3,7 @@ import {useEffect, useState} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link } from "react-router-dom";
 
-import {formChangeHandler} from './Utils.js';
+import {filterDict,formChangeHandler} from './Utils.js';
 import {documentActions} from './actions/index.js';
 
 import './Documents.scss';
@@ -17,7 +17,10 @@ export default function DocumentsPage(props) {
     userId
   } = props;
   // All documents, including those owned by someone else
-  const documents = useSelector(state => state.documents.entities);
+  const documents = filterDict(
+    useSelector(state => state.documents.entities),
+    e => e && !e.deleted_at
+  );
 
   // Load documents
   useEffect(() => {

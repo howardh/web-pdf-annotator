@@ -271,17 +271,24 @@ export const login = function(email, password, remember){
       {email: email, password: password, permanent: remember},
       {withCredentials: true}
     ).then(function(response){
+      window.loginresponse = response;
       dispatch({ 
         type: 'LOGIN_SUCCESS',
         payload: {id: response.data.id}
       });
-      return response;
+      return true;
     }).catch(function(error){
+      let message = "Unspecified error.";
+      if (error.response && error.response.data) {
+        message = error.response.data.error || message;
+      } else {
+        message = error.message || message;
+      }
       dispatch({ 
         type: 'LOGIN_FAILURE',
-        payload: {error: "Login failure. Try again."}
+        payload: {error: message}
       });
-      return error;
+      return false;
     });
   }
 }
