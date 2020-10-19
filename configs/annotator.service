@@ -1,0 +1,13 @@
+[Unit]
+Description=uWSGI instance to serve PDF annotator
+After=network.target
+
+[Service]
+User={user}
+Group=www-data
+WorkingDirectory={workingdirectory}
+Environment="PATH={workingdirectory}/backend/ENV/bin"
+ExecStart={workingdirectory}/backend/ENV/bin/uwsgi --ini app.ini
+
+[Install]
+WantedBy=multi-user.target

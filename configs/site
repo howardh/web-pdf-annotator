@@ -1,0 +1,13 @@
+server {
+    listen 80;
+    server_name localhost;
+
+    location /api/ {
+        include uwsgi_params;
+        uwsgi_pass unix:{workingdirectory}/backend/app.sock;
+    }
+
+    location / {
+        root {workingdirectory}/web/build;
+    }
+}
