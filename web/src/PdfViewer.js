@@ -668,17 +668,25 @@ export default function PdfAnnotationPage(props) {
           // Type of action being performed from a click and drag.
           // Possible values: move, resize-n, resize-ne, resize-nw, etc.
           dragAction: null,
+          dragStartCoord: null
         };
       },
       eventHandlers: {
         // Handles events on the PDF document body
         pdf: {
           onClick: function() {
-            setToolState({
-              ...toolState,
-              selectedAnnotationId: null
-            });
-            popTool();
+            if (toolState.dragAction) {
+              // This happens if the mouse was dragged out of the screen,
+              // then released, and moved back in. We want to continue the
+              // dragging action.
+              return;
+            } else {
+              setToolState({
+                ...toolState,
+                selectedAnnotationId: null
+              });
+              popTool();
+            }
           },
           onMouseDown: function() {},
           onMouseMove: function() {},
@@ -688,22 +696,37 @@ export default function PdfAnnotationPage(props) {
         // Handles events on the annotation
         annotation: {
           onClick: function(event, data) {
-            setToolState({
-              ...toolState,
-              selectedAnnotationId: data.id,
-              tempPosition: null,
-            });
-          },
-          onMouseDown: function(event, data) {
-            const classNames = event.target.className.split(' ');
-            // Only move if the user selected it first
-            if (classNames.indexOf('selected') !== -1) {
-              const selId = toolState.selectedAnnotationId;
+            if (toolState.dragAction) {
+              // This happens if the mouse was dragged out of the screen,
+              // then released, and moved back in. We want to continue the
+              // dragging action.
+              return;
+            } else {
               setToolState({
                 ...toolState,
-                dragAction: 'move',
-                tempPosition: annotations[selId].position
+                selectedAnnotationId: data.id,
+                tempPosition: null,
               });
+            }
+          },
+          onMouseDown: function(event, data) {
+            if (toolState.dragAction) {
+              // This happens if the mouse was dragged out of the screen,
+              // then released, and moved back in. We want to continue the
+              // dragging action.
+              return;
+            } else {
+              // Start moving annotation if appropriate
+              const classNames = event.target.className.split(' ');
+              // Only move if the user selected it first
+              if (classNames.indexOf('selected') !== -1) {
+                const selId = toolState.selectedAnnotationId;
+                setToolState({
+                  ...toolState,
+                  dragAction: 'move',
+                  tempPosition: annotations[selId].position
+                });
+              }
             }
           },
           onKeyPress: function(event,data) {
@@ -721,15 +744,24 @@ export default function PdfAnnotationPage(props) {
         // Handles events on the annotation's control points
         controlPoint: {
           onMouseDown: function(event, data) {
-            const classNames = event.target.className.split(' ');
-            const directions = ['nw','n','ne','w','e','sw','s','se'];
-            for (let d of directions) {
-              if (classNames.indexOf(d) !== -1) {
-                setToolState({
-                  ...toolState,
-                  dragAction: 'resize-'+d
-                });
-                break;
+            if (toolState.dragAction) {
+              // This happens if the mouse was dragged out of the screen,
+              // then released, and moved back in. We want to continue the
+              // dragging action.
+              return;
+            } else {
+              // Start resizing if appropriate
+              const classNames = event.target.className.split(' ');
+              const directions = ['nw','n','ne','w','e','sw','s','se'];
+              for (let d of directions) {
+                if (classNames.indexOf(d) !== -1) {
+                  setToolState({
+                    ...toolState,
+                    dragAction: 'resize-'+d,
+                    dragStartCoord: data.coords
+                  });
+                  break;
+                }
               }
             }
           },
@@ -856,14 +888,30 @@ export default function PdfAnnotationPage(props) {
           // Store temporarily created annotation as the user is creating
           // it by dragging the mouse.
           tempAnnotation: null,
+          dragStartCoord: null
         };
       },
       eventHandlers: {
         pdf: {
           onClick: function() {
-            popTool();
+            if (toolState.tempAnnotation) {
+              // Continue creating the annotation
+              return
+            } else {
+              popTool();
+            }
           },
-          onMouseDown: function() {},
+          onMouseDown: function(event,data) {
+            if (toolState.tempAnnotation) {
+              // Continue creating the annotation
+              return
+            } else {
+              setToolState({
+                ...toolState,
+                dragStartCoord: data.coords
+              });
+            }
+          },
         },
         annotation: {
           onDoubleClick: handleDoubleClick,
@@ -871,7 +919,8 @@ export default function PdfAnnotationPage(props) {
         controlPoint: {
         },
         onMouseMove: function(event,data) {
-          const {coords,startMouseCoord} = data;
+          const {coords} = data;
+          const startMouseCoord = toolState.dragStartCoord;
           const left   = Math.min(coords[0],startMouseCoord[0]);
           const right  = Math.max(coords[0],startMouseCoord[0]);
           const top    = Math.min(coords[1],startMouseCoord[1]);
@@ -888,7 +937,8 @@ export default function PdfAnnotationPage(props) {
           });
         },
         onMouseUp: function(event,data) {
-          const {coords,startMouseCoord} = data;
+          const {coords} = data;
+          const startMouseCoord = toolState.dragStartCoord;
           if (!startMouseCoord || !coords) {
             return; // Starting coords is none if mousedown happened elsewhere
           }
@@ -908,7 +958,8 @@ export default function PdfAnnotationPage(props) {
           }
           setToolState({
             ...toolState,
-            tempAnnotation: null
+            tempAnnotation: null,
+            dragStartCoord: null
           })
         },
       }
