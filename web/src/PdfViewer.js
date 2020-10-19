@@ -955,6 +955,17 @@ export default function PdfAnnotationPage(props) {
     setToolStateStack([]);
     setToolState(newState);
   }
+  function handleKeyDown(event) { // Undo/Redo Key bindings
+    const z = 90;
+    const y = 89;
+    if (event.ctrlKey) {
+      if (event.which === z) {
+        dispatch(annotationActions['undo']());
+      } else if (event.which === y) {
+        dispatch(annotationActions['redo']());
+      }
+    }
+  }
 
   // Can't render until everything is initialized
   if (toolState === null) {
@@ -964,7 +975,7 @@ export default function PdfAnnotationPage(props) {
     return null;
   }
 
-  return (<main className='annotation-container'>
+  return (<main className='annotation-container' onKeyDown={handleKeyDown}>
     {Object.entries(pages).map(function([pageNum,page],i){
       return <PdfPageContainer key={pageNum}
           activeId={activeId} setActiveId={activateAnnotation}
