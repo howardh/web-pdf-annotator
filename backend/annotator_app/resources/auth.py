@@ -10,7 +10,7 @@ import bcrypt
 import json
 
 from annotator_app.database import User
-from annotator_app.extensions import login_manager, db
+from annotator_app.extensions import db
 
 auth_bp = Blueprint('auth', __name__)
 
