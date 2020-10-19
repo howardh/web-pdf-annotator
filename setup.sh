@@ -10,7 +10,8 @@ username=$(whoami)
 
 # Database
 sudo apt -y install postgresql postgresql-contrib
-sudo -u postgres createuser -PE -s $username
+sudo -u postgres createuser -PE -s $username # Requires user input for password
+sudo -u postgres createdb $username
 
 # Flask Service
 sudo apt -y install python3-pip python3-dev build-essential libssl-dev libffi-dev python3-setuptools python3-virtualenv python3-flask libpcre3-dev
@@ -25,7 +26,6 @@ sed -e "s/{user}/$username/g" -e "s/{workingdirectory}/$pwd/g" ./configs/annotat
 
 sudo systemctl start annotator
 sudo systemctl enable annotator
-cd ..
 
 # Front End
 sudo apt -y install npm
@@ -37,7 +37,7 @@ cd ..
 
 # Nginx
 
-apt -y install nginx
+sudo apt -y install nginx
 
 sed -e "s/{workingdirectory}/$pwd/g" ./configs/site | sudo tee /etc/nginx/sites-available/annotator
 sudo ln -s /etc/nginx/sites-available/annotator /etc/nginx/sites-enabled
