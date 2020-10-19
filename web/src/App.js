@@ -22,6 +22,20 @@ import './App.scss';
 function App() {
   const dispatch = useDispatch();
   const userId = useSelector(state => state.session.uid);
+  const dirty = useSelector(
+    state =>
+      state.documents.dirtyEntities.size > 0 ||
+      state.annotations.dirtyEntities.size > 0
+  );
+
+  useEffect(()=>{ // Prevent leaving unsaved data
+    if (dirty) {
+      window.onbeforeunload = () => true;
+      return ()=>{
+        window.onbeforeunload = () => null;
+      };
+    }
+  },[dirty]);
 
   useEffect(()=>{
     dispatch(updateSession());
