@@ -164,7 +164,7 @@ function AnnotationLayer(props) {
       selected = true;
       ann = {
         ...ann,
-        position: toolState.tempPosition
+        position: toolState.tempPosition || ann.position
       }
     }
     function onClick(event) {
@@ -539,19 +539,19 @@ function DocInfoForm(props) {
   return (<div className='doc-info-form'>
     <label>
       <span>Title</span>
-      <input type='text' name='title' value={doc['title']} onChange={handleChange} />
+      <input type='text' name='title' value={doc['title'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>Authors</span>
-      <input type='text' name='author' value={doc['author']} onChange={handleChange} />
+      <input type='text' name='author' value={doc['author'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>URL</span>
-      <input type='text' name='url' value={doc['url']} onChange={handleChange} />
+      <input type='text' name='url' value={doc['url'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>Bibtex</span>
-      <textarea name='bibtex' value={doc['bibtex']} onChange={handleChange} />
+      <textarea name='bibtex' value={doc['bibtex'] || ''} onChange={handleChange} />
     </label>
   </div>);
 }
@@ -578,7 +578,7 @@ export default function PdfAnnotationPage(props) {
   const annotations = useSelector(
     state => filterDict( 
       state.annotations.entities,
-      ann => ann && ann.doc_id === parseInt(docId)
+      ann => !ann.deleted_at && ann.doc_id === parseInt(docId)
     )
   );
   const [activeId, setActiveId] = useState(null);
@@ -596,6 +596,7 @@ export default function PdfAnnotationPage(props) {
 
   // CRUD Functions
   function createAnnotation(ann) {
+    dispatch(annotationActions['saveCheckpoint']());
     ann['blob'] = "# Notes\nWrite your notes here";
     // Parser to convert blob into HTML
     // Possible values: text, commonmark
@@ -608,12 +609,15 @@ export default function PdfAnnotationPage(props) {
     });
   }
   function updateAnnotation(id, ann) {
+    dispatch(annotationActions['saveCheckpoint']());
     dispatch(annotationActions['update'](ann));
   }
   function deleteAnnotation(id) {
+    dispatch(annotationActions['saveCheckpoint']());
     dispatch(annotationActions['deleteSingle'](id));
   }
   function updateDoc(id, doc) {
+    dispatch(documentActions['saveCheckpoint']());
     dispatch(documentActions['update'](doc));
   }
 
@@ -687,16 +691,18 @@ export default function PdfAnnotationPage(props) {
             setToolState({
               ...toolState,
               selectedAnnotationId: data.id,
-              tempPosition: annotations[data.id].position
+              tempPosition: null,
             });
           },
           onMouseDown: function(event, data) {
             const classNames = event.target.className.split(' ');
             // Only move if the user selected it first
             if (classNames.indexOf('selected') !== -1) {
+              const selId = toolState.selectedAnnotationId;
               setToolState({
                 ...toolState,
-                dragAction: 'move'
+                dragAction: 'move',
+                tempPosition: annotations[selId].position
               });
             }
           },
@@ -799,11 +805,15 @@ export default function PdfAnnotationPage(props) {
         },
         onMouseUp: function(event,data) {
           const selId = toolState.selectedAnnotationId;
-          if (selId !== null && annotations[selId] &&
-              annotations[selId].position !== toolState.tempPosition) {
+          if (selId !== null && annotations[selId] && toolState.tempPosition) {
             updateAnnotation(selId, {
               ...annotations[selId],
               position: toolState.tempPosition
+            });
+            setToolState({
+              ...toolState,
+              dragAction: null,
+              tempPosition: null
             });
           }
           setToolState({
@@ -879,6 +889,9 @@ export default function PdfAnnotationPage(props) {
         },
         onMouseUp: function(event,data) {
           const {coords,startMouseCoord} = data;
+          if (!startMouseCoord || !coords) {
+            return; // Starting coords is none if mousedown happened elsewhere
+          }
           const left   = Math.min(coords[0],startMouseCoord[0]);
           const right  = Math.max(coords[0],startMouseCoord[0]);
           const top    = Math.min(coords[1],startMouseCoord[1]);
@@ -983,6 +996,12 @@ export default function PdfAnnotationPage(props) {
       </button>
       <button onClick={zoomOut}>
         -
+      </button>
+      <button onClick={()=>dispatch(annotationActions['undo']())}>
+        Undo
+      </button>
+      <button onClick={()=>dispatch(annotationActions['redo']())}>
+        Redo
       </button>
     </div>
   </main>);

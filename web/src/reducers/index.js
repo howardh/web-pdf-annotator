@@ -5,14 +5,16 @@ import {
 
 function createReducer(entityName) {
   let initialState = {
-    entities: {},
-    by: {},
-    dirtyEntities: new Set() // IDs of entries that were modified
+    entities: {}, // Present entities
+    dirtyEntities: new Set(), // IDs of entries that were modified
+    // Undo/Redo variables
+    past: [],
+    future: [],
+    changed: new Set() 
   }
   return function(state = initialState, action) {
     switch (action.type) {
       case 'FETCH_'+entityName+'_SUCCESS': {
-        console.log(action);
         let entities = action.payload.entities;
         if (entities) {
           return {
@@ -24,22 +26,37 @@ function createReducer(entityName) {
         }
       }
       case 'CREATE_'+entityName+'_SUCCESS': {
-        let newEntity = action.payload.data;
-        let by = {...state.by};
-        for (let props in by) {
-          let key = newEntity[props];
-          if (key in by[props]) {
-            by[props] = {
-              ...by[props],
-              [key]: [...by[props][key], newEntity.id]
+        let entities = action.payload.entities;
+        if (entities) {
+          // Update set of changed entities for unto/redo
+          let changed = new Set(state.changed);
+          let deletedNewEntities = {};
+          for (let [k,entity] of Object.entries(entities)) {
+            changed.add(k);
+            deletedNewEntities[k] = {
+              ...entity,
+              // Date not exactly correct, but this isn't important
+              deleted_at: new Date().toISOString().substr(0,10)
             };
           }
+          let newPast = state.past.map(function(p) {
+            return {
+              entities: {
+                ...p.entities,
+                ...deletedNewEntities
+              },
+              changed: p.changed
+            };
+          });
+          // Update state
+          return {
+            ...state,
+            past: newPast,
+            changed
+          };
+        } else {
+          return state;
         }
-        return {
-          ...state,
-          entities: {...state.entities, [newEntity.id]: newEntity},
-          by: by
-        };
       }
       case 'UPDATE_'+entityName+'_START': {
         let newEntity = action.payload.data;
@@ -47,6 +64,8 @@ function createReducer(entityName) {
         // Add to set of dirty entries
         let dirtyEntities = new Set(state.dirtyEntities);
         dirtyEntities.add(id);
+        let changed = new Set(state.changed);
+        changed.add(id);
         // Look for changed properties
         let oldEntity = state.entities[id];
         let changedProps = [];
@@ -55,17 +74,11 @@ function createReducer(entityName) {
             changedProps.push(key);
           }
         }
-        // Update 'by'
-        let by = {...state.by};
-        changedProps.forEach(function(key){
-          //TODO: Remove only by[key][oldEntity[key]] and by[key][newEntity[key]]
-          by[key] = {};
-        });
         // Create new state
         return {...state,
           entities: {...state.entities, [id]: newEntity},
-          by: by,
-          dirtyEntities: dirtyEntities
+          dirtyEntities: dirtyEntities,
+          changed: changed
         };
       }
       case 'UPDATE_'+entityName+'_SUCCESS': {
@@ -95,26 +108,82 @@ function createReducer(entityName) {
         filteredKeys.forEach(function(key){
           entities[key] = state.entities[key];
         });
-        // Remove matching entity IDs from `by`
-        let by = {...state.by};
-        Object.keys(state.by).forEach(function(prop){
-          let updatedBy = {...state.by[prop]};
-          for (let id of deletedIds) {
-            let entity = state.entities[id];
-            if (entity[prop] in updatedBy) {
-              updatedBy[entity[prop]] = updatedBy[entity[prop]].filter(x => x !== id);
-            }
-          }
-          by[prop] = updatedBy;
-        });
         return {
           ...state,
           entities: entities,
-          by: by
         };
       }
       case 'CLEAR_'+entityName: {
         return initialState;
+      }
+      case 'SAVE_CHECKPOINT_'+entityName: {
+        const max_history_size = 20;
+        const {
+          past,entities,future,changed
+        } = state;
+        const present = {entities,changed}
+        if (past.length > max_history_size) {
+          return {
+            ...state,
+            past: past.slice(0,-1)+[present],
+            future: [],
+            changed: new Set()
+          }
+        } else {
+          return {
+            ...state,
+            past: [...past, present],
+            future: [],
+            changed: new Set()
+          }
+        }
+      }
+      case 'CLEAR_HISTORY_'+entityName: {
+        return {
+          ...state,
+          past: [],
+          future: [],
+          changed: new Set()
+        }
+      }
+      case 'UNDO_'+entityName: {
+        const {
+          past,entities,future,changed
+        } = state;
+        const present = {entities,changed}
+
+        if (past.length === 0) {
+          return state;
+        }
+        return {
+          ...state,
+          entities: past[past.length-1].entities,
+          changed: past[past.length-1].changed,
+          past: past.slice(0,-1),
+          future: [...future,present],
+          dirtyEntities: new Set([...changed,...state.dirtyEntities]),
+        };
+      }
+      case 'REDO_'+entityName: {
+        const {
+          past,entities,future,changed
+        } = state;
+        const present = {entities,changed}
+
+        if (future.length === 0) {
+          return state;
+        }
+        return {
+          ...state,
+          entities: future[future.length-1].entities,
+          future: future.slice(0,-1),
+          past: [...past,present],
+          changed: future[future.length-1].changed,
+          dirtyEntities: new Set([
+            ...future[future.length-1].changed,
+            ...state.dirtyEntities
+          ]),
+        };
       }
       default:
         return state;

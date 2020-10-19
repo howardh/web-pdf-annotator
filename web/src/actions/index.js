@@ -27,6 +27,16 @@ function createActions(dataType, path, autosortProps) {
         });
       }
     }
+    if (response.data.new_entities) {
+      for (let [eType,entities] of Object.entries(response.data.new_entities)) {
+        dispatch({ 
+          type: 'CREATE_'+toUpperCaseSnakeCase(eType)+'_SUCCESS',
+          payload: {
+            entities: entities
+          }
+        });
+      }
+    }
     if (response.data.summary) {
       dispatch({ 
         type: 'FETCH_'+dataType+'_SUCCESS',
@@ -199,7 +209,35 @@ function createActions(dataType, path, autosortProps) {
           }
         });
       }
-    }
+    },
+    clearHistory: function() {
+      return function(dispatch) {
+        dispatch({
+          type: 'CLEAR_HISTORY_'+dataType
+        });
+      }
+    },
+    saveCheckpoint: function() {
+      return function(dispatch) {
+        dispatch({
+          type: 'SAVE_CHECKPOINT_'+dataType
+        });
+      }
+    },
+    undo: function() {
+      return function(dispatch) {
+        dispatch({
+          type: 'UNDO_'+dataType
+        });
+      }
+    },
+    redo: function() {
+      return function(dispatch) {
+        dispatch({
+          type: 'REDO_'+dataType
+        });
+      }
+    },
   }
 }
 

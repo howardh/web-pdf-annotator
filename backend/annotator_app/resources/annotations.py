@@ -2,6 +2,7 @@ from flask import Blueprint
 from flask_restful import Api
 from flask_login import current_user
 
+import datetime
 import json
 
 from annotator_app.database import Annotation
@@ -22,6 +23,8 @@ def update_object(entity,data):
             entity.__setattr__(k,data[k])
     if 'position' in data:
         entity.position = json.dumps(data['position'])
+    if 'deleted_at' in data and data['deleted_at'] is not None:
+        entity.deleted_at = datetime.datetime.strptime(data['deleted_at'], "%Y-%m-%d").date()
     return entity
 
 class AnnotationList(ListEndpoint):

@@ -10,10 +10,12 @@ api = Api(blueprint)
 class DocumentList(ListEndpoint):
     class Meta:
         model = Document
+        filterable_params = ['id', 'user_id', 'title']
 
 class DocumentEndpoint(EntityEndpoint):
     class Meta:
         model = Document
+        filterable_params = ['id', 'user_id', 'title']
 
 api.add_resource(DocumentList, '/documents')
 api.add_resource(DocumentEndpoint, '/documents/<int:entity_id>')

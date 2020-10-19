@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from flasgger import SwaggerView
 
 from collections import defaultdict
+import datetime
 
 from annotator_app.extensions import db
 
@@ -16,17 +17,27 @@ def entities_to_dict(entities):
     return output
 
 class ListEndpoint(Resource):
+    """
+    Meta:
+        model: Class representing a SQLAlchemy model
+        filterable_params: List of columns by which the data can be filtered.
+        to_object: dict -> entity
+            Function that creates an entity from a dictionary.
+        update_object: entity, dict -> entity
+            Function that updates the entity with new data in the form of a dictionary.
+    """
     def get(self):
         # Get filters from query parameters
-        filterable_params = ['id', 'user_id', 'title']
         filter_params = {}
-        for p in filterable_params:
-            val = request.args.get(p)
-            if val is not None:
-                filter_params[p] = val
+        if getattr(self.Meta,'filterable_params',None) is not None:
+            for p in self.Meta.filterable_params:
+                val = request.args.get(p)
+                if val is not None:
+                    filter_params[p] = val
         # Query database
         entities = db.session.query(self.Meta.model) \
                 .filter_by(user_id=current_user.get_id()) \
+                .filter_by(deleted_at=None) \
                 .filter_by(**filter_params) \
                 .all()
         print(entities)
@@ -46,8 +57,9 @@ class ListEndpoint(Resource):
         db.session.commit()
 
         return {
-            'message': 'Document created',
-            'entities': entities_to_dict([entity])
+            'message': 'Entity created',
+            'entities': entities_to_dict([entity]),
+            'new_entities': entities_to_dict([entity]),
         }, 200
 
 class EntityEndpoint(Resource):
@@ -70,11 +82,17 @@ class EntityEndpoint(Resource):
                 .filter_by(user_id=current_user.get_id()) \
                 .first()
 
+        if entity.deleted_at is not None:
+            entity.deleted_at = None # Undelete
+
         if getattr(self.Meta,'update_object',None) is not None:
             entity = self.Meta.update_object(entity,data)
         else:
             for k,v in data.items():
-                entity.__setattr__(k,v)
+                if k == 'deleted_at' and v is not None:
+                    entity.deleted_at = datetime.datetime.strptime(v, "%Y-%m-%d").date()
+                else:
+                    entity.__setattr__(k,v)
 
         if entity is None:
             return {'error': 'No entity found with this ID.'}, 404
@@ -96,15 +114,12 @@ class EntityEndpoint(Resource):
                 "error": "Unable to find entity with ID %d." % entity_id
             }, 404
 
-        db.session.delete(entity)
+        entity.deleted_at = datetime.date.today()
+
         db.session.flush()
         db.session.commit()
 
         return {
             "message": "Deleted successfully",
-            "entities": {
-                self.Meta.model.__tablename__: {
-                    entity_id: None
-                }
-            }
+            'entities': entities_to_dict([entity])
         }, 200

@@ -46,6 +46,7 @@ class Document(db.Model):
     title = Column(String)
     author = Column(String)
     bibtex = Column(String)
+    deleted_at = Column(Date)
     annotations = db.relationship('Annotation', lazy='dynamic')
 
     def to_dict(self):
@@ -56,6 +57,7 @@ class Document(db.Model):
                 'title': self.title,
                 'author': self.author,
                 'bibtex': self.bibtex,
+                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
         }
 
 class Annotation(db.Model):
@@ -68,6 +70,7 @@ class Annotation(db.Model):
     blob = Column(String)
     parser = Column(String)
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
+    deleted_at = Column(Date)
 
     def to_dict(self):
         return {
@@ -78,7 +81,8 @@ class Annotation(db.Model):
                 'type': self.type,
                 'blob': self.blob,
                 'position': json.loads(self.position),
-                'parser': self.parser
+                'parser': self.parser,
+                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
         }
 
 # Setup Flask-Security
