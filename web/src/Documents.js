@@ -48,6 +48,9 @@ function NewDocumentForm(props) {
   const [values,setValues] = useState(initialValues);
   const handleChange = formChangeHandler(values,setValues);
   function createDoc() {
+    if (!values.url) {
+      return;
+    }
     dispatch(documentActions['create'](values)).then(
       response => {
         setValues(initialValues);
