@@ -46,7 +46,7 @@ export default function LoginPage(props) {
     <div className='login-form-container'>
       <div className='error-message'>{error}</div>
       <label>
-        Username:
+        Email:
         <input type='text'
             autoFocus={true}
             name='email'

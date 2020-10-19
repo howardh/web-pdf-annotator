@@ -58,7 +58,7 @@ export function SignupForm(props) {
         {error}
       </div>
       <label>
-        Username:
+        Email:
         <input type='text'
             autoFocus={true}
             name='email'

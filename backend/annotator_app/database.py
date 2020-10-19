@@ -85,5 +85,34 @@ class Annotation(db.Model):
                 'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
         }
 
+documents_tags = db.Table('documents_tags',
+        db.Column('document_id', db.Integer(), db.ForeignKey('documents.id')),
+        db.Column('tag_id', db.Integer(), db.ForeignKey('tags.id')))
+
+annotations_tags = db.Table('annotations_tags',
+        db.Column('annotation_id', db.Integer(), db.ForeignKey('annotations.id')),
+        db.Column('tag_id', db.Integer(), db.ForeignKey('tags.id')))
+
+class Tag(db.Model):
+    __tablename__ = 'tags'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    name = Column(String)
+    description = Column(String)
+    deleted_at = Column(Date)
+
+    def to_dict(self):
+        return {
+                'id': self.id,
+                'user_id': self.user_id,
+                'doc_id': self.doc_id,
+                'page': self.page,
+                'type': self.type,
+                'blob': self.blob,
+                'position': json.loads(self.position),
+                'parser': self.parser,
+                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
+        }
+
 # Setup Flask-Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
