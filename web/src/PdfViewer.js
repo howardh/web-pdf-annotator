@@ -1046,7 +1046,46 @@ export default function PdfAnnotationPage(props) {
       } else if (event.key === 'y') {
         dispatch(annotationActions['redo']());
       }
+    } else {
+      console.log(event.key);
+      if (event.key === 'ArrowRight') {
+        scrollToNextPage();
+      } else if (event.key === 'ArrowLeft') {
+        scrollToPrevPage();
+      }
     }
+  }
+  function scrollToNextPage() {
+    const margin = 5;
+    const pageHeights = Object.values(pages).map(
+      page => page.getViewport({scale: pdfScale}).height+margin
+    ); // FIXME: This assumes we iterate the object in the order of the pages.
+    let scrollTo = 0;
+    let pos = window.scrollY;
+    for (let ph of pageHeights) {
+      scrollTo += ph;
+      if (pos < ph) {
+        break;
+      }
+      pos -= ph;
+    }
+    window.scrollTo(window.scrollX,scrollTo);
+  }
+  function scrollToPrevPage() {
+    const margin = 5;
+    const pageHeights = Object.values(pages).map(
+      page => page.getViewport({scale: pdfScale}).height+margin
+    ); // FIXME: This assumes we iterate the object in the order of the pages.
+    let scrollTo = 0;
+    let pos = window.scrollY;
+    for (let ph of pageHeights) {
+      if (pos <= ph) {
+        break;
+      }
+      scrollTo += ph;
+      pos -= ph;
+    }
+    window.scrollTo(window.scrollX,scrollTo);
   }
 
   // Can't render until everything is initialized
