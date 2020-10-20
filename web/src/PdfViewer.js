@@ -597,6 +597,15 @@ export default function PdfAnnotationPage(props) {
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
 
+  // Document title
+  useEffect(() => {
+    if (!doc) {
+      document.title = 'PDF Annotator Tool';
+    } else {
+      document.title = doc.title || doc.url || 'PDF Annotator Tool';
+    }
+  },[doc]);
+
   // Load PDF URL and annotations
   useEffect(()=>{
     if (!docId) {
