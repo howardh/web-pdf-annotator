@@ -399,9 +399,22 @@ function PdfViewer(props) {
   } = props;
   const ref = useRef(null);
 
+  // Needs to be rerendered if the page or scale changes
+  const [needsRender,setNeedsRender] = useState(false);
+  useEffect(() => {
+    setNeedsRender(true);
+  }, [page, scale]);
+
   // Render PDF
+  const [doneRendering,setDoneRendering] = useState(true);
   useEffect(() => {
     if (!ref.current || !page) {
+      return;
+    }
+    if (!doneRendering) {
+      return;
+    }
+    if (!needsRender) {
       return;
     }
     var viewport = page.getViewport({ scale: scale, });
@@ -414,9 +427,13 @@ function PdfViewer(props) {
       canvasContext: context,
       viewport: viewport
     };
-    page.render(renderContext);
+    page.render(renderContext).promise.then(x => {
+      setDoneRendering(true);
+    });
+    setNeedsRender(false);
+    setDoneRendering(false);
     // TODO: Render text layer
-  }, [page, ref.current, scale]);
+  }, [ref.current, needsRender, doneRendering]);
 
   return (
     <canvas ref={ref}></canvas>
