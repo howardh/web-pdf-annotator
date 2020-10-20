@@ -4,7 +4,7 @@ import {useDispatch,useSelector} from 'react-redux';
 import { useParams } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
-import {filterDict,generateClassNames,formChangeHandler} from './Utils.js';
+import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
 import './PdfViewer.scss';
@@ -141,10 +141,7 @@ function AnnotationLayer(props) {
         callback(event, data);
       }
     } else if (classNames.indexOf('annotation') !== -1) {
-      let callback = eventHandlers.annotation.onKeyPress;
-      if (callback) {
-        callback(event, data);
-      }
+      // Handled by Annotation DOM
     } else if (classNames.indexOf('control') !== -1) {
       let callback = eventHandlers.controlPoint.onKeyPress;
       if (callback) {
@@ -176,6 +173,19 @@ function AnnotationLayer(props) {
         callback(event, {id: key});
       }
     }
+    function onKeyPress(event) {
+      if (key === 'temp') {
+        return;
+      }
+      let data = {
+        id: key,
+        page
+      }
+      let callback = eventHandlers.annotation.onKeyPress;
+      if (callback) {
+        callback(event, data);
+      }
+    }
     switch (ann.type) {
       case 'point':
         style = {
@@ -188,6 +198,7 @@ function AnnotationLayer(props) {
           key={key}
           style={style}
           onClick={onClick}
+          onKeyPress={onKeyPress}
           onDoubleClick={e => onDoubleClick(e,ann)}>
         </div>;
       case 'rect':
@@ -203,6 +214,7 @@ function AnnotationLayer(props) {
           key={key}
           style={style}
           onClick={onClick}
+          onKeyPress={onKeyPress}
           onDoubleClick={e => onDoubleClick(e,ann)}>
           {
             selected &&
@@ -668,7 +680,8 @@ export default function PdfAnnotationPage(props) {
           // Type of action being performed from a click and drag.
           // Possible values: move, resize-n, resize-ne, resize-nw, etc.
           dragAction: null,
-          dragStartCoord: null
+          dragStartCoord: null,
+          pageBoundaries: null
         };
       },
       eventHandlers: {
@@ -730,14 +743,18 @@ export default function PdfAnnotationPage(props) {
             }
           },
           onKeyPress: function(event,data) {
-            const DELETE = 46;
-            if (event.which === DELETE) {
-              deleteAnnotation(toolState.selectedAnnotationId);
-              setToolState({
-                ...toolState,
-                selectedAnnotationId: null,
-                tempPosition: null
-              });
+            if (event.key === 'Delete') {
+              const selId = toolState.selectedAnnotationId;
+              if (selId && selId !== data.id) {
+                console.error('Mismatch between selected ID and focused DOM element. Not deleting anything until the conflict is resolved.');
+              } else {
+                deleteAnnotation(data.id);
+                setToolState({
+                  ...toolState,
+                  selectedAnnotationId: null,
+                  tempPosition: null
+                });
+              }
             }
           },
         },
@@ -778,29 +795,34 @@ export default function PdfAnnotationPage(props) {
           const deltaX = coords[0]-startMouseCoord[0];
           const deltaY = coords[1]-startMouseCoord[1];
           const selId = toolState.selectedAnnotationId;
+          const vp = pages[annotations[selId].page].getViewport({scale:1});
           if (toolState.dragAction === 'move') {
             const selType = annotations[selId].type;
+            const pos = annotations[selId].position;
             switch (selType) {
               case 'point':
+                // Update temp annotation
                 setToolState({
                   ...toolState,
                   tempPosition: {
                     coords: [
-                      annotations[selId].position.coords[0]+deltaX,
-                      annotations[selId].position.coords[1]+deltaY
+                      clip(pos.coords[0]+deltaX,0,vp.width),
+                      clip(pos.coords[1]+deltaY,0,vp.height)
                     ]
                   }
                 });
                 break;
               case 'rect':
+                const w = pos.box[1]-pos.box[3];
+                const h = pos.box[2]-pos.box[0];
                 setToolState({
                   ...toolState,
                   tempPosition: {
                     box: [
-                      annotations[selId].position.box[0]+deltaY,
-                      annotations[selId].position.box[1]+deltaX,
-                      annotations[selId].position.box[2]+deltaY,
-                      annotations[selId].position.box[3]+deltaX
+                      clip(pos.box[0]+deltaY,0,vp.height-h),
+                      clip(pos.box[1]+deltaX,w,vp.width),
+                      clip(pos.box[2]+deltaY,h,vp.height),
+                      clip(pos.box[3]+deltaX,0,vp.width-w)
                     ]
                   }
                 });
@@ -915,6 +937,17 @@ export default function PdfAnnotationPage(props) {
         },
         annotation: {
           onDoubleClick: handleDoubleClick,
+          onMouseDown: function(event,data) {
+            if (toolState.tempAnnotation) {
+              // Continue creating the annotation
+              return
+            } else {
+              setToolState({
+                ...toolState,
+                dragStartCoord: data.coords
+              });
+            }
+          },
         },
         controlPoint: {
         },
@@ -1007,12 +1040,10 @@ export default function PdfAnnotationPage(props) {
     setToolState(newState);
   }
   function handleKeyDown(event) { // Undo/Redo Key bindings
-    const z = 90;
-    const y = 89;
     if (event.ctrlKey) {
-      if (event.which === z) {
+      if (event.key === 'z') {
         dispatch(annotationActions['undo']());
-      } else if (event.which === y) {
+      } else if (event.key === 'y') {
         dispatch(annotationActions['redo']());
       }
     }

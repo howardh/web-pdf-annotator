@@ -24,6 +24,12 @@ export function filterDict(dict,filterCondition) {
     return acc;
   }, {});
 }
+// Math
+export function clip(val,min,max) {
+  if (val < min) return min;
+  if (val > max) return max;
+  return val;
+}
 // Store reducer utils
 class StatusTreeNode {
   constructor(key, children) {
