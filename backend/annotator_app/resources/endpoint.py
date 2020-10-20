@@ -1,7 +1,6 @@
 from flask import request
 from flask_restful import Resource
-import flask_login
-from flask_login import login_required, current_user
+from flask_security import current_user
 from flasgger import SwaggerView
 
 from collections import defaultdict

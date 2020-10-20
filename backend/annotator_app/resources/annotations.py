@@ -1,6 +1,6 @@
 from flask import Blueprint
 from flask_restful import Api
-from flask_login import current_user
+from flask_security import current_user
 
 import datetime
 import json

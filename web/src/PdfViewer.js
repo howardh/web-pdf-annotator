@@ -464,18 +464,20 @@ function PdfPageContainer(props) {
   );
 }
 
-function usePdfPages(pdfUrl) {
+function usePdfPages(doc) {
   const [pdf,setPdf] = useState(null);
   const [pages,setPages] = useState({});
   const [progress,setProgress] = useState(null);
+  const [error,setError] = useState(null);
   const pagesRef = useRef({}); // Ref is needed because multiple setPages in one update cycle will overwrite each other.
   useEffect(()=>{
-    if (!pdfUrl) {
+    if (!doc) {
       return;
     }
-    window.pdfjsLib.getDocument(
-      pdfUrl
-    ).promise .then(pdf => {
+    window.pdfjsLib.getDocument({
+      url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+doc.id+'/pdf',
+      withCredentials: true
+    }).promise .then(pdf => {
       setPdf(pdf);
       setProgress({
         totalPages: pdf.numPages,
@@ -483,8 +485,13 @@ function usePdfPages(pdfUrl) {
       });
     }).catch(error => {
       console.error(error);
+      if (error.response && error.response.data && error.response.data.message) {
+        setError(error.response.data.message);
+      } else {
+        setError(error.message || "Error Loading PDF");
+      }
     });
-  },[pdfUrl]);
+  },[doc]);
   useEffect(()=>{
     if (!pdf) {
       return;
@@ -506,7 +513,8 @@ function usePdfPages(pdfUrl) {
   return {
     pdf,
     pages,
-    progress
+    progress,
+    error
   }
 }
 
@@ -582,9 +590,13 @@ export default function PdfAnnotationPage(props) {
   const dispatch = useDispatch();
 
   const doc = useSelector(state => state.documents.entities[docId]);
-  const pdfUrl = doc ? doc.url : null;
 
-  const {pdf,pages,progress:pagesLoadingProgress} = usePdfPages(pdfUrl);
+  const {
+    pdf,
+    pages,
+    progress:pagesLoadingProgress,
+    error:pagesLoadingError
+  } = usePdfPages(doc);
 
   const [pdfScale,setPdfScale] = useState(2);
   const annotations = useSelector(
@@ -1103,6 +1115,12 @@ export default function PdfAnnotationPage(props) {
   }
   if (pdf && Object.entries(pages).length !== pdf.numPages) {
     return null;
+  }
+  if (pagesLoadingError) {
+    window.error = pagesLoadingError;
+    return (<main className='annotation-container'>
+      {pagesLoadingError}
+    </main>);
   }
 
   return (<main className='annotation-container' onKeyDown={handleKeyDown}>
