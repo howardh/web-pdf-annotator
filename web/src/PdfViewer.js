@@ -505,7 +505,7 @@ function usePdfPages(doc) {
         setError(error.message || "Error Loading PDF");
       }
     });
-  },[doc]);
+  },[doc && doc.id]);
   useEffect(()=>{
     if (!pdf) {
       return;
@@ -1129,6 +1129,7 @@ export default function PdfAnnotationPage(props) {
     window.error = pagesLoadingError;
     return (<main className='annotation-container'>
       {pagesLoadingError}
+      <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     </main>);
   }
 

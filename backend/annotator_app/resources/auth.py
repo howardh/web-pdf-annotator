@@ -73,6 +73,7 @@ def get_current_session():
           type: object
     """
     try:
+        breakpoint()
         print(current_user)
         if current_user.id is not None:
             return json.dumps({'id': current_user.id}), 200

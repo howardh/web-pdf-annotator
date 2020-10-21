@@ -13,8 +13,6 @@ from annotator_app.resources.endpoint import ListEndpoint, EntityEndpoint
 blueprint = Blueprint('documents', __name__)
 api = Api(blueprint)
 
-upload_directory = app.config['UPLOAD_DIRECTORY']
-
 class DocumentList(ListEndpoint):
     class Meta:
         model = Document
@@ -49,7 +47,7 @@ class DocumentPdfEndpoint(Resource):
                 'error': 'File too large.'
             }, 413
 
-        file_name = os.path.join(upload_directory,'%d.pdf'%entity_id)
+        file_name = os.path.join(app.config['UPLOAD_DIRECTORY'],'%d.pdf'%entity_id)
         with open(file_name,'wb') as f:
             f.write(response.content)
         return send_file(
