@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import {useEffect, useState} from 'react';
@@ -22,6 +23,8 @@ import './App.scss';
 function App() {
   const dispatch = useDispatch();
   const userId = useSelector(state => state.session.uid);
+  const confirmed = useSelector(state => state.session.confirmed);
+
   const dirty = useSelector(
     state =>
       state.documents.dirtyEntities.size > 0 ||
@@ -45,23 +48,23 @@ function App() {
     <Router>
       <Switch>
         <Route path="/signup">
-          <Navigation userId={userId} />
+          <Navigation userId={userId} confirmed={confirmed} />
           <SignupPage />
         </Route>
         <Route path="/login">
-          <Navigation userId={userId} />
+          <Navigation userId={userId} confirmed={confirmed} />
           <LoginPage />
         </Route>
         <Route path="/logout">
           <LogoutPage />
         </Route>
         <Route path="/docs">
-          <Navigation userId={userId} />
+          <Navigation userId={userId} confirmed={confirmed} />
           <DocumentsPage userId={userId} />
         </Route>
         <Route path="/annotate/:docId" component={PdfAnnotationPage} />
         <Route path="/">
-          <Navigation userId={userId} />
+          <Navigation userId={userId} confirmed={confirmed} />
           <LandingPage />
         </Route>
       </Switch>
@@ -71,7 +74,8 @@ function App() {
 
 function Navigation(props) {
   const {
-    userId
+    userId,
+    confirmed
   } = props;
   if (userId) {
     return (<nav>
@@ -90,6 +94,45 @@ function Navigation(props) {
       </span>
     </nav>);
   }
+}
+
+export function EmailVerificationWarning(props) {
+  const [sent,setSent] = useState(false);
+  const [error,setError] = useState(null);
+  function resend() {
+    return axios.post(
+      process.env.REACT_APP_SERVER_ADDRESS+"/auth/resend_confirmation",
+      {},
+      {withCredentials: true}
+    ).then(function(response){
+      setSent(true);
+    }).catch(function(error){
+      let message = "Unspecified error.";
+      if (error.response && error.response.data) {
+        message = error.response.data.error || message;
+      } else {
+        message = error.message || message;
+      }
+      setError(message);
+    });
+  }
+  if (sent) {
+    return <span className='email-verification-warning'>Verification email sent!</span>
+  }
+  if (error) {
+    return (<span className='email-verification-warning'>
+      {error}
+      <button onClick={resend}>
+        Resend Code
+      </button>
+    </span>);
+  }
+  return (<span className='email-verification-warning'>
+    <p>Your email has not been verified.</p>
+    <button onClick={resend}>
+      Resend Code
+    </button>
+  </span>);
 }
 
 export default App;

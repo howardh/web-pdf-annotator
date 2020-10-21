@@ -196,7 +196,8 @@ function sessionReducer(state = {}, action) {
     case 'UPDATE_SESSION_SUCCESS': {
       if (isFinite(action.payload.id)) {
         return {
-          uid: action.payload.id
+          uid: action.payload.id,
+          confirmed: action.payload.confirmed,
         };
       } else {
         return {
@@ -214,6 +215,7 @@ function sessionReducer(state = {}, action) {
       return {
         ...state,
         uid: action.payload.id,
+        confirmed: action.payload.confirmed,
         error: null
       };
     }
@@ -221,6 +223,7 @@ function sessionReducer(state = {}, action) {
       return {
         ...state,
         uid: null,
+        confirmed: null,
         error: action.payload.error
       };
     }

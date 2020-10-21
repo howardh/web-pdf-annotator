@@ -274,7 +274,7 @@ export const login = function(email, password, remember){
       window.loginresponse = response;
       dispatch({ 
         type: 'LOGIN_SUCCESS',
-        payload: {id: response.data.id}
+        payload: response.data
       });
       return true;
     }).catch(function(error){

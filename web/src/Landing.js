@@ -2,15 +2,20 @@ import React from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link } from "react-router-dom";
 import {SignupForm} from './Signup.js';
+import {EmailVerificationWarning} from './App.js';
 
 import './Landing.scss';
 
 export default function LandingPage(props) {
   const userId = useSelector(state => state.session.uid);
+  const confirmed = useSelector(state => state.session.confirmed);
 
   if (userId) {
     return (<main className='landing-page'>
       <h1>PDF Annotation Tool</h1>
+      {
+        !confirmed && <EmailVerificationWarning />
+      }
     </main>);
   } else {
     return (<main className='landing-page'>

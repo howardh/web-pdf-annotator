@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from flasgger import SwaggerView
 import flask_security
 
+import re
 import datetime
 import os
 import base64
@@ -53,6 +54,14 @@ class UserList(Resource):
         """
         data = request.get_json()
 
+        # Validate email
+        r = re.compile("[^@]+@[^@]+\.[^@]+")
+        if not r.match(data['email']):
+            return {
+                'error': "Invalid email"
+            }, 400
+
+        # Check if already in use
         user = user_datastore.get_user(data['email'])
         if user is not None:
             return {

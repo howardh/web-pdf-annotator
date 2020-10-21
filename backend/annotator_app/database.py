@@ -1,5 +1,6 @@
 import sqlalchemy
 from sqlalchemy import create_engine, ForeignKey
+from sqlalchemy.sql import func
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -33,9 +34,17 @@ class User(db.Model, UserMixin):
     verified_email = Column(Boolean)
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
+
     roles = db.relationship('Role', secondary=roles_users,
                             backref=db.backref('users', lazy='dynamic'))
     documents = db.relationship('Document', lazy='dynamic')
+
+class EmailConfirmationCode(db.Model):
+    __tablename__ = 'email_confirmation_codes'
+    user_id = Column(Integer, ForeignKey('users.id'))
+    code = Column(String(), primary_key=True)
+    created_at = db.Column(db.DateTime(), server_default=func.now())
+    user = db.relationship('User')
 
 class Document(db.Model):
     __tablename__ = 'documents'
