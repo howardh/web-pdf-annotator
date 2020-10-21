@@ -451,12 +451,9 @@ function PdfPageContainer(props) {
     page, pageNum,
     scale
   } = props;
-  const relevantAnnotations = Object.values(annotations).filter(
-    ann => ann && ann.page === pageNum
-  ).reduce(function(acc,ann){
-    acc[ann.id] = ann;
-    return acc;
-  },{});
+  const relevantAnnotations = filterDict(
+    annotations, ann => ann && ann.page === pageNum
+  );
   return (
     <div className='pdf-page-container'>
       <div className='pdf-container'>
@@ -599,13 +596,9 @@ function DocInfoForm(props) {
 
 export default function PdfAnnotationPage(props) {
   const {
-  } = props;
-  const {
     docId
   } = useParams();
-
   const dispatch = useDispatch();
-
   const doc = useSelector(state => state.documents.entities[docId]);
 
   const {
@@ -1085,7 +1078,6 @@ export default function PdfAnnotationPage(props) {
         dispatch(annotationActions['redo']());
       }
     } else {
-      console.log(event.key);
       if (event.key === 'ArrowRight') {
         scrollToNextPage();
       } else if (event.key === 'ArrowLeft') {
