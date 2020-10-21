@@ -6,7 +6,7 @@ from flask_cors import CORS
 from annotator_app.extensions import cors, db, security
 from annotator_app.database import user_datastore
 
-app = Flask(__name__)
+app = Flask(__name__,instance_relative_config=True)
 app.config.from_pyfile('config.py')
 cors.init_app(app, supports_credentials=True)
 db.init_app(app)
