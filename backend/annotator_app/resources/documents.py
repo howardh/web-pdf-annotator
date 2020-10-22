@@ -13,15 +13,28 @@ from annotator_app.resources.endpoint import ListEndpoint, EntityEndpoint
 blueprint = Blueprint('documents', __name__)
 api = Api(blueprint)
 
+def update_object(entity,data):
+    for k,v in data.items():
+        breakpoint()
+        if k == 'deleted_at' and v is not None:
+            entity.deleted_at = datetime.datetime.strptime(v, "%Y-%m-%d").date()
+        elif k == 'tag_names':
+            entity.tags = json.loads(v)
+        else:
+            entity.__setattr__(k,v)
+    return entity
+
 class DocumentList(ListEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
+        update_object = update_object
 
 class DocumentEndpoint(EntityEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
+        update_object = update_object
 
 class DocumentPdfEndpoint(Resource):
     def get(self, entity_id):

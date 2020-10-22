@@ -308,3 +308,4 @@ export const logout = function(){
 
 export const documentActions = createActions('DOCUMENTS', '/data/documents');
 export const annotationActions = createActions('ANNOTATIONS', '/data/annotations');
+export const tagActions = createActions('TAGS', '/data/tags');

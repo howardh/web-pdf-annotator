@@ -54,6 +54,7 @@ function initDirtyEntityWatcher(entityName, upperEntityName, path, debounceTime)
 let debounceTime = 500;
 initDirtyEntityWatcher('documents', 'DOCUMENTS', '/data/documents/', debounceTime);
 initDirtyEntityWatcher('annotations', 'ANNOTATIONS', '/data/annotations/', debounceTime);
+initDirtyEntityWatcher('tags', 'TAGS', '/data/tags/', debounceTime);
 
 window.store = store;
 

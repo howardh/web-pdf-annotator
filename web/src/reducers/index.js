@@ -293,6 +293,7 @@ export function loadingStatusReducer(state = {}, action) {
 const combinedReducer = combineReducers({
   documents: createReducer('DOCUMENTS'),
   annotations: createReducer('ANNOTATIONS'),
+  tags: createReducer('TAGS'),
   loadingStatus: loadingStatusReducer,
   session: sessionReducer
 });

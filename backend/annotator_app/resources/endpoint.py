@@ -45,10 +45,14 @@ class ListEndpoint(Resource):
         }, 200
     def post(self):
         data = request.get_json() 
-        if getattr(self.Meta,'to_object',None) is not None:
-            entity = self.Meta.to_object(data)
-        else:
-            entity = self.Meta.model(**data)
+
+        entity = self.Meta.model()
+        try:
+            entity.update(data)
+        except ValueError as e:
+            return {
+                    'error': str(e)
+            }, 400
         entity.user_id = current_user.get_id()
 
         db.session.add(entity)
@@ -84,14 +88,7 @@ class EntityEndpoint(Resource):
         if entity.deleted_at is not None:
             entity.deleted_at = None # Undelete
 
-        if getattr(self.Meta,'update_object',None) is not None:
-            entity = self.Meta.update_object(entity,data)
-        else:
-            for k,v in data.items():
-                if k == 'deleted_at' and v is not None:
-                    entity.deleted_at = datetime.datetime.strptime(v, "%Y-%m-%d").date()
-                else:
-                    entity.__setattr__(k,v)
+        entity.update(data)
 
         if entity is None:
             return {'error': 'No entity found with this ID.'}, 404

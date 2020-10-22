@@ -1,12 +1,14 @@
+@import 'variables';
+
 .documents-page {
   text-align: center;
 
   table {
     display: inline-block;
-    margin: 20px;
+    margin: 0;
     thead {
-      background-color: #9a1f1f;
-      color: #ffcaca;
+      background-color: $primary-colour-dark;
+      color: $primary-colour-light;
       th {
         padding: 5px 20px;
       }
@@ -15,23 +17,92 @@
       text-align: left;
       tr{
         &:nth-child(even) {
-          background-color: #ffe6e6;
+          background-color: white;
         }
         &:hover {
-          background-color: #ffcaca;
+          background-color: $primary-colour-light;
         }
         td {
           padding: 5px 10px;
-        }
-        td:nth-child(2) {
-          i.material-icons {
-            color: black;
-            cursor: pointer;
-            &:hover {
-              color: #9a1f1f;
+          &:nth-child(1) {
+            text-align: center;
+          }
+          &:nth-child(3) {
+            i.material-icons {
+              color: black;
+              cursor: pointer;
+              &:hover {
+                color: $primary-colour-dark;
+              }
             }
           }
         }
+      }
+    }
+  }
+
+  .documents-table-actions {
+    text-align: center;
+    margin: 10px;
+    margin-top: 20px;
+
+    .tag-editor-container {
+      display: inline-block;
+      position: relative;
+    }
+  }
+}
+
+.tag-editor {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  display: inline-block;
+  height: 32px;
+  width: 300px;
+  background-color: white;
+
+  .editor {
+    text-align: left;
+    border: 1px solid black;
+    input {
+      box-sizing: border-box;
+      display: inline-block;
+      border: none;
+      height: 30px;
+      padding-left: 10px;
+      outline: none;
+      width: 100%;
+    }
+  }
+
+  .dropdown {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    top: 100%;
+    width: 100%;
+    background-color: white;
+    z-index: 1;
+    border: 1px solid black;
+
+    .tag, button {
+      display: inline-block;
+      border: 1px solid black;
+      margin: 5px;
+      padding: 3px 5px;
+      cursor: pointer;
+      border-radius: 3px;
+      &:hover {
+        background-color: $primary-colour-light;
+      }
+      &.partial {
+        color: $primary-colour-dark;
+      }
+      &.selected {
+        background-color: $primary-colour-dark;
+        color: $primary-colour-light;
       }
     }
   }

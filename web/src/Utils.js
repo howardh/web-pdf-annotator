@@ -15,6 +15,14 @@ export function formChangeHandler(state,setState) {
     });
   }
 }
+// List utils
+export function removeFromList(list,elem) {
+  let index = list.indexOf(elem);
+  if (index === -1) {
+    return list;
+  }
+  return list.slice(0,index).concat(list.slice(index+1))
+}
 // Dict utils
 export function filterDict(dict,filterCondition) {
   return Object.entries(dict).filter(function([k,v]) {
