@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useState, useRef } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
@@ -194,6 +194,7 @@ function AnnotationLayer(props) {
         };
         classNames.push('point');
         return <div className={classNames.join(' ')}
+          id={'annotation'+ann.id}
           tabIndex={-1}
           key={key}
           style={style}
@@ -210,6 +211,7 @@ function AnnotationLayer(props) {
         };
         classNames.push('rect');
         return <div className={classNames.join(' ')}
+          id={'annotation'+ann.id}
           tabIndex={-1}
           key={key}
           style={style}
@@ -246,7 +248,7 @@ function AnnotationLayer(props) {
   </div>;
 }
 
-function AnnotationTextCard(props) {
+function AnnotationCard(props) {
   const {
     annotation,
     isActive, setActive,
@@ -303,24 +305,12 @@ function AnnotationTextCard(props) {
     }
   }
 
-  let style = {};
-  let classNames = ['card'];
-  // Align card with annotation
-  let yCoord = null;
-  if (annotation.type === 'point') {
-    yCoord = annotation.position.coords[1];
-  } else if (annotation.type === 'rect') {
-    yCoord = (annotation.position.box[0]+annotation.position.box[2])/2;
-  }
-  yCoord *= scale;
-  style['top'] = yCoord+'px';
-  // Make sure card is visible if it's the current active card
-  if (isActive) {
-    classNames.push('active');
-  }
-
+  let classNames = generateClassNames({
+    card: true,
+    active: isActive
+  });
   if (isEditing) {
-    return (<div className={classNames.join(' ')} style={style}
+    return (<div className={classNames}
         onClick={()=>setActive(true)} id={'card'+annotation.id}>
       <textarea onChange={onChange}
           onKeyPress={onKeyPress}
@@ -344,7 +334,7 @@ function AnnotationTextCard(props) {
     </div>);
   } else {
     let parsedBlob = parseBlob(annotation);
-    return (<div className={classNames.join(' ')} style={style}
+    return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
       <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
       <div className='controls'>
@@ -358,6 +348,9 @@ function AnnotationTextCard(props) {
         </span>
         <span onClick={deleteAnnotation}>
           <i className='material-icons'>delete</i>
+        </span>
+        <span>
+          <a href={'#annotation'+annotation.id}>scroll into view</a>
         </span>
       </div>
     </div>);
@@ -389,7 +382,7 @@ function AnnotationCardsContainer(props) {
     {
       Object.values(annotations).map(function(ann){
         return (
-          <AnnotationTextCard
+          <AnnotationCard
               key={ann.id}
               scale={scale}
               isActive={ann.id === activeId}
@@ -409,7 +402,8 @@ function AnnotationCardsContainer(props) {
 function PdfViewer(props) {
   const {
     page,
-    scale
+    scale,
+    onRenderingStatusChange = ()=>null
   } = props;
   const ref = useRef(null);
 
@@ -443,9 +437,11 @@ function PdfViewer(props) {
     };
     page.render(renderContext).promise.then(x => {
       setDoneRendering(true);
+      onRenderingStatusChange(true);
     });
     setNeedsRender(false);
     setDoneRendering(false);
+    onRenderingStatusChange(false);
     // TODO: Render text layer
   }, [ref.current, needsRender, doneRendering]);
 
@@ -468,18 +464,32 @@ function PdfPageContainer(props) {
   const relevantAnnotations = filterDict(
     annotations, ann => ann && ann.page === pageNum
   );
+
+  // Delay rendering annotations until the pdf is rendered
+  const [renderingStatus,setRenderingStatus] = useState(null);
+  const [annotationScale,setAnnotationScale] = useState(null);
+  useEffect(()=>{
+    if (renderingStatus === true) {
+      setAnnotationScale(scale);
+    }
+  },[scale,renderingStatus]);
+
   return (
     <div className='pdf-page-container'>
       <div className='pdf-container'>
-        <PdfViewer page={page} scale={scale}/>
-        <AnnotationLayer
-            eventHandlers={eventHandlers}
-            toolState={toolState}
-            createAnnotation={createAnnotation}
-            updateAnnotation={updateAnnotation}
-            annotations={relevantAnnotations}
-            page={pageNum}
-            scale={scale} />
+        <PdfViewer page={page} scale={scale}
+            onRenderingStatusChange={setRenderingStatus}/>
+        {
+          annotationScale &&
+          <AnnotationLayer
+              eventHandlers={eventHandlers}
+              toolState={toolState}
+              createAnnotation={createAnnotation}
+              updateAnnotation={updateAnnotation}
+              annotations={relevantAnnotations}
+              page={pageNum}
+              scale={annotationScale} />
+        }
       </div>
     </div>
   );
@@ -606,6 +616,7 @@ export default function PdfAnnotationPage(props) {
     docId
   } = useParams();
   const dispatch = useDispatch();
+  const location = useLocation();
   const doc = useSelector(state => state.documents.entities[docId]);
 
   const {
@@ -625,6 +636,34 @@ export default function PdfAnnotationPage(props) {
   const [activeId, setActiveId] = useState(null);
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
+
+  // If linked to a specific annotation, scroll it into view
+  useEffect(() => {
+    let hash = location.hash;
+    if (hash) {
+      // Parse out relevant IDs
+      let id = null;
+      let annotationHash = null;
+      if (hash.startsWith('#annotation')) {
+        id = parseInt(hash.slice('#annotation'.length));
+        annotationHash = hash;
+      } else if (hash.startsWith('#card')) {
+        id = parseInt(hash.slice('#card'.length));
+        annotationHash = '#annotation'+id;
+      }
+      // Wait until element is loaded to scroll it into view
+      function scrollWhenFound() {
+        let elem = document.getElementById(hash.slice(1));
+        if (!elem) {
+          window.setTimeout(scrollWhenFound, 100);
+          return;
+        }
+        elem.scrollIntoView();
+        setActiveId(id);
+      }
+      scrollWhenFound();
+    }
+  }, []);
 
   // Document title
   useEffect(() => {
