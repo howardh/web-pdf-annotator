@@ -98,14 +98,16 @@ body {
     }
   }
 
-  .annotation-cards-container {
+  .annotation-cards-container{
     position: absolute;
     top: 0;
     left: 0;
-    background-color: rgba(black,0.1);
+    width: 0;
+    height: 0;
+    background-color: black; /*Should not be visible*/
+    transition: 0.2s ease;
 
     .card {
-      position: absolute;
       width: 500px;
       background-color: white;
       border: 1px solid rgb(200,200,200);
@@ -113,11 +115,11 @@ body {
       padding: 10px;
       text-align: left;
       box-shadow: 3px 3px rgba(black,0.1);
-      transform: translate(-500px,-50%);
+      transform: translateX(-500px);
       transition: 0.2s ease;
 
       &.active, &:hover {
-        transform: translate(0,-50%);
+        transform: translateX(0);
         z-index: 1;
       }
 

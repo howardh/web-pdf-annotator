@@ -321,7 +321,7 @@ function AnnotationTextCard(props) {
 
   if (isEditing) {
     return (<div className={classNames.join(' ')} style={style}
-        onClick={()=>setActive(true)}>
+        onClick={()=>setActive(true)} id={'card'+annotation.id}>
       <textarea onChange={onChange}
           onKeyPress={onKeyPress}
           value={updatedBlob} />
@@ -345,7 +345,7 @@ function AnnotationTextCard(props) {
   } else {
     let parsedBlob = parseBlob(annotation);
     return (<div className={classNames.join(' ')} style={style}
-        onClick={()=>isActive?null:setActive(true)}>
+        onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
       <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
@@ -371,7 +371,21 @@ function AnnotationCardsContainer(props) {
     updateAnnotation,
     scale
   } = props;
-  return (<div className='annotation-cards-container'>
+
+  const [scrollYPos, setScrollYPos] = useState(0);
+
+  useEffect(()=>{
+    if (!activeId) {
+      return;
+    }
+    let card = document.getElementById('card'+activeId);
+    setScrollYPos(window.scrollY-card.offsetTop+30);
+  },[activeId]);
+
+  const style = {
+    transform: 'translateY('+scrollYPos+'px)'
+  };
+  return (<div className='annotation-cards-container' style={style}>
     {
       Object.values(annotations).map(function(ann){
         return (
@@ -467,13 +481,6 @@ function PdfPageContainer(props) {
             page={pageNum}
             scale={scale} />
       </div>
-      <AnnotationCardsContainer
-          createAnnotation={createAnnotation}
-          updateAnnotation={updateAnnotation}
-          activeId={activeId}
-          setActiveId={setActiveId}
-          annotations={relevantAnnotations}
-          scale={scale} />
     </div>
   );
 }
@@ -1146,6 +1153,11 @@ export default function PdfAnnotationPage(props) {
           scale={pdfScale}
           />
     })}
+    <AnnotationCardsContainer
+        annotations={annotations}
+        activeId={activeId} setActiveId={activateAnnotation}
+        updateAnnotation={updateAnnotation}
+        scale={pdfScale} />
     <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     <div className='controls'>
       <button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
