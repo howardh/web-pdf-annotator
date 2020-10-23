@@ -31,9 +31,24 @@ export default function DocumentsPage(props) {
     dispatch(tagActions['fetchMultiple']());
   },[]);
 
+  // Filters
+  const [tagFilters,setTagFilters] = useState(new Set());
+  const filteredDocs = filterDict(
+    documents,
+    doc => { // Must be tagged by all selected filters
+      for (let t of tagFilters) {
+        if (doc.tag_names.indexOf(t) === -1) {
+          return false;
+        }
+      }
+      return true;
+    }
+  );
+
   // Selected documents
   const [selectedDocIds, setSelectedDocIds] = useState(new Set());
-  const selectedDocs = filterDict(documents,doc=>selectedDocIds.has(doc.id));
+  const selectedDocs = filterDict(filteredDocs,
+    doc=>selectedDocIds.has(doc.id));
   const selectedAllDocs = Object.keys(selectedDocs).length > 0 && 
       Object.keys(selectedDocs).length === Object.keys(documents).length;
   function toggleSelectDoc(id) {
@@ -74,8 +89,9 @@ export default function DocumentsPage(props) {
     <DocumentsTableActions
         selectedDocs={selectedDocs}
         selectedDocIds={selectedDocIds}
+        tagFilters={tagFilters} setTagFilters={setTagFilters}
         deleteSelectedDocs={deleteSelectedDocs}/>
-    <DocumentsTable documents={documents} 
+    <DocumentsTable documents={filteredDocs} 
         selectedDocIds={selectedDocIds}
         selectedAllDocs={selectedAllDocs}
         toggleSelectDoc={toggleSelectDoc}
@@ -124,14 +140,23 @@ function DocumentsTableActions(props) {
   const {
     selectedDocs,
     selectedDocIds,
+    tagFilters, setTagFilters,
     deleteSelectedDocs
   } = props;
 
   const history = useHistory();
   const [tagEditorVisible,setTagEditorVisible] = useState(false);
+  const [tagFilterVisible,setTagFilterVisible] = useState(false);
 
   if (selectedDocIds.size === 0) {
     return (<div className='documents-table-actions'>
+      <div className='tag-filter-container'>
+        <button onClick={()=>setTagFilterVisible(!tagFilterVisible)}>
+          <i className='material-icons'>filter_list</i>
+        </button>
+        <TagFilter visible={tagFilterVisible} selectedTags={tagFilters}
+            onChangeSelectedTags={setTagFilters} />
+      </div>
     </div>);
   }
 
@@ -319,6 +344,59 @@ function TagEditor(props) {
           return (
             <div className={classNames} key={tag.id}
                 onClick={()=>toggleTag(tag.id)}>
+              {tag.name}
+            </div>
+          );
+        })
+      }
+    </div>
+  </div>);
+}
+
+function TagFilter(props) {
+  const {
+    visible,
+    setVisible = () => null,
+    selectedTags,
+    onChangeSelectedTags,
+  } = props;
+
+  const dispatch = useDispatch();
+
+  const [tagSearchValue,setTagSearchValue] = useState('');
+  const tags = useSelector(state => state.tags.entities);
+  const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
+
+  function toggleTag(tagName) {
+    if (selectedTags.has(tagName)) {
+      let temp = new Set(selectedTags);
+      temp.delete(tagName);
+      onChangeSelectedTags(temp);
+    } else {
+      onChangeSelectedTags(new Set(selectedTags).add(tagName));
+    }
+  }
+
+  if (!visible) {
+    return null;
+  }
+
+  return (<div className='tag-editor'>
+    <div className='editor'>
+      <div className='selected-tags'>
+      </div>
+      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)}/>
+    </div>
+    <div className='dropdown'>
+      {
+        Object.values(filteredTags).map(tag => {
+          const classNames = generateClassNames({
+            tag: true,
+            selected: selectedTags.has(tag.name),
+          })
+          return (
+            <div className={classNames} key={tag.id}
+                onClick={()=>toggleTag(tag.name)}>
               {tag.name}
             </div>
           );
