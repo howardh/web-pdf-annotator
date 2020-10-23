@@ -173,5 +173,21 @@ class Tag(db.Model, ModelMixin):
                 'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
         }
 
+class DocumentAccessCode(db.Model, ModelMixin):
+    __tablename__ = 'document_access_codes'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    document_id = Column(Integer, ForeignKey('documents.id'))
+    allow_read = Column(Boolean)
+    allow_write = Column(Boolean)
+    code = Column(String)
+    created_at = db.Column(DateTime, server_default=func.now())
+
+    def update(self,data):
+        pass
+
+    def to_dict(self):
+        pass
+
 # Setup Flask-Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
