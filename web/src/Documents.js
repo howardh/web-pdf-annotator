@@ -1,7 +1,7 @@
 import React from 'react';
 import {useEffect, useState} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
-import { Link } from "react-router-dom";
+import { Link, useHistory } from "react-router-dom";
 
 import {
   filterDict,formChangeHandler,generateClassNames,removeFromList
@@ -34,7 +34,8 @@ export default function DocumentsPage(props) {
   // Selected documents
   const [selectedDocIds, setSelectedDocIds] = useState(new Set());
   const selectedDocs = filterDict(documents,doc=>selectedDocIds.has(doc.id));
-  const selectedAllDocs = Object.keys(selectedDocs).length === Object.keys(documents).length;
+  const selectedAllDocs = Object.keys(selectedDocs).length > 0 && 
+      Object.keys(selectedDocs).length === Object.keys(documents).length;
   function toggleSelectDoc(id) {
     let temp = new Set(selectedDocIds);
     if (temp.has(id)) {
@@ -55,6 +56,9 @@ export default function DocumentsPage(props) {
   // Callbacks
   function deleteSelectedDocs() {
     console.log(['delete',selectedDocIds]);
+    for (let id of selectedDocIds) {
+      dispatch(documentActions['deleteSingle'](id));
+    }
   }
 
   // Render
@@ -119,9 +123,11 @@ function NewDocumentForm(props) {
 function DocumentsTableActions(props) {
   const {
     selectedDocs,
-    selectedDocIds
+    selectedDocIds,
+    deleteSelectedDocs
   } = props;
 
+  const history = useHistory();
   const [tagEditorVisible,setTagEditorVisible] = useState(false);
 
   if (selectedDocIds.size === 0) {
@@ -130,11 +136,12 @@ function DocumentsTableActions(props) {
   }
 
   if (selectedDocIds.size === 1) {
+    const id = selectedDocIds.values().next().value;
     return (<div className='documents-table-actions'>
-      <button>
+      <button onClick={()=>history.push('/annotate/'+id)}>
         <i className='material-icons'>create</i>
       </button>
-      <button>
+      <button onClick={deleteSelectedDocs}>
         <i className='material-icons'>delete</i>
       </button>
       <div className='tag-editor-container'>
@@ -147,7 +154,7 @@ function DocumentsTableActions(props) {
   }
 
   return (<div className='documents-table-actions'>
-    <button>
+    <button onClick={deleteSelectedDocs}>
       <i className='material-icons'>delete</i>
     </button>
     <div className='tag-editor-container'>
