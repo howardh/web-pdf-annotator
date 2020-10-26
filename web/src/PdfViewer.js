@@ -21,6 +21,7 @@ function AnnotationLayer(props) {
     eventHandlers,
     toolState,
     page,
+    pageNum,
     scale
   } = props;
 
@@ -29,6 +30,7 @@ function AnnotationLayer(props) {
   const [startMouseCoord,setStartMouseCoord] = useState(null);
   const [mouseCoord,setMouseCoord] = useState(null);
   const [mouseMoved,setMouseMoved] = useState(false);
+  const [focusedId,setFocusedId] = useState(null); // In case something drawn on the canvas is focused
 
   // Event Handlers
   function getCoordsFromEvent(event) {
@@ -38,14 +40,57 @@ function AnnotationLayer(props) {
     const offsetY = (event.clientY - rect.top)/scale;
     return [offsetX,offsetY];
   }
+  function checkAnnotationCollision(coords) {
+    // Check the annotations drawn on the canvas for collision with the given coord
+    // Return the ID of the collided annotation, or null if no collision.
+    let radius = 10;
+    for (let ann of Object.values(annotations)) {
+      if (ann.type !== 'highlight') {
+        continue;
+      }
+      for (let i = 0; i < ann.position.points.length-1; i++) {
+        let p0 = ann.position.points[i];
+        let p1 = ann.position.points[i+1];
+        // Check that the length of the orthogonal projection is within the highlight width.
+        let p0c = [coords[0]-p0[0],coords[1]-p0[1]];
+        let p0p1 = [p1[0]-p0[0],p1[1]-p0[1]];
+        let p0p1o = [-p0p1[1],p0p1[0]]; // Orthogonal to p0p1
+        let len = Math.sqrt(p0p1[0]*p0p1[0]+p0p1[1]*p0p1[1]); // Len of p0p1
+        let dist = (p0c[0]*p0p1o[0]+p0c[1]*p0p1o[1])/len;
+        if (Math.abs(dist) > radius) {
+          continue;
+        }
+        // If the length of the projection is longer than the vector it's projected on, then we're too far from the segment.
+        let proj = (p0c[0]*p0p1[0]+p0c[1]*p0p1[1])/len;
+        if (proj > len || proj < 0) {
+          continue;
+        }
+        // Collision found
+        return ann.id;
+      }
+    }
+    return null;
+  }
   function onClick(event) {
     const coords = getCoordsFromEvent(event);
     const data = {
-      page,
+      page: pageNum,
       coords
     };
     // Clicked on PDF
     if (event.target === ref.current) {
+      // Check all annotations for click
+      let annId = checkAnnotationCollision(coords);
+      if (annId) {
+        setFocusedId(annId);
+        let callback = eventHandlers.annotation.onClick;
+        if (callback) {
+          callback(event, {id: annId});
+        }
+        return;
+      }
+      setFocusedId(null); // Unfocus if nothing was clicked
+      // If annotations haven't been clicked...
       let callback = eventHandlers.pdf.onClick;
       if (callback) {
         callback(event, data);
@@ -57,7 +102,7 @@ function AnnotationLayer(props) {
   function onDoubleClick(event,ann) {
     const coords = getCoordsFromEvent(event);
     const data = {
-      page,
+      page: pageNum,
       coords,
       ann
     };
@@ -65,6 +110,16 @@ function AnnotationLayer(props) {
     const classNames = event.target.className.split(' ');
     let callback = null;
     if (event.target === ref.current) {
+      // Check all annotations for click
+      let annId = checkAnnotationCollision(coords);
+      if (annId) {
+        console.log(['doubleclick',annId]);
+        let callback = eventHandlers.annotation.onDoubleClick;
+        if (callback) {
+          callback(event, {...data, ann: annotations[annId]});
+        }
+        return;
+      }
       callback = eventHandlers.pdf.onDoubleClick;
     } else if (classNames.indexOf('annotation') !== -1) {
       callback = eventHandlers.annotation.onDoubleClick;
@@ -79,7 +134,7 @@ function AnnotationLayer(props) {
     const coords = getCoordsFromEvent(event);
     setStartMouseCoord(coords);
     const data = {
-      page,
+      page: pageNum,
       coords
     };
 
@@ -99,7 +154,7 @@ function AnnotationLayer(props) {
   function onMouseUp(event) {
     const coords = getCoordsFromEvent(event);
     const data = {
-      page,
+      page: pageNum,
       coords,
       mouseMoved,
       startMouseCoord
@@ -120,7 +175,7 @@ function AnnotationLayer(props) {
       return;
     }
     const data = {
-      page,
+      page: pageNum,
       coords,
       startMouseCoord,
     };
@@ -132,13 +187,20 @@ function AnnotationLayer(props) {
   function onKeyPress(event) {
     const classNames = event.target.className.split(' ');
     const data = {
-      page,
+      page: pageNum,
     };
     // Target = pdf document
     if (event.target === ref.current) {
-      let callback = eventHandlers.pdf.onKeyPress;
-      if (callback) {
-        callback(event, data);
+      if (focusedId) {
+        let callback = eventHandlers.annotation.onKeyPress;
+        if (callback) {
+          callback(event, {id: focusedId});
+        }
+      } else {
+        let callback = eventHandlers.pdf.onKeyPress;
+        if (callback) {
+          callback(event, data);
+        }
       }
     } else if (classNames.indexOf('annotation') !== -1) {
       // Handled by Annotation DOM
@@ -179,7 +241,7 @@ function AnnotationLayer(props) {
       }
       let data = {
         id: key,
-        page
+        page: pageNum,
       }
       let callback = eventHandlers.annotation.onKeyPress;
       if (callback) {
@@ -234,13 +296,55 @@ function AnnotationLayer(props) {
         </div>;
     }
   }
+  useEffect(()=>{
+    if (!ref.current) {
+      return;
+    }
+    if (!page) {
+      return;
+    }
+    let viewport = page.getViewport({ scale: scale, });
+    let canvas = ref.current;
+    let context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    // Render drawn markings
+    function renderLine(points, selected) {
+      if (selected) {
+        context.strokeStyle = 'rgba(100,255,100,0.3)';
+      } else {
+        context.strokeStyle = 'rgba(255,255,100,0.3)';
+      }
+      context.lineWidth = 20;
+      context.beginPath();
+      let p = points[0];
+      context.moveTo(p[0]*scale,p[1]*scale);
+      for (p of points.slice(1)) {
+        context.lineTo(p[0]*scale,p[1]*scale);
+      }
+      context.stroke();
+    }
+    for (let ann of Object.values(annotations)) {
+      if (ann.type === 'highlight') {
+        renderLine(
+          ann.position.points,
+          ann.id === toolState.selectedAnnotationId
+        );
+      }
+    }
+    // Render marking that's in the process of being drawn
+    if (toolState.type === 'highlight') {
+      if (toolState.points) {
+        renderLine(toolState.points);
+      }
+    }
+  },[page, ref.current, annotations, toolState]);
 
-  return <div className='annotation-layer'
-      tabIndex={-1}
-      ref={ref}
-      onClick={onClick} onMouseDown={onMouseDown}
-      onMouseUp={onMouseUp} onMouseMove={onMouseMove}
-      onKeyDown={onKeyPress}>
+  return <div className='annotation-layer'>
+    <canvas ref={ref} onDoubleClick={onDoubleClick}
+        onKeyDown={onKeyPress} tabIndex={-1}
+        onClick={onClick} onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp} onMouseMove={onMouseMove} />
     {
       Object.values(annotations).map(renderAnnotation)
     }
@@ -371,6 +475,9 @@ function AnnotationCardsContainer(props) {
     if (!activeId) {
       return;
     }
+    if (annotations[activeId].type === 'highlight') {
+      return;
+    }
     let card = document.getElementById('card'+activeId);
     setScrollYPos(window.scrollY-card.offsetTop+30);
   },[activeId]);
@@ -380,7 +487,9 @@ function AnnotationCardsContainer(props) {
   };
   return (<div className='annotation-cards-container' style={style}>
     {
-      Object.values(annotations).map(function(ann){
+      Object.values(annotations).filter(
+        ann => ann.type === 'rect' || ann.type === 'point'
+      ).map(function(ann){
         return (
           <AnnotationCard
               key={ann.id}
@@ -425,9 +534,9 @@ function PdfViewer(props) {
     if (!needsRender) {
       return;
     }
-    var viewport = page.getViewport({ scale: scale, });
-    var canvas = ref.current;
-    var context = canvas.getContext('2d');
+    let viewport = page.getViewport({ scale: scale, });
+    let canvas = ref.current;
+    let context = canvas.getContext('2d');
     canvas.height = viewport.height;
     canvas.width = viewport.width;
 
@@ -487,7 +596,8 @@ function PdfPageContainer(props) {
               createAnnotation={createAnnotation}
               updateAnnotation={updateAnnotation}
               annotations={relevantAnnotations}
-              page={pageNum}
+              page={page}
+              pageNum={pageNum}
               scale={annotationScale} />
         }
       </div>
@@ -712,7 +822,9 @@ export default function PdfAnnotationPage(props) {
 
   // Tools
   function handleDoubleClick(event,data) {
+    console.log('dblclick received');
     switch (data.ann.type) {
+      case 'highlight':
       case 'rect':
       case 'point':
         let newState = tools['resize'].initState();
@@ -1073,7 +1185,83 @@ export default function PdfAnnotationPage(props) {
           })
         },
       }
-    }
+    },
+    highlight: {
+      initState: function() {
+        return {
+          type: 'highlight',
+          points: null, // Sequence of mouse move coordinates
+        };
+      },
+      eventHandlers: {
+        pdf: {
+          onClick: function() {
+            if (toolState.points) {
+              // Continue creating the annotation
+              return
+            } else {
+              popTool();
+            }
+          },
+          onMouseDown: function(event,data) {
+            if (toolState.points) {
+              // Continue creating the annotation
+              return
+            } else {
+              setToolState({
+                ...toolState,
+                points: [data.coords]
+              });
+            }
+          },
+        },
+        annotation: {
+          onDoubleClick: handleDoubleClick,
+        },
+        controlPoint: {},
+        onMouseMove: function(event,data) {
+          const {coords} = data;
+          if (toolState.points) {
+            setToolState({
+              ...toolState,
+              points: [...toolState.points, coords]
+            });
+          }
+        },
+        onMouseUp: function(event,data) {
+          const {coords} = data;
+          if (toolState.points) {
+            // Check if there's enough points.
+            let minX = toolState.points[0][0];
+            let minY = toolState.points[0][1];
+            let maxX = toolState.points[0][0];
+            let maxY = toolState.points[0][1];
+            for (let p of toolState.points) {
+              if (p[0] < minX) { minX = p[0]; }
+              if (p[0] > maxX) { maxX = p[0]; }
+              if (p[1] < minY) { minY = p[1]; }
+              if (p[1] > maxY) { maxY = p[1]; }
+            }
+            if (maxX-minX < 5 && maxY-minY < 5) {
+              // Too small. User probably didn't intend to create a marking.
+              // Ignore
+            } else {
+              createAnnotation({
+                type: 'highlight',
+                position: {
+                  points: toolState.points
+                },
+                page: data.page
+              });
+            }
+          }
+          setToolState({
+            ...toolState,
+            points: null,
+          })
+        },
+      }
+    },
   };
 
   // Initialize State
@@ -1210,6 +1398,9 @@ export default function PdfAnnotationPage(props) {
       </button>
       <button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
         Rect
+      </button>
+      <button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
+        Highlight
       </button>
       <button onClick={zoomIn}>
         +
