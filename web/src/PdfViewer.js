@@ -340,7 +340,12 @@ function AnnotationLayer(props) {
     // Render marking that's in the process of being drawn
     if (toolState.type === 'highlight') {
       if (toolState.points) {
-        renderLine(toolState.points);
+        if (toolState.keepStraight) {
+          let points = [toolState.points[0],toolState.points[toolState.points.length-1]];
+          renderLine(points);
+        } else {
+          renderLine(toolState.points);
+        }
       }
     }
   },[page, ref.current, annotations, toolState]);
@@ -1195,6 +1200,7 @@ export default function PdfAnnotationPage(props) {
         return {
           type: 'highlight',
           points: null, // Sequence of mouse move coordinates
+          keepStraight: false, // Straight line from the initial click to current mouse position
         };
       },
       eventHandlers: {
@@ -1228,7 +1234,8 @@ export default function PdfAnnotationPage(props) {
           if (toolState.points) {
             setToolState({
               ...toolState,
-              points: [...toolState.points, coords]
+              points: [...toolState.points, coords],
+              keepStraight: event.ctrlKey
             });
           }
         },
@@ -1250,13 +1257,23 @@ export default function PdfAnnotationPage(props) {
               // Too small. User probably didn't intend to create a marking.
               // Ignore
             } else {
-              createAnnotation({
-                type: 'highlight',
-                position: {
-                  points: toolState.points
-                },
-                page: data.page
-              });
+              if (toolState.keepStraight) {
+                createAnnotation({
+                  type: 'highlight',
+                  position: {
+                    points: [toolState.points[0],toolState.points[toolState.points.length-1]]
+                  },
+                  page: data.page
+                });
+              } else {
+                createAnnotation({
+                  type: 'highlight',
+                  position: {
+                    points: toolState.points
+                  },
+                  page: data.page
+                });
+              }
             }
           }
           setToolState({
