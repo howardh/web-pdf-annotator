@@ -113,7 +113,6 @@ function AnnotationLayer(props) {
       // Check all annotations for click
       let annId = checkAnnotationCollision(coords);
       if (annId) {
-        console.log(['doubleclick',annId]);
         let callback = eventHandlers.annotation.onDoubleClick;
         if (callback) {
           callback(event, {...data, ann: annotations[annId]});
@@ -261,6 +260,9 @@ function AnnotationLayer(props) {
           key={key}
           style={style}
           onClick={onClick}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseMove={onMouseMove}
           onKeyPress={onKeyPress}
           onDoubleClick={e => onDoubleClick(e,ann)}>
         </div>;
@@ -278,6 +280,9 @@ function AnnotationLayer(props) {
           key={key}
           style={style}
           onClick={onClick}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseMove={onMouseMove}
           onKeyPress={onKeyPress}
           onDoubleClick={e => onDoubleClick(e,ann)}>
           {
@@ -822,7 +827,6 @@ export default function PdfAnnotationPage(props) {
 
   // Tools
   function handleDoubleClick(event,data) {
-    console.log('dblclick received');
     switch (data.ann.type) {
       case 'highlight':
       case 'rect':
