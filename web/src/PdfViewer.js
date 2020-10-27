@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation } from "react-router-dom";
 import * as commonmark from 'commonmark';
+import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField } from './Inputs.js';
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
@@ -626,7 +627,7 @@ function usePdfPages(doc) {
     if (!doc) {
       return;
     }
-    window.pdfjsLib.getDocument({
+    pdfjsLib.getDocument({
       url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+doc.id+'/pdf',
       withCredentials: true
     }).promise .then(pdf => {
