@@ -571,6 +571,64 @@ function PdfViewer(props) {
   );
 }
 
+function PdfTextLayer(props) {
+  // I just copied this over from PdfViewer. There's probably a lot of unnecessary code here.
+  const {
+    page,
+    scale,
+    onRenderingStatusChange = ()=>null,
+    hidden=false
+  } = props;
+  const ref = useRef(null);
+
+  // Needs to be rerendered if the page or scale changes
+  const [needsRender,setNeedsRender] = useState(false);
+  useEffect(() => {
+    setNeedsRender(true);
+  }, [page, scale]);
+
+  // Render PDF
+  const [doneRendering,setDoneRendering] = useState(true);
+  useEffect(() => {
+    if (!ref.current || !page) {
+      return;
+    }
+    if (!doneRendering) {
+      return;
+    }
+    if (!needsRender) {
+      return;
+    }
+    let viewport = page.getViewport({ scale: scale, });
+
+    page.getTextContent().then(content => {
+      var renderContext = {
+        textContent: content,
+        viewport: viewport,
+        container: ref.current,
+        textDivs: []
+      };
+      console.log(renderContext);
+      pdfjsLib.renderTextLayer(renderContext).promise.then(x => {
+        setDoneRendering(true);
+        onRenderingStatusChange(true);
+      });
+      setNeedsRender(false);
+      setDoneRendering(false);
+      onRenderingStatusChange(false);
+    });
+  }, [page, ref.current, needsRender, doneRendering]);
+
+  let classNames = generateClassNames({
+    'text-layer': true,
+    hidden
+  })
+  return (
+    <div className={classNames} ref={ref}>
+    </div>
+  );
+}
+
 function PdfPageContainer(props) {
   const {
     activeId, setActiveId,
@@ -612,6 +670,9 @@ function PdfPageContainer(props) {
               pageNum={pageNum}
               scale={annotationScale} />
         }
+        <PdfTextLayer page={page} scale={scale}
+            onRenderingStatusChange={setRenderingStatus}
+            hidden={toolState.type !== 'text'}/>
       </div>
     </div>
   );
@@ -864,6 +925,17 @@ export default function PdfAnnotationPage(props) {
           },
           onDoubleClick: handleDoubleClick,
         }
+      }
+    },
+    text: {
+      initState: function() {
+        return {
+          type: 'text'
+        };
+      },
+      eventHandlers: {
+        pdf: {},
+        annotation: {},
       }
     },
     resize: {
@@ -1411,6 +1483,9 @@ export default function PdfAnnotationPage(props) {
     <div className='controls'>
       <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
         Read
+      </Button>
+      <Button onClick={()=>selectTool('text')} className={toolState.type === 'text' ? 'active' : null}>
+        Text
       </Button>
       <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
         Resize
