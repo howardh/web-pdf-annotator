@@ -765,13 +765,10 @@ export default function PdfAnnotationPage(props) {
     if (hash) {
       // Parse out relevant IDs
       let id = null;
-      let annotationHash = null;
       if (hash.startsWith('#annotation')) {
         id = parseInt(hash.slice('#annotation'.length));
-        annotationHash = hash;
       } else if (hash.startsWith('#card')) {
         id = parseInt(hash.slice('#card'.length));
-        annotationHash = '#annotation'+id;
       }
       // Wait until element is loaded to scroll it into view
       function scrollWhenFound() {
@@ -843,6 +840,8 @@ export default function PdfAnnotationPage(props) {
         newState.tempPosition = data.ann.position;
         pushTool(newState);
         break;
+      default:
+        break;
     }
   }
   const tools = {
@@ -903,7 +902,6 @@ export default function PdfAnnotationPage(props) {
           },
           onMouseDown: function() {},
           onMouseMove: function() {},
-          onKeyPress: function() {},
           onKeyPress: function() {},
         },
         // Handles events on the annotation
@@ -1026,6 +1024,8 @@ export default function PdfAnnotationPage(props) {
                     ]
                   }
                 });
+                break;
+              default:
                 break;
             }
           } else if (toolState.dragAction.startsWith('resize-')) {
@@ -1242,7 +1242,6 @@ export default function PdfAnnotationPage(props) {
           }
         },
         onMouseUp: function(event,data) {
-          const {coords} = data;
           if (toolState.points) {
             // Check if there's enough points.
             let minX = toolState.points[0][0];

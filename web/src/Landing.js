@@ -1,6 +1,5 @@
 import React from 'react';
-import {useDispatch,useSelector} from 'react-redux';
-import { Link } from "react-router-dom";
+import {useSelector} from 'react-redux';
 import {SignupForm} from './Signup.js';
 import {EmailVerificationWarning} from './App.js';
 

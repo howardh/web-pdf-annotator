@@ -17,11 +17,6 @@ export default function LoginPage(props) {
   const [password,setPassword] = useState('');
 
   function submit() {
-    let url = 'http://localhost:5000/api/auth/login';
-    let data = {
-      email: email,
-      password: password
-    };
     dispatch(login(email,password,true)).then(success => {
       if (success) {
         history.push('/docs');
@@ -68,7 +63,7 @@ export function LogoutPage(props) {
     dispatch(logout()).then(() => {
       history.push('/');
     });
-  },[]);
+  },[dispatch]);
 
   return (<main className='logout-page'>
     <h1>Logging Out...</h1>
