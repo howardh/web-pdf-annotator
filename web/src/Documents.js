@@ -6,6 +6,9 @@ import { Link, useHistory } from "react-router-dom";
 import {
   filterDict,formChangeHandler,generateClassNames,removeFromList
 } from './Utils.js';
+import {
+  Checkbox, TextField, Button
+} from './Inputs.js';
 import {documentActions,tagActions} from './actions/index.js';
 
 import './Documents.scss';
@@ -126,12 +129,12 @@ function NewDocumentForm(props) {
     <div className='new-doc-form-container'>
       <label>
         URL: 
-        <input type='text' name='url'
+        <TextField name='url'
             value={values['url']}
             onKeyPress={handleKeyPress}
             onChange={handleChange} />
       </label>
-      <input type='submit' value='Create' onClick={createDoc} />
+      <Button onClick={createDoc}>Create</Button>
     </div>
   );
 }
@@ -215,7 +218,7 @@ function DocumentsTable(props) {
     <table>
       <thead>
         <tr>
-          <th><input type='checkbox' checked={selectedAllDocs} onChange={()=>toggleSelectAllDocs()}/></th>
+          <th><Checkbox checked={selectedAllDocs} onChange={toggleSelectAllDocs}/></th>
           <th>Title</th>
           <th>Actions</th>
         </tr>
@@ -228,7 +231,7 @@ function DocumentsTable(props) {
             }
             return (<tr key={doc.id}>
               <td>
-                <input type='checkbox' checked={selectedDocIds.has(doc.id)}
+                <Checkbox checked={selectedDocIds.has(doc.id)}
                     onChange={()=>toggleSelectDoc(doc.id)}/>
               </td>
               <td>

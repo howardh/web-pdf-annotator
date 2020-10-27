@@ -4,6 +4,7 @@ import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation } from "react-router-dom";
 import * as commonmark from 'commonmark';
 
+import { Button, TextField } from './Inputs.js';
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
@@ -710,15 +711,15 @@ function DocInfoForm(props) {
   return (<div className='doc-info-form'>
     <label>
       <span>Title</span>
-      <input type='text' name='title' value={doc['title'] || ''} onChange={handleChange} />
+      <TextField name='title' value={doc['title'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>Authors</span>
-      <input type='text' name='author' value={doc['author'] || ''} onChange={handleChange} />
+      <TextField name='author' value={doc['author'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>URL</span>
-      <input type='text' name='url' value={doc['url'] || ''} onChange={handleChange} />
+      <TextField name='url' value={doc['url'] || ''} onChange={handleChange} />
     </label>
     <label>
       <span>Bibtex</span>
@@ -1408,33 +1409,33 @@ export default function PdfAnnotationPage(props) {
         scale={pdfScale} />
     <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     <div className='controls'>
-      <button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
+      <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
         Read
-      </button>
-      <button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
+      </Button>
+      <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
         Resize
-      </button>
-      <button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
+      </Button>
+      <Button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
         Point
-      </button>
-      <button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
+      </Button>
+      <Button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
         Rect
-      </button>
-      <button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
+      </Button>
+      <Button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
         Highlight
-      </button>
-      <button onClick={zoomIn}>
+      </Button>
+      <Button onClick={zoomIn}>
         +
-      </button>
-      <button onClick={zoomOut}>
+      </Button>
+      <Button onClick={zoomOut}>
         -
-      </button>
-      <button onClick={()=>dispatch(annotationActions['undo']())}>
+      </Button>
+      <Button onClick={()=>dispatch(annotationActions['undo']())}>
         Undo
-      </button>
-      <button onClick={()=>dispatch(annotationActions['redo']())}>
+      </Button>
+      <Button onClick={()=>dispatch(annotationActions['redo']())}>
         Redo
-      </button>
+      </Button>
     </div>
   </main>);
 }

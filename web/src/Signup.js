@@ -3,6 +3,8 @@ import {useState} from 'react';
 import { useHistory } from "react-router-dom";
 import axios from 'axios';
 
+import { TextField, Password, Button } from './Inputs.js';
+
 import './Signup.scss';
 
 export default function SignupPage(props) {
@@ -65,7 +67,7 @@ export function SignupForm(props) {
       </div>
       <label>
         Email:
-        <input type='text'
+        <TextField
             autoFocus={true}
             name='email'
             value={email}
@@ -74,7 +76,7 @@ export function SignupForm(props) {
       </label>
       <label>
         Password:
-        <input type='password'
+        <Password
             name='password1'
             value={password1}
             onKeyPress={handleKeyPress}
@@ -82,13 +84,15 @@ export function SignupForm(props) {
       </label>
       <label>
         Confirm Password:
-        <input type='password'
+        <Password
             name='password2'
             value={password2}
             onKeyPress={handleKeyPress}
             onChange={e=>setPassword2(e.target.value)}/>
       </label>
-      <input type='submit' value='Sign Up' onClick={submit}/>
+      <Button onClick={submit}>
+        Sign Up
+      </Button>
     </div>
   );
 }

@@ -3,6 +3,8 @@ import {useState,useEffect} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useHistory } from "react-router-dom";
 
+import { TextField,Password,Button } from './Inputs.js';
+
 import {login,logout} from './actions/index.js';
 
 import './Login.scss';
@@ -38,7 +40,7 @@ export default function LoginPage(props) {
       <div className='error-message'>{error}</div>
       <label>
         Email:
-        <input type='text'
+        <TextField
             autoFocus={true}
             name='email'
             value={email}
@@ -47,13 +49,13 @@ export default function LoginPage(props) {
       </label>
       <label>
         Password:
-        <input type='password'
+        <Password
             name='password'
             value={password}
             onKeyPress={handleKeyPress}
             onChange={e=>setPassword(e.target.value)}/>
       </label>
-      <input type='submit' value='Login' onClick={submit}/>
+      <Button onClick={submit}>Login</Button>
     </div>
   </main>);
 }
