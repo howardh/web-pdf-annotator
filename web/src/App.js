@@ -17,6 +17,7 @@ import { LogoutPage } from './Login.js';
 import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
 import DocumentsPage from './Documents.js';
+import TagsPage from './Tags.js';
 
 import './App.scss';
 
@@ -63,6 +64,10 @@ function App() {
           <DocumentsPage userId={userId} />
         </Route>
         <Route path="/annotate/:docId" component={PdfAnnotationPage} />
+        <Route path="/tags">
+          <Navigation userId={userId} confirmed={confirmed} />
+          <TagsPage userId={userId} />
+        </Route>
         <Route path="/">
           <Navigation userId={userId} confirmed={confirmed} />
           <LandingPage />

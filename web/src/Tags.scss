@@ -1,0 +1,43 @@
+@import 'variables';
+
+.tags-page {
+  text-align: center;
+
+  table {
+    display: inline-block;
+    margin: 0;
+    thead {
+      background-color: $primary-colour-dark;
+      color: $primary-colour-light;
+      th {
+        padding: 5px 20px;
+      }
+    }
+    tbody {
+      text-align: left;
+      tr{
+        &:nth-child(even) {
+          background-color: white;
+        }
+        &:hover {
+          background-color: $primary-colour-light;
+        }
+        td {
+          padding: 5px 10px;
+          &:nth-child(1) {
+            text-align: center;
+          }
+          &:nth-child(4) {
+            i.material-icons {
+              color: black;
+              cursor: pointer;
+              &:hover {
+                color: $primary-colour-dark;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
