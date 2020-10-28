@@ -1,12 +1,16 @@
-from flask import Blueprint
-from flask_restful import Api
+from flask import Blueprint, send_file
+from flask_restful import Api, Resource
 from flask_security import current_user
 
+from pdf2image import convert_from_path
 import datetime
 import json
+from io import BytesIO
 
-from annotator_app.database import Annotation
+from annotator_app.extensions import db
+from annotator_app.database import Annotation, Document
 from annotator_app.resources.endpoint import ListEndpoint, EntityEndpoint
+from annotator_app.resources.documents import fetch_pdf
 
 blueprint = Blueprint('annotations', __name__)
 api = Api(blueprint)
@@ -39,5 +43,49 @@ class AnnotationEndpoint(EntityEndpoint):
         to_object = to_object
         update_object = update_object
 
+class AnnotationImageEndpoint(Resource):
+    def get(self, entity_id):
+        # Get annotation
+        annotation = db.session.query(Annotation) \
+                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(id=entity_id) \
+                .first()
+        # Check if annotation is rect
+        if annotation.type != 'rect':
+            return None, 200
+        # Get document
+        document = db.session.query(Document) \
+                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(id=annotation.doc_id) \
+                .first()
+        # Get PDF
+        max_bytes = 1024*1024*5 # 5MB
+        output = fetch_pdf(document, max_bytes)
+        if 'error' in output:
+            return {
+                'error': output['error']
+            }, output['code']
+        # Render relevant page to image
+        file_name = output['file_name']
+        # Extract relevant portion of image
+        scale = 3
+        images = convert_from_path(file_name,
+                # FIXME: Hacky solution. I got the dpi from trial and error.
+                dpi=72*scale,
+                first_page=int(annotation.page),
+                last_page=int(annotation.page)
+        )
+        position = json.loads(annotation.position)
+        box = position['box'] # top, right, bottom, left
+        box = [box[3],box[0],box[1],box[2]] # left, top, right, bottom
+        box = [x*scale for x in box] # rescale
+        cropped_image = images[0].crop(box)
+        # Return image
+        img_io = BytesIO()
+        cropped_image.save(img_io, 'JPEG', quality=70)
+        img_io.seek(0)
+        return send_file(img_io, mimetype='image/jpeg')
+
 api.add_resource(AnnotationList, '/annotations')
 api.add_resource(AnnotationEndpoint, '/annotations/<int:entity_id>')
+api.add_resource(AnnotationImageEndpoint, '/annotations/<int:entity_id>/img')

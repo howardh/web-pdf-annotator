@@ -24,6 +24,25 @@ class DocumentEndpoint(EntityEndpoint):
         model = Document
         filterable_params = ['id', 'user_id', 'title']
 
+def fetch_pdf(document, max_bytes):
+    response = requests.get(document.url)
+    content_bytes = response.headers.get('content-length', None)
+    if content_bytes is None:
+        return {
+            'error': 'No file found at %s' % document.url,
+            'code': 404
+        }
+    if len(content_bytes) > max_bytes:
+        return {
+            'error': 'File too large.',
+            'code': 413
+        }
+
+    file_name = os.path.join(app.config['UPLOAD_DIRECTORY'],'%d.pdf'%document.id)
+    with open(file_name,'wb') as f:
+        f.write(response.content)
+    return { 'file_name': file_name }
+
 class DocumentPdfEndpoint(Resource):
     def get(self, entity_id):
         entity = db.session.query(Document) \
@@ -37,20 +56,12 @@ class DocumentPdfEndpoint(Resource):
 
         # Download file
         max_bytes = 1024*1024*5 # 5MB
-        response = requests.get(entity.url)
-        content_bytes = response.headers.get('content-length', None)
-        if content_bytes is None:
+        output = fetch_pdf(entity, max_bytes)
+        if 'error' in output:
             return {
-                'error': 'No file found at %s' % entity.url
-            }, 404
-        if len(content_bytes) > max_bytes:
-            return {
-                'error': 'File too large.'
-            }, 413
-
-        file_name = os.path.join(app.config['UPLOAD_DIRECTORY'],'%d.pdf'%entity_id)
-        with open(file_name,'wb') as f:
-            f.write(response.content)
+                'error': output['error']
+            }, output['code']
+        file_name = output['file_name']
         return send_file(
                 file_name,
                 mimetype='application/pdf',
