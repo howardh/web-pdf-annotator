@@ -1428,10 +1428,14 @@ export default function PdfAnnotationPage(props) {
         dispatch(annotationActions['redo']());
       }
     } else {
-      if (event.key === 'ArrowRight') {
-        scrollToNextPage();
-      } else if (event.key === 'ArrowLeft') {
-        scrollToPrevPage();
+      if (event.target.tagName !== 'INPUT' && 
+          event.target.tagName !== 'TEXTAREA') {
+        // Only scroll when not in a text field/area
+        if (event.key === 'ArrowRight') {
+          scrollToNextPage();
+        } else if (event.key === 'ArrowLeft') {
+          scrollToPrevPage();
+        }
       }
     }
   }
