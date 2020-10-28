@@ -1,4 +1,4 @@
-from flask import Blueprint, send_file
+from flask import Blueprint, send_file, make_response
 from flask_restful import Api, Resource
 from flask_security import current_user
 
@@ -84,7 +84,10 @@ class AnnotationImageEndpoint(Resource):
         img_io = BytesIO()
         cropped_image.save(img_io, 'JPEG', quality=70)
         img_io.seek(0)
-        return send_file(img_io, mimetype='image/jpeg')
+        response = make_response(send_file(img_io, mimetype='image/jpeg'))
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache' # If cached, user won't see changes when the annotation is changed
+        return response
 
 api.add_resource(AnnotationList, '/annotations')
 api.add_resource(AnnotationEndpoint, '/annotations/<int:entity_id>')

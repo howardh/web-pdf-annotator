@@ -368,7 +368,6 @@ function AnnotationCard(props) {
     annotation,
     isActive, setActive,
     updateAnnotation,
-    scale
   } = props;
   const dispatch = useDispatch();
   // Stores changes before they're saved
@@ -420,6 +419,18 @@ function AnnotationCard(props) {
     }
   }
 
+  const [refreshing,setRefreshing] = useState(false);
+  function refresh() {
+    // Momentarily hide the div to force a rerender
+    setRefreshing(true);
+  }
+  useEffect(()=>{
+    if (!refreshing) {
+      return;
+    }
+    setRefreshing(false);
+  },[refreshing])
+
   let classNames = generateClassNames({
     card: true,
     active: isActive
@@ -451,7 +462,10 @@ function AnnotationCard(props) {
     let parsedBlob = parseBlob(annotation);
     return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
-      <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
+      {
+        !refreshing &&
+        <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
+      }
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -464,9 +478,20 @@ function AnnotationCard(props) {
         <span onClick={deleteAnnotation}>
           <i className='material-icons'>delete</i>
         </span>
+        <span onClick={refresh}>
+          <i className='material-icons'>sync</i>
+        </span>
         <span>
           <a href={'#annotation'+annotation.id}>scroll into view</a>
         </span>
+        {
+          annotation.type === 'rect' &&
+          (
+            <span>
+              <a href={process.env.REACT_APP_SERVER_ADDRESS+"/data/annotations/"+annotation.id+'/img'}>img</a>
+            </span>
+          )
+        }
       </div>
     </div>);
   }
