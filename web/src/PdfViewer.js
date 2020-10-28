@@ -17,8 +17,6 @@ import './PdfViewer.scss';
 
 function AnnotationLayer(props) {
   const {
-    createAnnotation,
-    updateAnnotation,
     annotations,
     eventHandlers,
     toolState,
@@ -30,7 +28,6 @@ function AnnotationLayer(props) {
   const ref = useRef(null);
 
   const [startMouseCoord,setStartMouseCoord] = useState(null);
-  const [mouseCoord,setMouseCoord] = useState(null);
   const [mouseMoved,setMouseMoved] = useState(false);
   const [focusedId,setFocusedId] = useState(null); // In case something drawn on the canvas is focused
 
@@ -301,6 +298,8 @@ function AnnotationLayer(props) {
             </>
           }
         </div>;
+      default:
+        return null;
     }
   }
   useEffect(()=>{
@@ -350,7 +349,7 @@ function AnnotationLayer(props) {
         }
       }
     }
-  },[page, ref.current, annotations, toolState]);
+  },[page, ref.current, annotations, toolState, scale]);
 
   return <div className='annotation-layer'>
     <canvas ref={ref} onDoubleClick={onDoubleClick}
@@ -563,7 +562,6 @@ function PdfViewer(props) {
     setNeedsRender(false);
     setDoneRendering(false);
     onRenderingStatusChange(false);
-    // TODO: Render text layer
   }, [ref.current, needsRender, doneRendering]);
 
   return (
@@ -608,7 +606,6 @@ function PdfTextLayer(props) {
         container: ref.current,
         textDivs: []
       };
-      console.log(renderContext);
       pdfjsLib.renderTextLayer(renderContext).promise.then(x => {
         setDoneRendering(true);
         onRenderingStatusChange(true);
@@ -631,7 +628,6 @@ function PdfTextLayer(props) {
 
 function PdfPageContainer(props) {
   const {
-    activeId, setActiveId,
     toolState,
     eventHandlers,
     createAnnotation,
@@ -684,12 +680,13 @@ function usePdfPages(doc) {
   const [progress,setProgress] = useState(null);
   const [error,setError] = useState(null);
   const pagesRef = useRef({}); // Ref is needed because multiple setPages in one update cycle will overwrite each other.
+  const docId = doc && doc.id;
   useEffect(()=>{
-    if (!doc) {
+    if (docId === null || docId === undefined) {
       return;
     }
     pdfjsLib.getDocument({
-      url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+doc.id+'/pdf',
+      url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+docId+'/pdf',
       withCredentials: true
     }).promise .then(pdf => {
       setPdf(pdf);
@@ -705,7 +702,7 @@ function usePdfPages(doc) {
         setError(error.message || "Error Loading PDF");
       }
     });
-  },[doc && doc.id]);
+  },[docId]);
   useEffect(()=>{
     if (!pdf) {
       return;
