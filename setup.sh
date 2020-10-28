@@ -22,7 +22,7 @@ cat requirements.txt | xargs -n 1 ./ENV/bin/pip install
 ./ENV/bin/pip install uwsgi
 cd ..
 
-sed -e "s/{user}/$username/g" -e "s/{workingdirectory}/$pwd/g" ./configs/annotator.service | sudo tee /etc/systemd/system/annotator.service
+sed -e "s/{user}/$username/g" -e "s/{workingdirectory}/$pwd/g" "s/{path}/$PATH/g" ./configs/annotator.service | sudo tee /etc/systemd/system/annotator.service
 
 sudo systemctl start annotator
 sudo systemctl enable annotator
@@ -44,3 +44,7 @@ sudo ln -s /etc/nginx/sites-available/annotator /etc/nginx/sites-enabled
 sudo rm /etc/nginx/sites-enabled/default
 
 sudo systemctl restart nginx
+
+# Misc
+
+sudo apt install poppler-utils

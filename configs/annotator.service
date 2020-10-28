@@ -6,7 +6,7 @@ After=network.target
 User={user}
 Group=www-data
 WorkingDirectory={workingdirectory}/backend
-Environment="PATH={workingdirectory}/backend/ENV/bin"
+Environment="PATH={workingdirectory}/backend/ENV/bin:{path}"
 ExecStart={workingdirectory}/backend/ENV/bin/uwsgi --ini app.ini
 
 [Install]
