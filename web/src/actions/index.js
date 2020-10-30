@@ -7,6 +7,37 @@ function toUpperCaseSnakeCase(str) {
   return str.split(/(?=[A-Z])/).join('_').toUpperCase()
 }
 
+function updateStore(dispatch, response) {
+  if (response.data.entities) {
+    for (let [eType,entities] of Object.entries(response.data.entities)) {
+      dispatch({
+        type: 'FETCH_'+toUpperCaseSnakeCase(eType)+'_SUCCESS',
+        payload: {
+          entities: entities
+        }
+      });
+    }
+  }
+  if (response.data.new_entities) {
+    for (let [eType,entities] of Object.entries(response.data.new_entities)) {
+      dispatch({
+        type: 'CREATE_'+toUpperCaseSnakeCase(eType)+'_SUCCESS',
+        payload: {
+          entities: entities
+        }
+      });
+    }
+  }
+  //if (response.data.summary) {
+  //  dispatch({
+  //    type: 'FETCH_'+dataType+'_SUCCESS',
+  //    payload: {
+  //      summary: response.data.summary
+  //    }
+  //  });
+  //}
+}
+
 function createActions(dataType, path, autosortProps) {
   // Process path. If it should start with a / but not end with one.
   if (!path.startsWith('/')) {
@@ -14,37 +45,6 @@ function createActions(dataType, path, autosortProps) {
   }
   if (path.endsWith('/')) {
     path = path.substr(0, path.length-1);
-  }
-
-  function updateStore(dispatch, response) {
-    if (response.data.entities) {
-      for (let [eType,entities] of Object.entries(response.data.entities)) {
-        dispatch({ 
-          type: 'FETCH_'+toUpperCaseSnakeCase(eType)+'_SUCCESS',
-          payload: {
-            entities: entities
-          }
-        });
-      }
-    }
-    if (response.data.new_entities) {
-      for (let [eType,entities] of Object.entries(response.data.new_entities)) {
-        dispatch({ 
-          type: 'CREATE_'+toUpperCaseSnakeCase(eType)+'_SUCCESS',
-          payload: {
-            entities: entities
-          }
-        });
-      }
-    }
-    if (response.data.summary) {
-      dispatch({ 
-        type: 'FETCH_'+dataType+'_SUCCESS',
-        payload: {
-          summary: response.data.summary
-        }
-      });
-    }
   }
 
   return {
@@ -301,6 +301,19 @@ export const logout = function(){
       {withCredentials: true}
     ).then(function(response){
       dispatch({type: 'LOGOUT_SUCCESS'});
+      return response;
+    });
+  }
+}
+
+export const autofillDocumentInfo = function(docId){
+  return function(dispatch) {
+    return axios.post(
+      process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+docId+'/autofill',
+      {},
+      {withCredentials: true}
+    ).then(function(response){
+      updateStore(dispatch, response);
       return response;
     });
   }
