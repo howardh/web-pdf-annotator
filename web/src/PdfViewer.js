@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect, useState, useRef } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useHistory } from "react-router-dom";
 import * as commonmark from 'commonmark';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
@@ -368,8 +368,10 @@ function AnnotationCard(props) {
     annotation,
     isActive, setActive,
     updateAnnotation,
+    setCardInView, setAnnotationInView
   } = props;
   const dispatch = useDispatch();
+  const history = useHistory();
   // Stores changes before they're saved
   const [updatedBlob,setUpdatedBlob] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
@@ -403,6 +405,11 @@ function AnnotationCard(props) {
       saveChanges();
     }
   }
+  function scrollIntoView() {
+    history.push('#annotation'+annotation.id);
+    setCardInView(annotation.id);
+    setAnnotationInView(annotation.id);
+  }
 
   function parseBlob(annotation) {
     switch (annotation.parser) {
@@ -429,7 +436,7 @@ function AnnotationCard(props) {
       return;
     }
     setRefreshing(false);
-  },[refreshing])
+  },[refreshing]);
 
   let classNames = generateClassNames({
     card: true,
@@ -459,13 +466,11 @@ function AnnotationCard(props) {
       </div>
     </div>);
   } else {
-    let parsedBlob = parseBlob(annotation);
+    let parsedBlob = {__html: parseBlob(annotation)};
+    let parsedBlobDiv = (<div dangerouslySetInnerHTML={parsedBlob} />);
     return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
-      {
-        !refreshing &&
-        <div dangerouslySetInnerHTML={{__html: parsedBlob}} />
-      }
+      { !refreshing && parsedBlobDiv }
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -481,9 +486,9 @@ function AnnotationCard(props) {
         <span onClick={refresh}>
           <i className='material-icons'>sync</i>
         </span>
-        <span>
-          <a href={'#annotation'+annotation.id}>scroll into view</a>
-        </span>
+        <Button onClick={scrollIntoView}>
+          Scroll into view
+        </Button>
         {
           annotation.type === 'rect' &&
           (
@@ -501,6 +506,8 @@ function AnnotationCardsContainer(props) {
   const {
     annotations,
     activeId, setActiveId,
+    cardInView, setCardInView,
+    setAnnotationInView,
     updateAnnotation,
     scale
   } = props;
@@ -508,15 +515,16 @@ function AnnotationCardsContainer(props) {
   const [scrollYPos, setScrollYPos] = useState(0);
 
   useEffect(()=>{
-    if (!activeId) {
+    let id = cardInView;
+    if (!id || !annotations[id]) {
       return;
     }
-    if (annotations[activeId].type === 'highlight') {
+    if (annotations[id].type === 'highlight') {
       return;
     }
-    let card = document.getElementById('card'+activeId);
+    let card = document.getElementById('card'+id);
     setScrollYPos(window.scrollY-card.offsetTop+30);
-  },[activeId]);
+  },[cardInView]);
 
   const style = {
     transform: 'translateY('+scrollYPos+'px)'
@@ -533,7 +541,9 @@ function AnnotationCardsContainer(props) {
               isActive={ann.id === activeId}
               setActive={(f)=>setActiveId(f ? ann.id : null)}
               annotation={ann}
-              updateAnnotation={updateAnnotation} />
+              updateAnnotation={updateAnnotation}
+              setCardInView={setCardInView}
+              setAnnotationInView={setAnnotationInView} />
         );
       })
     }
@@ -839,6 +849,8 @@ export default function PdfAnnotationPage(props) {
     )
   );
   const [activeId, setActiveId] = useState(null);
+  const [cardInView, setCardInView] = useState(null);
+  const [annotationInView, setAnnotationInView] = useState(null);
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
 
@@ -853,19 +865,71 @@ export default function PdfAnnotationPage(props) {
       } else if (hash.startsWith('#card')) {
         id = parseInt(hash.slice('#card'.length));
       }
-      // Wait until element is loaded to scroll it into view
-      function scrollWhenFound() {
-        let elem = document.getElementById(hash.slice(1));
-        if (!elem) {
-          window.setTimeout(scrollWhenFound, 100);
-          return;
-        }
-        elem.scrollIntoView();
-        setActiveId(id);
-      }
-      scrollWhenFound();
+      setActiveId(id);
+      setCardInView(id);
+      setAnnotationInView(id);
     }
-  }, []);
+  }, [location.hash]);
+
+  // Scrolling card into view
+  useEffect(()=>{
+    if (cardInView) {
+      console.log(['scrolling to card',cardInView]);
+      function handleScroll(e) {
+        setCardInView(null);
+        console.log('Scrolled away card');
+      }
+      window.addEventListener('scroll',handleScroll);
+      return () => {
+        window.removeEventListener('scroll',handleScroll);
+      };
+    }
+  },[cardInView]);
+  useEffect(()=>{
+    if (annotationInView) {
+      console.log(['scrolling to annotaiton',annotationInView]);
+      function handleScroll(e) {
+        setAnnotationInView(null);
+        console.log('Scrolled away annotation');
+      }
+      window.addEventListener('scroll',handleScroll);
+      return () => {
+        window.removeEventListener('scroll',handleScroll);
+      };
+    }
+  },[annotationInView]);
+  useEffect(() => { // Do the scrolling when annotationInView changes
+    function scrollWhenFound() {
+      if (!annotationInView) {
+        return;
+      }
+      let annotationElemId = 'annotation'+annotationInView;
+      let elem = document.getElementById(annotationElemId);
+      if (!elem) { // Try again later
+        window.setTimeout(scrollWhenFound, 100);
+        return;
+      }
+      // Scroll into view, then center the element
+      let vpHeight = window.innerHeight;
+      let elemHeight = elem.offsetHeight;
+      elem.scrollIntoView();
+      window.scrollTo({
+        top: window.scrollY-vpHeight/2+elemHeight/2
+      });
+      // Hacky solution.
+      // Has to be set in the next update cycle, or else it gets overridden
+      setTimeout(()=>setCardInView(annotationInView),0);
+    }
+    scrollWhenFound();
+  }, [annotationInView]);
+  useEffect(()=>{
+    if (!activeId) {
+      return;
+    }
+    console.log(['active changed',activeId]);
+    //setCardInView(activeId); // Scroll it into view
+    //setAnnotationInView(activeId); // Scroll it into view
+  },[activeId])
 
   // Document title
   useEffect(() => {
@@ -897,6 +961,7 @@ export default function PdfAnnotationPage(props) {
       let newAnnotations = response.data.entities.annotations;
       let newKeys = Object.keys(newAnnotations);
       setActiveId(parseInt(newKeys[0]));
+      setCardInView(parseInt(newKeys[0]));
     });
   }
   function updateAnnotation(id, ann) {
@@ -944,6 +1009,7 @@ export default function PdfAnnotationPage(props) {
         annotation: {
           onClick: function(event,data) {
             setActiveId(data.id);
+            setCardInView(data.id);
           },
           onDoubleClick: handleDoubleClick,
         }
@@ -1389,6 +1455,7 @@ export default function PdfAnnotationPage(props) {
   function activateAnnotation(annId) {
     setActiveId(annId);
     if (annId) { // Check if we're activating or deactivating
+      setCardInView(annId);
       setToolState({
         ...tools.resize.initState(),
         selectedAnnotationId: annId,
@@ -1503,6 +1570,9 @@ export default function PdfAnnotationPage(props) {
     <AnnotationCardsContainer
         annotations={annotations}
         activeId={activeId} setActiveId={activateAnnotation}
+        cardInView={cardInView} setCardInView={setCardInView}
+        annotationInView={annotationInView}
+        setAnnotationInView={setAnnotationInView}
         updateAnnotation={updateAnnotation}
         scale={pdfScale} />
     <DocInfoContainer doc={doc} updateDoc={updateDoc} />
