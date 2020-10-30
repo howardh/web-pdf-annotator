@@ -720,10 +720,11 @@ function usePdfPages(doc) {
     if (docId === null || docId === undefined) {
       return;
     }
-    pdfjsLib.getDocument({
+    let loadingTask = pdfjsLib.getDocument({
       url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+docId+'/pdf',
       withCredentials: true
-    }).promise .then(pdf => {
+    })
+    loadingTask.promise.then(pdf => {
       setPdf(pdf);
       setProgress({
         totalPages: pdf.numPages,
@@ -737,6 +738,9 @@ function usePdfPages(doc) {
         setError(error.message || "Error Loading PDF");
       }
     });
+    return ()=>{
+      loadingTask.destroy();
+    }
   },[docId]);
   useEffect(()=>{
     if (!pdf) {
