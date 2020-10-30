@@ -50,9 +50,15 @@ class AnnotationImageEndpoint(Resource):
                 .filter_by(user_id=current_user.get_id()) \
                 .filter_by(id=entity_id) \
                 .first()
+        if annotation is None:
+            return json.dumps({
+                'error': 'Annotation not found'
+            }), 404
         # Check if annotation is rect
         if annotation.type != 'rect':
-            return None, 200
+            return json.dumps({
+                'error': 'Annotation of type %s cannot be converted to image.' % annotation.type
+            }), 404
         # Get document
         document = db.session.query(Document) \
                 .filter_by(user_id=current_user.get_id()) \
