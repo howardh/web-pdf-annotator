@@ -874,10 +874,8 @@ export default function PdfAnnotationPage(props) {
   // Scrolling card into view
   useEffect(()=>{
     if (cardInView) {
-      console.log(['scrolling to card',cardInView]);
       function handleScroll(e) {
         setCardInView(null);
-        console.log('Scrolled away card');
       }
       window.addEventListener('scroll',handleScroll);
       return () => {
@@ -887,10 +885,8 @@ export default function PdfAnnotationPage(props) {
   },[cardInView]);
   useEffect(()=>{
     if (annotationInView) {
-      console.log(['scrolling to annotaiton',annotationInView]);
       function handleScroll(e) {
         setAnnotationInView(null);
-        console.log('Scrolled away annotation');
       }
       window.addEventListener('scroll',handleScroll);
       return () => {
@@ -926,7 +922,6 @@ export default function PdfAnnotationPage(props) {
     if (!activeId) {
       return;
     }
-    console.log(['active changed',activeId]);
     //setCardInView(activeId); // Scroll it into view
     //setAnnotationInView(activeId); // Scroll it into view
   },[activeId])
