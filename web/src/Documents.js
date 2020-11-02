@@ -1,5 +1,5 @@
 import React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useRef} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link, useHistory } from "react-router-dom";
 
@@ -161,7 +161,7 @@ function DocumentsTableActions(props) {
           <i className='material-icons'>filter_list</i>
         </button>
         <TagFilter visible={tagFilterVisible} selectedTags={tagFilters}
-            onChangeSelectedTags={setTagFilters} />
+            onChangeSelectedTags={setTagFilters} setVisible={setTagFilterVisible}/>
       </div>
     </div>);
   }
@@ -179,7 +179,7 @@ function DocumentsTableActions(props) {
         <button onClick={()=>setTagEditorVisible(!tagEditorVisible)}>
           <i className='material-icons'>label</i>
         </button>
-        <TagEditor documents={selectedDocs} visible={tagEditorVisible} />
+        <TagEditor documents={selectedDocs} visible={tagEditorVisible} setVisible={setTagEditorVisible}/>
       </div>
     </div>);
   }
@@ -192,7 +192,7 @@ function DocumentsTableActions(props) {
       <button onClick={()=>setTagEditorVisible(!tagEditorVisible)}>
         <i className='material-icons'>label</i>
       </button>
-      <TagEditor documents={selectedDocs} visible={tagEditorVisible} />
+      <TagEditor documents={selectedDocs} visible={tagEditorVisible} setVisible={setTagEditorVisible}/>
     </div>
   </div>);
 }
@@ -282,6 +282,24 @@ function TagEditor(props) {
   const tags = useSelector(state => state.tags.entities);
   const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
   const exactMatch = Object.values(filteredTags).filter(t => t.name === tagSearchValue);
+  const ref = useRef(null);
+
+  useEffect(()=>{
+    if (!visible) {
+      return;
+    }
+    if (setVisible) {
+      function handleClick(e) {
+        if (ref.current && e.target.contains(ref.current)) {
+          setVisible(false);
+        }
+      }
+      document.addEventListener('click',handleClick);
+      return () => {
+        document.removeEventListener('click',handleClick);
+      }
+    }
+  },[visible]);
 
   const tagSelectionCount = Object.values(
     documents
@@ -334,7 +352,7 @@ function TagEditor(props) {
     return null;
   }
 
-  return (<div className='tag-editor'>
+  return (<div className='tag-editor' ref={ref}>
     <div className='editor'>
       <div className='selected-tags'>
       </div>
@@ -383,6 +401,24 @@ function TagFilter(props) {
   const [tagSearchValue,setTagSearchValue] = useState('');
   const tags = useSelector(state => state.tags.entities);
   const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
+  const ref = useRef(null);
+
+  useEffect(()=>{
+    if (!visible) {
+      return;
+    }
+    if (setVisible) {
+      function handleClick(e) {
+        if (ref.current && e.target.contains(ref.current)) {
+          setVisible(false);
+        }
+      }
+      document.addEventListener('click',handleClick);
+      return () => {
+        document.removeEventListener('click',handleClick);
+      }
+    }
+  },[visible]);
 
   function toggleTag(tagName) {
     if (selectedTags.has(tagName)) {
@@ -398,7 +434,7 @@ function TagFilter(props) {
     return null;
   }
 
-  return (<div className='tag-editor'>
+  return (<div className='tag-editor' ref={ref}>
     <div className='editor'>
       <div className='selected-tags'>
       </div>
