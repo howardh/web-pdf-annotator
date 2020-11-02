@@ -3,7 +3,9 @@
 .input {
   box-sizing: border-box;
   display: inline-block;
+  vertical-align: middle;
   i.material-icons {
+    vertical-align: middle;
     cursor: pointer;
   }
   input[type='checkbox'] {

@@ -36,7 +36,10 @@ export function Checkbox(props) {
     ...rest
   } = props;
   const ref = useRef(null);
-  function toggle() {
+  function toggle(e) {
+    if (e.target.closest('label')) {
+      return; // Don't do anyting if it's contained in a label
+    }
     let event = new Event('input', {bubbles: true});
     ref.current.checked = !checked;
     ref.current.dispatchEvent(event);

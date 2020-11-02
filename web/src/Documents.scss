@@ -24,10 +24,20 @@
         }
         td {
           padding: 5px 10px;
-          &:nth-child(1) {
+          &.checkbox {
             text-align: center;
           }
-          &:nth-child(4) {
+          &.title {
+            span.title {
+              font-weight: bold;
+              &.read {
+                font-weight: unset;
+              }
+            }
+          }
+          &.lastmodified {
+          }
+          &.actions {
             i.material-icons {
               color: black;
               cursor: pointer;

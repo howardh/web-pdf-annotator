@@ -237,18 +237,22 @@ function DocumentsTable(props) {
               return null;
             }
             return (<tr key={doc.id}>
-              <td>
+              <td className='checkbox'>
                 <Checkbox checked={selectedDocIds.has(doc.id)}
                     onChange={()=>toggleSelectDoc(doc.id)}/>
               </td>
-              <td>
-                {doc.tag_names.length > 0 && '['+doc.tag_names.join('][')+'] '}
-                {doc.title || doc.url}
+              <td className='title'>
+                <span className='tags'>
+                  {doc.tag_names.length > 0 && '['+doc.tag_names.join('][')+'] '}
+                </span>
+                <span className={generateClassNames({title:true,read:doc.read})}>
+                  {doc.title || doc.url}
+                </span>
               </td>
-              <td>
+              <td className='lastmodified'>
                 {new Date(doc.last_modified_at).toLocaleString()}
               </td>
-              <td>
+              <td className='actions'>
                 <Link to={'/annotate/'+doc.id}>
                   <i className='material-icons'>create</i>
                 </Link>

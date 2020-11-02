@@ -5,7 +5,7 @@ import { useParams, useLocation, useHistory } from "react-router-dom";
 import * as commonmark from 'commonmark';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
-import { Button, TextField } from './Inputs.js';
+import { Button, TextField, Checkbox } from './Inputs.js';
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
@@ -822,6 +822,10 @@ function DocInfoForm(props) {
     <label>
       <span>Bibtex</span>
       <textarea name='bibtex' value={doc['bibtex'] || ''} onChange={handleChange} />
+    </label>
+    <label>
+      <Checkbox name='read' checked={doc['read']} onChange={handleChange} />
+      <span>Read</span>
     </label>
   </div>);
 }

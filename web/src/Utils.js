@@ -9,10 +9,17 @@ export function generateClassNames(cn) {
 // Forms
 export function formChangeHandler(state,setState) {
   return function(event) {
-    setState({
-      ...state,
-      [event.target.name]: event.target.value
-    });
+    if (event.target.type='checkbox') {
+      setState({
+        ...state,
+        [event.target.name]: event.target.checked
+      });
+    } else {
+      setState({
+        ...state,
+        [event.target.name]: event.target.value
+      });
+    }
   }
 }
 // List utils
