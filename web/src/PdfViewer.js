@@ -375,6 +375,7 @@ function AnnotationCard(props) {
   // Stores changes before they're saved
   const [updatedBlob,setUpdatedBlob] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
+  const [isVisibleAdvancedOptions,setIsVisibleAdvancedOptions] = useState(false);
 
   function startEditing() {
     setUpdatedBlob(annotation.blob);
@@ -409,6 +410,12 @@ function AnnotationCard(props) {
     history.push('#annotation'+annotation.id);
     setCardInView(annotation.id);
     setAnnotationInView(annotation.id);
+  }
+  function handleChangeParser(e) {
+    updateAnnotation(annotation.id, {
+      ...annotation,
+      parser: e.target.value
+    });
   }
 
   function parseBlob(annotation) {
@@ -463,11 +470,39 @@ function AnnotationCard(props) {
         <span onClick={deleteAnnotation}>
           <i className='material-icons'>delete</i>
         </span>
+        {
+          isVisibleAdvancedOptions ? (
+            <div className='advanced'>
+              <label>
+                Parser:
+                <select value={annotation.parser} onChange={handleChangeParser}>
+                  <option value='plaintext'>plaintext</option>
+                  <option value='commonmark'>commonmark</option>
+                </select>
+              </label>
+              <div className='advanced-toggle' onClick={()=>setIsVisibleAdvancedOptions(false)}>Hide advanced Options</div>
+            </div>
+          ) : (
+            <div className='advanced'>
+              <div className='advanced-toggle' onClick={()=>setIsVisibleAdvancedOptions(true)}>Show advanced Options</div>
+            </div>
+          )
+        }
       </div>
     </div>);
   } else {
-    let parsedBlob = {__html: parseBlob(annotation)};
-    let parsedBlobDiv = (<div dangerouslySetInnerHTML={parsedBlob} />);
+    let parsedBlobDiv = null;
+    switch (annotation.parser) {
+      case 'plaintext':
+        parsedBlobDiv = (<pre>{annotation.blob}</pre>);
+        break;
+      case 'commonmark':
+        let parsedBlob = {__html: parseBlob(annotation)};
+        parsedBlobDiv = (<div dangerouslySetInnerHTML={parsedBlob} />);
+        break;
+      default:
+        break;
+    }
     return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
       { !refreshing && parsedBlobDiv }
