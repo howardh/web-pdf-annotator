@@ -9,6 +9,7 @@ import requests
 import uuid
 import json
 import re
+import datetime
 
 from annotator_app.extensions import db
 from annotator_app.database import Document
@@ -26,6 +27,9 @@ class DocumentEndpoint(EntityEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
+    def after_update(self,entity):
+        entity.last_modified_at = datetime.datetime.now()
+        return entity
 
 def fetch_pdf(document, max_bytes):
     response = requests.get(document.url)
@@ -107,7 +111,7 @@ class DocumentAccessCodeEndpoint(Resource):
 
 class DocumentAutoFillEndpoint(Resource):
     def post(self, entity_id):
-        data = request.get_json() 
+        data = request.get_json()
         entity = db.session.query(Document) \
                 .filter_by(user_id=current_user.get_id()) \
                 .filter_by(id=entity_id) \

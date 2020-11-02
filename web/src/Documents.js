@@ -217,18 +217,22 @@ function DocumentsTable(props) {
     }
   }
 
+  const sortedDocs = Object.values(documents).sort(
+    (doc1,doc2) => new Date(doc2.last_modified_at) - new Date(doc1.last_modified_at)
+  )
   return (
     <table>
       <thead>
         <tr>
           <th><Checkbox checked={selectedAllDocs} onChange={toggleSelectAllDocs}/></th>
           <th>Title</th>
+          <th>Last Modified</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         {
-          Object.values(documents).map(doc=>{
+          sortedDocs.map(doc=>{
             if (!doc) {
               return null;
             }
@@ -240,6 +244,9 @@ function DocumentsTable(props) {
               <td>
                 {doc.tag_names.length > 0 && '['+doc.tag_names.join('][')+'] '}
                 {doc.title || doc.url}
+              </td>
+              <td>
+                {new Date(doc.last_modified_at).toLocaleString()}
               </td>
               <td>
                 <Link to={'/annotate/'+doc.id}>

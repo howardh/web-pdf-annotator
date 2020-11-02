@@ -15,7 +15,11 @@ def entities_to_dict(entities):
         output[entity.__tablename__][entity.id] = entity_dict
     return output
 
-class ListEndpoint(Resource):
+class CustomResource(Resource):
+    def after_update(self,entity):
+        return entity
+
+class ListEndpoint(CustomResource):
     """
     Meta:
         model: Class representing a SQLAlchemy model
@@ -65,7 +69,7 @@ class ListEndpoint(Resource):
             'new_entities': entities_to_dict([entity]),
         }, 200
 
-class EntityEndpoint(Resource):
+class EntityEndpoint(CustomResource):
     def get(self, entity_id):
         entity = db.session.query(self.Meta.model) \
                 .filter_by(user_id=current_user.get_id()) \
@@ -85,13 +89,14 @@ class EntityEndpoint(Resource):
                 .filter_by(user_id=current_user.get_id()) \
                 .first()
 
+        if entity is None:
+            return {'error': 'No entity found with this ID.'}, 404
+
         if entity.deleted_at is not None:
             entity.deleted_at = None # Undelete
 
         entity.update(data)
-
-        if entity is None:
-            return {'error': 'No entity found with this ID.'}, 404
+        entity = self.after_update(entity)
 
         db.session.flush()
         db.session.commit()

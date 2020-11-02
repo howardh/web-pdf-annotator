@@ -3,7 +3,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
-from annotator_app.extensions import cors, db, security, mail
+from annotator_app.extensions import cors, db, security, mail, migrate
 from annotator_app.database import user_datastore
 
 app = Flask(__name__,instance_relative_config=True)
@@ -12,6 +12,7 @@ cors.init_app(app, supports_credentials=True)
 db.init_app(app)
 security.init_app(app,user_datastore)
 mail.init_app(app)
+migrate.init_app(app,db)
 app.app_context().push()
 
 from annotator_app.resources.auth import auth_bp

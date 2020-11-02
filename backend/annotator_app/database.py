@@ -42,9 +42,11 @@ class ModelMixin(object):
             prop_type = type(prop.columns[0].type)
             if prop_type is Date:
                 val = datetime.datetime.strptime(v, "%Y-%m-%d").date()
-                self.__setattr__(k,val)
+            elif prop_type is DateTime:
+                val = datetime.datetime.strptime(v, "%Y-%m-%dT%H:%M:%S")
             else:
-                self.__setattr__(k,v)
+                val = v
+            self.__setattr__(k,val)
 
 roles_users = db.Table('roles_users',
         db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
@@ -85,7 +87,11 @@ class Document(db.Model, ModelMixin):
     title = Column(String)
     author = Column(String)
     bibtex = Column(String)
+    read = Column(Boolean)
     deleted_at = Column(Date)
+    created_at = Column(DateTime)
+    last_modified_at = Column(DateTime)
+    last_accessed_at = Column(DateTime)
 
     annotations = db.relationship('Annotation', lazy='dynamic')
     tags = db.relationship('Tag', secondary=lambda: documents_tags)
@@ -96,6 +102,14 @@ class Document(db.Model, ModelMixin):
     )
 
     def to_dict(self):
+        def date_to_str(d):
+            if d is None:
+                return None
+            return d.strftime('%Y-%m-%d')
+        def datetime_to_str(d):
+            if d is None:
+                return None
+            return d.strftime('%Y-%m-%dT%H:%M:%S')
         return {
                 'id': self.id,
                 'user_id': self.user_id,
@@ -103,7 +117,10 @@ class Document(db.Model, ModelMixin):
                 'title': self.title,
                 'author': self.author,
                 'bibtex': self.bibtex,
-                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None,
+                'read': self.read,
+                'deleted_at': date_to_str(self.deleted_at),
+                'last_modified_at': datetime_to_str(self.last_modified_at),
+                'last_accessed_at': datetime_to_str(self.last_accessed_at),
                 'tag_names': list(self.tag_names)
         }
 
