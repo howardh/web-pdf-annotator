@@ -1550,7 +1550,7 @@ export default function PdfAnnotationPage(props) {
       page => page.getViewport({scale: pdfScale}).height+margin
     ); // FIXME: This assumes we iterate the object in the order of the pages.
     let scrollTo = 0;
-    let pos = window.scrollY;
+    let pos = window.scrollY+1;
     for (let ph of pageHeights) {
       scrollTo += ph;
       if (pos < ph) {
