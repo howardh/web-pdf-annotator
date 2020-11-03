@@ -1634,16 +1634,16 @@ export default function PdfAnnotationPage(props) {
         Highlight
       </Button>
       <Button onClick={zoomIn}>
-        +
+        <i className='material-icons'>zoom_in</i>
       </Button>
       <Button onClick={zoomOut}>
-        -
+        <i className='material-icons'>zoom_out</i>
       </Button>
       <Button onClick={()=>dispatch(annotationActions['undo']())}>
-        Undo
+        <i className='material-icons'>undo</i>
       </Button>
       <Button onClick={()=>dispatch(annotationActions['redo']())}>
-        Redo
+        <i className='material-icons'>redo</i>
       </Button>
     </div>
   </main>);
