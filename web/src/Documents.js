@@ -123,7 +123,7 @@ function NewDocumentForm(props) {
     );
   }
   function handleKeyPress(e) {
-    if (e.which === 13) {
+    if (e.key === 'Enter') {
       createDoc();
     }
   }

@@ -9,7 +9,7 @@ export function generateClassNames(cn) {
 // Forms
 export function formChangeHandler(state,setState) {
   return function(event) {
-    if (event.target.type='checkbox') {
+    if (event.target.type==='checkbox') {
       setState({
         ...state,
         [event.target.name]: event.target.checked
