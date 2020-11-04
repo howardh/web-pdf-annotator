@@ -16,6 +16,8 @@ def entities_to_dict(entities):
     return output
 
 class CustomResource(Resource):
+    def after_create(self,entity):
+        return entity
     def after_update(self,entity):
         return entity
 
@@ -58,6 +60,7 @@ class ListEndpoint(CustomResource):
                     'error': str(e)
             }, 400
         entity.user_id = current_user.get_id()
+        self.after_create(entity)
 
         db.session.add(entity)
         db.session.flush()

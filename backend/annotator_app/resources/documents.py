@@ -22,6 +22,10 @@ class DocumentList(ListEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
+    def after_create(self,entity):
+        entity.last_modified_at = datetime.datetime.now()
+        entity = autofill_document_details(entity)
+        return entity
 
 class DocumentEndpoint(EntityEndpoint):
     class Meta:
@@ -109,6 +113,36 @@ class DocumentAccessCodeEndpoint(Resource):
             'code': code.code
         }), 200
 
+def autofill_document_details(entity):
+    url = entity.url
+    match = re.search("^https://arxiv.org/pdf/(\d+\.\d+)", url)
+    if match is not None:
+        arxiv_abs_url = 'https://arxiv.org/abs/%s' % match.group(1)
+
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '3600',
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
+        }
+        response = requests.get(arxiv_abs_url, headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        title = soup.find_all('h1', class_='title')[0].text
+        if title.startswith('Title:'):
+            title = title[len('Title:'):]
+            if entity.title is None:
+                entity.title = title
+        authors = soup.find_all('div', class_='authors')[0].text
+        if authors.startswith('Authors:'):
+            authors = authors[len('Authors:'):]
+            #if entity.author is None:
+            entity.author = authors
+
+    return entity
+
+
 class DocumentAutoFillEndpoint(Resource):
     def post(self, entity_id):
         data = request.get_json()
@@ -122,31 +156,7 @@ class DocumentAutoFillEndpoint(Resource):
                 'error': 'Document not found'
             }, 404
 
-        url = entity.url
-        match = re.search("^https://arxiv.org/pdf/(\d+\.\d+)", url)
-        if match is not None:
-            arxiv_abs_url = 'https://arxiv.org/abs/%s' % match.group(1)
-
-            headers = {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET',
-                'Access-Control-Allow-Headers': 'Content-Type',
-                'Access-Control-Max-Age': '3600',
-                'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
-            }
-            response = requests.get(arxiv_abs_url, headers)
-            soup = BeautifulSoup(response.content, 'html.parser')
-
-            title = soup.find_all('h1', class_='title')[0].text
-            if title.startswith('Title:'):
-                title = title[len('Title:'):]
-                if entity.title is None:
-                    entity.title = title
-            authors = soup.find_all('div', class_='authors')[0].text
-            if authors.startswith('Authors:'):
-                authors = authors[len('Authors:'):]
-                #if entity.author is None:
-                entity.author = authors
+        entity = autofill_document_details(entity)
 
         db.session.flush()
         db.session.commit()

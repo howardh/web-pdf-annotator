@@ -116,9 +116,6 @@ function NewDocumentForm(props) {
     dispatch(documentActions['create'](values)).then(
       response => {
         setValues(initialValues);
-        for (let docId of Object.keys(response.data.new_entities.documents)) {
-          dispatch(autofillDocumentInfo(docId));
-        }
       }
     );
   }

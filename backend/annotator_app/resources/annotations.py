@@ -49,7 +49,6 @@ class AnnotationEndpoint(EntityEndpoint):
         if doc is None:
             print('Error: Unable to find document associated with annotation %d' % entity.id)
 
-        print('Annotation update',doc)
         doc.last_modified_at = datetime.datetime.now()
         return entity
 
