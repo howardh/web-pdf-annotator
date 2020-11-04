@@ -8,6 +8,8 @@
     "@testing-library/user-event": "^7.2.1",
     "axios": "^0.20.0",
     "commonmark": "^0.29.2",
+    "markdown-it": "^12.0.2",
+    "markdown-it-mathjax": "^2.0.0",
     "material-design-icons": "^3.0.1",
     "node-sass": "^4.14.1",
     "pdfjs-dist": "^2.5.207",

@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import * as commonmark from 'commonmark';
+import * as MarkdownIt from 'markdown-it';
+import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox } from './Inputs.js';
@@ -10,6 +12,8 @@ import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {documentActions,annotationActions} from './actions/index.js';
 
 import './PdfViewer.scss';
+
+const md = MarkdownIt().use(MarkdownItMathjax());
 
 //////////////////////////////////////////////////
 // Annotations
@@ -377,6 +381,12 @@ function AnnotationCard(props) {
   const [isEditing,setIsEditing] = useState(false);
   const [isVisibleAdvancedOptions,setIsVisibleAdvancedOptions] = useState(false);
 
+  // Mathjax
+  useEffect(()=>{
+    // Redo typesetting whenever the annotation changes
+    window.MathJax.typeset();
+  }, [annotation]);
+
   function startEditing() {
     setUpdatedBlob(annotation.blob);
     setIsEditing(true);
@@ -420,15 +430,18 @@ function AnnotationCard(props) {
 
   function parseBlob(annotation) {
     switch (annotation.parser) {
-      case 'plaintext':
+      case 'plaintext': {
         return annotation.blob;
-      case 'commonmark':
+      } case 'commonmark': {
         let reader = new commonmark.Parser();
         let writer = new commonmark.HtmlRenderer({safe: true});
         let parsed = reader.parse(annotation.blob); // parsed is a 'Node' tree
         let parsedBlob = writer.render(parsed);
         return parsedBlob;
-      default:
+      } case 'markdown-it': {
+        let parsedBlob = md.render(annotation.blob);
+        return parsedBlob;
+      } default:
         return 'Error: Invalid Parser ('+(annotation.parser)+')';
     }
   }
@@ -478,6 +491,7 @@ function AnnotationCard(props) {
                 <select value={annotation.parser} onChange={handleChangeParser}>
                   <option value='plaintext'>plaintext</option>
                   <option value='commonmark'>commonmark</option>
+                  <option value='markdown-it'>markdown-it</option>
                 </select>
               </label>
               <div className='advanced-toggle' onClick={()=>setIsVisibleAdvancedOptions(false)}>Hide advanced Options</div>
@@ -496,11 +510,11 @@ function AnnotationCard(props) {
       case 'plaintext':
         parsedBlobDiv = (<pre>{annotation.blob}</pre>);
         break;
+      case 'markdown-it':
       case 'commonmark':
+      default:
         let parsedBlob = {__html: parseBlob(annotation)};
         parsedBlobDiv = (<div dangerouslySetInnerHTML={parsedBlob} />);
-        break;
-      default:
         break;
     }
     return (<div className={classNames}
@@ -992,8 +1006,8 @@ export default function PdfAnnotationPage(props) {
     dispatch(annotationActions['saveCheckpoint']());
     ann['blob'] = "# Notes\nWrite your notes here";
     // Parser to convert blob into HTML
-    // Possible values: text, commonmark
-    ann['parser'] = 'commonmark';
+    // Possible values: text, commonmark, markdown-it
+    ann['parser'] = 'markdown-it';
     ann['doc_id'] = docId;
     dispatch(annotationActions['create'](ann)).then(response => {
       let newAnnotations = response.data.entities.annotations;
