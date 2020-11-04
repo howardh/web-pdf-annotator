@@ -10,6 +10,7 @@ import uuid
 import json
 import re
 import datetime
+import hashlib
 
 from annotator_app.extensions import db
 from annotator_app.database import Document
@@ -54,6 +55,17 @@ def fetch_pdf(document, max_bytes):
         f.write(response.content)
     return { 'file_name': file_name }
 
+def get_file_hash(file_name):
+    BUF_SIZE = 1024*1024*1024 # 1GB at a time
+    md5 = hashlib.md5()
+    with open(file_name, 'rb') as f:
+        while True:
+            data = f.read(BUF_SIZE)
+            if not data:
+                break
+            md5.update(data)
+    return md5.hexdigest()
+
 class DocumentPdfEndpoint(Resource):
     def get(self, entity_id):
         entity = db.session.query(Document) \
@@ -73,6 +85,17 @@ class DocumentPdfEndpoint(Resource):
                 'error': output['error']
             }, output['code']
         file_name = output['file_name']
+        
+        # Check hash
+        file_hash = get_file_hash(file_name)
+        print('hash: %s' % file_hash)
+        if entity.hash is None:
+            entity.hash = file_hash
+            db.session.flush()
+            db.session.commit()
+        elif entity.hash != file_hash:
+            print('HASH MISMATCH! FILE CHANGED!\n\tOld hash: %s\n\tNew hash:%s' % (entity.hash, file_hash))
+
         return send_file(
                 file_name,
                 mimetype='application/pdf',

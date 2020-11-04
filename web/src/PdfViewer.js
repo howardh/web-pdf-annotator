@@ -1500,7 +1500,7 @@ export default function PdfAnnotationPage(props) {
 
   // Initialize State
   useEffect(() => {
-    setToolState(tools.rect.initState());
+    setToolState(tools.read.initState());
   }, []);
 
   // Misc
