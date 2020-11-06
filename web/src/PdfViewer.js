@@ -76,12 +76,14 @@ function AnnotationLayer(props) {
     }
     return null;
   }
-  function onClick(event) {
+  function handleClick(event, ann) {
     const coords = getCoordsFromEvent(event);
     const data = {
       page: pageNum,
       coords
     };
+    const classNames = event.target.className.split(' ');
+
     // Clicked on PDF
     if (event.target === ref.current) {
       // Check all annotations for click
@@ -100,11 +102,19 @@ function AnnotationLayer(props) {
       if (callback) {
         callback(event, data);
       }
-    } else {
-      // TODO
+    } else if (classNames.indexOf('annotation') !== -1) {
+      if (ann.id === 'temp') {
+        return;
+      }
+      let callback = eventHandlers.annotation.onClick;
+      if (callback) {
+        callback(event, {id: ann.id});
+      }
+    } else if (classNames.indexOf('control') !== -1) {
+      // Nothing to do
     }
   }
-  function onDoubleClick(event,ann) {
+  function handleDoubleClick(event,ann) {
     const coords = getCoordsFromEvent(event);
     const data = {
       page: pageNum,
@@ -134,7 +144,7 @@ function AnnotationLayer(props) {
       callback(event, data);
     }
   }
-  function onMouseDown(event) {
+  function handleMouseDown(event) {
     const coords = getCoordsFromEvent(event);
     setStartMouseCoord(coords);
     const data = {
@@ -155,7 +165,7 @@ function AnnotationLayer(props) {
       callback(event, data);
     }
   }
-  function onMouseUp(event) {
+  function handleMouseUp(event) {
     const coords = getCoordsFromEvent(event);
     const data = {
       page: pageNum,
@@ -172,7 +182,7 @@ function AnnotationLayer(props) {
     setStartMouseCoord(null);
     setMouseMoved(false);
   }
-  function onMouseMove(event) {
+  function handleMouseMove(event) {
     const coords = getCoordsFromEvent(event);
     setMouseMoved(true);
     if (!startMouseCoord) {
@@ -188,126 +198,35 @@ function AnnotationLayer(props) {
       callback(event, data);
     }
   }
-  function onKeyPress(event) {
+  function handleKeyDown(event, ann) {
     const classNames = event.target.className.split(' ');
     const data = {
       page: pageNum,
     };
-    // Target = pdf document
+
+    let callback = null;
     if (event.target === ref.current) {
       if (focusedId) {
-        let callback = eventHandlers.annotation.onKeyPress;
-        if (callback) {
-          callback(event, {id: focusedId});
-        }
+        callback = eventHandlers.annotation.onKeyPress;
+        data['id'] = focusedId;
       } else {
-        let callback = eventHandlers.pdf.onKeyPress;
-        if (callback) {
-          callback(event, data);
-        }
+        callback = eventHandlers.pdf.onKeyPress;
       }
     } else if (classNames.indexOf('annotation') !== -1) {
-      // Handled by Annotation DOM
-    } else if (classNames.indexOf('control') !== -1) {
-      let callback = eventHandlers.controlPoint.onKeyPress;
-      if (callback) {
-        callback(event, data);
+      if (ann.id === 'temp') {
+        return;
       }
+      data['id'] = ann.id;
+      callback = eventHandlers.annotation.onKeyPress;
+    } else if (classNames.indexOf('control') !== -1) {
+      callback = eventHandlers.controlPoint.onKeyPress;
+    }
+
+    if (callback) {
+      callback(event, data);
     }
   }
 
-  // Rendering
-  function renderAnnotation(ann) {
-    const key = ann.id;
-    let style = null;
-    let classNames = ['annotation'];
-    let selected = false;
-    if (key === toolState.selectedAnnotationId) {
-      classNames.push('selected');
-      selected = true;
-      ann = {
-        ...ann,
-        position: toolState.tempPosition || ann.position
-      }
-    }
-    function onClick(event) {
-      if (key === 'temp') {
-        return;
-      }
-      let callback = eventHandlers.annotation.onClick;
-      if (callback) {
-        callback(event, {id: key});
-      }
-    }
-    function onKeyPress(event) {
-      if (key === 'temp') {
-        return;
-      }
-      let data = {
-        id: key,
-        page: pageNum,
-      }
-      let callback = eventHandlers.annotation.onKeyPress;
-      if (callback) {
-        callback(event, data);
-      }
-    }
-    switch (ann.type) {
-      case 'point':
-        style = {
-          left: ann.position.coords[0]*scale,
-          top: ann.position.coords[1]*scale,
-        };
-        classNames.push('point');
-        return <div className={classNames.join(' ')}
-          id={'annotation'+ann.id}
-          tabIndex={-1}
-          key={key}
-          style={style}
-          onClick={onClick}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseMove={onMouseMove}
-          onKeyPress={onKeyPress}
-          onDoubleClick={e => onDoubleClick(e,ann)}>
-        </div>;
-      case 'rect':
-        style = {
-          top: ann.position.box[0]*scale,
-          left: ann.position.box[3]*scale,
-          height: (ann.position.box[2]-ann.position.box[0])*scale,
-          width: (ann.position.box[1]-ann.position.box[3])*scale,
-        };
-        classNames.push('rect');
-        return <div className={classNames.join(' ')}
-          id={'annotation'+ann.id}
-          tabIndex={-1}
-          key={key}
-          style={style}
-          onClick={onClick}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseMove={onMouseMove}
-          onKeyPress={onKeyPress}
-          onDoubleClick={e => onDoubleClick(e,ann)}>
-          {
-            selected &&
-            <>
-            <div className='control nw' />
-            <div className='control n' />
-            <div className='control ne' />
-            <div className='control e' />
-            <div className='control w' />
-            <div className='control sw' />
-            <div className='control s' />
-            <div className='control se' />
-            </>
-          }
-        </div>;
-      default:
-        return null;
-    }
-  }
   useEffect(()=>{
     if (!ref.current) {
       return;
@@ -358,15 +277,122 @@ function AnnotationLayer(props) {
   },[page, ref.current, annotations, toolState, scale]);
 
   return <div className='annotation-layer'>
-    <canvas ref={ref} onDoubleClick={onDoubleClick}
-        onKeyDown={onKeyPress} tabIndex={-1}
-        onClick={onClick} onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp} onMouseMove={onMouseMove} />
+    <canvas ref={ref} onDoubleClick={handleDoubleClick}
+        onKeyDown={handleKeyDown} tabIndex={-1}
+        onClick={handleClick} onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} />
     {
-      Object.values(annotations).map(renderAnnotation)
+      Object.values(annotations).map(annotation =>
+        <Annotation annotation={annotation}
+          key={annotation.id}
+          scale={scale}
+          toolState={toolState} 
+          onClick={e=>handleClick(e,annotation)}
+          onKeyDown={e=>handleKeyDown(e,annotation)} 
+          onDoubleClick={e=>handleDoubleClick(e,annotation)}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove} />
+      )
     }
-    { toolState.tempAnnotation && renderAnnotation(toolState.tempAnnotation) }
+    { 
+      toolState.tempAnnotation && 
+      <Annotation annotation={toolState.tempAnnotation} 
+        key='temp'
+        scale={scale}
+        toolState={toolState}
+        onClick={e=>handleClick(e,toolState.tempAnnotation)}
+        onKeyDown={e=>handleKeyDown(e,toolState.tempAnnotation)} 
+        onDoubleClick={e=>handleDoubleClick(e,toolState.tempAnnotation)}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove} />
+    }
   </div>;
+}
+
+function Annotation(props) {
+  const {
+    annotation,
+    toolState,
+    scale,
+
+    onClick,
+    onMouseDown,
+    onMouseUp,
+    onMouseMove,
+    onKeyDown,
+    onDoubleClick,
+  } = props;
+
+  let style = null;
+  let selected = false;
+  let ann = annotation;
+  if (annotation.id === toolState.selectedAnnotationId) {
+    selected = true;
+    ann = {
+      ...ann,
+      position: toolState.tempPosition || ann.position
+    }
+  }
+
+  let classNames = {
+    annotation: true,
+    selected
+  }
+  switch (ann.type) {
+    case 'point':
+      style = {
+        left: ann.position.coords[0]*scale,
+        top: ann.position.coords[1]*scale,
+      };
+      classNames['point'] = true;
+      return <div className={generateClassNames(classNames)}
+        id={'annotation'+ann.id}
+        tabIndex={-1}
+        style={style}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseMove={onMouseMove}
+        onKeyDown={onKeyDown}
+        onDoubleClick={e => onDoubleClick(e,ann)}>
+      </div>;
+    case 'rect':
+      style = {
+        top: ann.position.box[0]*scale,
+        left: ann.position.box[3]*scale,
+        height: (ann.position.box[2]-ann.position.box[0])*scale,
+        width: (ann.position.box[1]-ann.position.box[3])*scale,
+      };
+      classNames['rect'] = true;
+      return <div className={generateClassNames(classNames)}
+        id={'annotation'+ann.id}
+        tabIndex={-1}
+        style={style}
+        onClick={onClick}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseMove={onMouseMove}
+        onKeyDown={onKeyDown}
+        onDoubleClick={e => onDoubleClick(e,ann)}>
+        {
+          selected &&
+          <>
+          <div className='control nw' />
+          <div className='control n' />
+          <div className='control ne' />
+          <div className='control e' />
+          <div className='control w' />
+          <div className='control sw' />
+          <div className='control s' />
+          <div className='control se' />
+          </>
+        }
+      </div>;
+    default:
+      return null;
+  }
 }
 
 function NoteCard(props) {
