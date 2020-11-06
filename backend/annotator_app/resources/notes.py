@@ -41,6 +41,17 @@ class NoteEndpoint(EntityEndpoint):
     class Meta:
         model = Note
         filterable_params = ['id', 'user_id']
+    def after_delete(self,entity):
+        for model in [Annotation,Document]:
+            # Check for associated annotation
+            entity2 = db.session.query(model) \
+                    .filter_by(note_id=entity.id) \
+                    .filter_by(user_id=current_user.get_id()) \
+                    .first()
+            if entity2 is not None:
+                entity2.note_id = None
+                return [entity,entity2]
+        return [entity]
 
 api.add_resource(NoteList, '/notes')
 api.add_resource(NoteEndpoint, '/notes/<int:entity_id>')

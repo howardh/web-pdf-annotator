@@ -17,9 +17,11 @@ def entities_to_dict(entities):
 
 class CustomResource(Resource):
     def after_create(self,entity,data):
-        return entity
+        return [entity]
     def after_update(self,entity,data):
-        return entity
+        return [entity]
+    def after_delete(self,entity):
+        return [entity]
 
 class ListEndpoint(CustomResource):
     """
@@ -122,11 +124,13 @@ class EntityEndpoint(CustomResource):
             }, 404
 
         entity.deleted_at = datetime.date.today()
-
         db.session.flush()
+
+        entities = self.after_delete(entity)
+
         db.session.commit()
 
         return {
             "message": "Deleted successfully",
-            'entities': entities_to_dict([entity])
+            'entities': entities_to_dict(entities)
         }, 200

@@ -7,7 +7,7 @@ import * as MarkdownIt from 'markdown-it';
 import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
-import { Button, TextField, Checkbox } from './Inputs.js';
+import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
 import {
   documentActions,annotationActions,noteActions
@@ -406,6 +406,8 @@ function AnnotationActions(props) {
   } = props;
 
   const dispatch = useDispatch();
+  const imageUrlRef= useRef(null);
+  const imageUrl = process.env.REACT_APP_SERVER_ADDRESS+"/data/annotations/"+annotation.id+'/img';
 
   function deleteAnnotation() {
     dispatch(annotationActions['saveCheckpoint']());
@@ -419,15 +421,39 @@ function AnnotationActions(props) {
       annotation_id: annotation.id
     }));
   }
+  function copyPhotoUrlToClipboard() {
+    if (!imageUrlRef.current) {
+      return;
+    }
+    imageUrlRef.current.select();
+    document.execCommand("copy");
+  }
 
   return (
     <div className='actions-container'>
-      <Button onClick={createNote}>
-        <i className='material-icons'>note_add</i>
-      </Button>
+      {
+        annotation.note_id ?
+          <Button onClick={null}>
+            <i className='material-icons'>description</i>
+          </Button>
+        : <Button onClick={createNote}>
+            <i className='material-icons'>note_add</i>
+          </Button>
+      }
       <Button onClick={deleteAnnotation}>
         <i className='material-icons'>delete</i>
       </Button>
+      {
+        annotation.type === 'rect' &&
+        <GroupedInputs>
+          <TextField name='image-url' value={imageUrl}
+            readOnly
+            ref={imageUrlRef} />
+          <Button onClick={copyPhotoUrlToClipboard}>
+            <i className='material-icons'>photo</i>
+          </Button>
+        </GroupedInputs>
+      }
     </div>
   );
 }
@@ -1711,36 +1737,42 @@ export default function PdfAnnotationPage(props) {
         scale={pdfScale} />
     <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     <div className='controls'>
-      <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
-        Read
-      </Button>
-      <Button onClick={()=>selectTool('text')} className={toolState.type === 'text' ? 'active' : null}>
-        Text
-      </Button>
-      <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
-        Resize
-      </Button>
-      <Button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
-        Point
-      </Button>
-      <Button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
-        Rect
-      </Button>
-      <Button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
-        Highlight
-      </Button>
-      <Button onClick={zoomIn}>
-        <i className='material-icons'>zoom_in</i>
-      </Button>
-      <Button onClick={zoomOut}>
-        <i className='material-icons'>zoom_out</i>
-      </Button>
-      <Button onClick={()=>dispatch(annotationActions['undo']())}>
-        <i className='material-icons'>undo</i>
-      </Button>
-      <Button onClick={()=>dispatch(annotationActions['redo']())}>
-        <i className='material-icons'>redo</i>
-      </Button>
+      <GroupedInputs>
+        <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
+          Read
+        </Button>
+        <Button onClick={()=>selectTool('text')} className={toolState.type === 'text' ? 'active' : null}>
+          Text
+        </Button>
+        <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
+          Resize
+        </Button>
+        <Button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
+          Point
+        </Button>
+        <Button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
+          Rect
+        </Button>
+        <Button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
+          Highlight
+        </Button>
+      </GroupedInputs>
+      <GroupedInputs>
+        <Button onClick={zoomIn}>
+          <i className='material-icons'>zoom_in</i>
+        </Button>
+        <Button onClick={zoomOut}>
+          <i className='material-icons'>zoom_out</i>
+        </Button>
+      </GroupedInputs>
+      <GroupedInputs>
+        <Button onClick={()=>dispatch(annotationActions['undo']())}>
+          <i className='material-icons'>undo</i>
+        </Button>
+        <Button onClick={()=>dispatch(annotationActions['redo']())}>
+          <i className='material-icons'>redo</i>
+        </Button>
+      </GroupedInputs>
     </div>
   </main>);
 }

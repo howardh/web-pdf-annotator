@@ -1,23 +1,24 @@
 import React from 'react';
-import {useRef} from 'react';
+import {useRef, forwardRef} from 'react';
 
 import './Inputs.scss';
 
 const inputClassName = 'input'
 
-export function TextField(props) {
+function TextField(props, ref) {
   return (<div className={inputClassName}>
-    <input type='textfield' {...props} />
+    <input type='textfield' {...props} ref={ref} />
   </div>);
 }
+TextField = forwardRef(TextField);
 
-export function Password(props) {
+function Password(props) {
   return (<div className={inputClassName}>
     <input type='password' {...props} />
   </div>);
 }
 
-export function Button(props) {
+function Button(props) {
   const {
     children,
     ...rest
@@ -29,7 +30,7 @@ export function Button(props) {
   </div>);
 }
 
-export function Checkbox(props) {
+function Checkbox(props) {
   const {
     checked,
     onChange=console.log,
@@ -58,3 +59,11 @@ export function Checkbox(props) {
         onChange={onChange} {...rest} />
   </div>);
 }
+
+function GroupedInputs(props) {
+  return (<div className='grouped-inputs'>
+    {props.children}
+  </div>);
+}
+
+export {TextField, Password, Button, Checkbox, GroupedInputs};
