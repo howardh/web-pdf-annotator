@@ -16,9 +16,9 @@ def entities_to_dict(entities):
     return output
 
 class CustomResource(Resource):
-    def after_create(self,entity):
+    def after_create(self,entity,data):
         return entity
-    def after_update(self,entity):
+    def after_update(self,entity,data):
         return entity
 
 class ListEndpoint(CustomResource):
@@ -60,15 +60,17 @@ class ListEndpoint(CustomResource):
                     'error': str(e)
             }, 400
         entity.user_id = current_user.get_id()
-        self.after_create(entity)
-
         db.session.add(entity)
+        db.session.flush()
+
+        entities = self.after_create(entity, data)
+
         db.session.flush()
         db.session.commit()
 
         return {
             'message': 'Entity created',
-            'entities': entities_to_dict([entity]),
+            'entities': entities_to_dict(entities),
             'new_entities': entities_to_dict([entity]),
         }, 200
 
@@ -99,14 +101,15 @@ class EntityEndpoint(CustomResource):
             entity.deleted_at = None # Undelete
 
         entity.update(data)
-        entity = self.after_update(entity)
+        db.session.flush()
+        entities = self.after_update(entity,data)
 
         db.session.flush()
         db.session.commit()
 
         return {
             'message': 'Updated successfully',
-            'entities': entities_to_dict([entity])
+            'entities': entities_to_dict(entities)
         }, 200
     def delete(self, entity_id):
         entity = db.session.query(self.Meta.model) \

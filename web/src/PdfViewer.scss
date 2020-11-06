@@ -120,6 +120,16 @@ body {
         box-shadow: 0 0 5px black;
       }
     }
+    .actions-container {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translate(-50%,0);
+      white-space: nowrap;
+      > * {
+        margin: 5px 2px;
+      }
+    }
   }
 
   .annotation-cards-container{

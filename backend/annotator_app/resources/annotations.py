@@ -42,7 +42,7 @@ class AnnotationEndpoint(EntityEndpoint):
         model = Annotation
         to_object = to_object
         update_object = update_object
-    def after_update(self,entity):
+    def after_update(self,entity,data):
         doc = db.session.query(Document) \
                 .filter_by(id=entity.doc_id) \
                 .first()
@@ -50,7 +50,7 @@ class AnnotationEndpoint(EntityEndpoint):
             print('Error: Unable to find document associated with annotation %d' % entity.id)
 
         doc.last_modified_at = datetime.datetime.now()
-        return entity
+        return [entity]
 
 class AnnotationImageEndpoint(Resource):
     def get(self, entity_id):

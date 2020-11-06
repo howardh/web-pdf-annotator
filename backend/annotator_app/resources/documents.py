@@ -23,18 +23,18 @@ class DocumentList(ListEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
-    def after_create(self,entity):
+    def after_create(self,entity,data):
         entity.last_modified_at = datetime.datetime.now()
         entity = autofill_document_details(entity)
-        return entity
+        return [entity]
 
 class DocumentEndpoint(EntityEndpoint):
     class Meta:
         model = Document
         filterable_params = ['id', 'user_id', 'title']
-    def after_update(self,entity):
+    def after_update(self,entity,data):
         entity.last_modified_at = datetime.datetime.now()
-        return entity
+        return [entity]
 
 class DocumentRecursiveEndpoint(Resource):
     def get(self, entity_id):

@@ -24,6 +24,7 @@ const md = MarkdownIt().use(MarkdownItMathjax());
 function AnnotationLayer(props) {
   const {
     annotations,
+    activeId,
     eventHandlers,
     toolState,
     page,
@@ -285,6 +286,7 @@ function AnnotationLayer(props) {
       Object.values(annotations).map(annotation =>
         <Annotation annotation={annotation}
           key={annotation.id}
+          isActive={activeId===annotation.id}
           scale={scale}
           toolState={toolState} 
           onClick={e=>handleClick(e,annotation)}
@@ -316,6 +318,7 @@ function Annotation(props) {
     annotation,
     toolState,
     scale,
+    isActive,
 
     onClick,
     onMouseDown,
@@ -357,6 +360,7 @@ function Annotation(props) {
         onMouseMove={onMouseMove}
         onKeyDown={onKeyDown}
         onDoubleClick={e => onDoubleClick(e,ann)}>
+        {isActive && <AnnotationActions annotation={annotation}/>}
       </div>;
     case 'rect':
       style = {
@@ -389,10 +393,43 @@ function Annotation(props) {
           <div className='control se' />
           </>
         }
+        {isActive && <AnnotationActions annotation={annotation}/>}
       </div>;
     default:
       return null;
   }
+}
+
+function AnnotationActions(props) {
+  const {
+    annotation
+  } = props;
+
+  const dispatch = useDispatch();
+
+  function deleteAnnotation() {
+    dispatch(annotationActions['saveCheckpoint']());
+    dispatch(annotationActions['deleteSingle'](annotation.id));
+  }
+  function createNote() {
+    dispatch(annotationActions['saveCheckpoint']());
+    dispatch(noteActions['create']({
+      body: '# Note\nWrite your notes here',
+      parser: 'markdown-it',
+      annotation_id: annotation.id
+    }));
+  }
+
+  return (
+    <div className='actions-container'>
+      <Button onClick={createNote}>
+        <i className='material-icons'>note_add</i>
+      </Button>
+      <Button onClick={deleteAnnotation}>
+        <i className='material-icons'>delete</i>
+      </Button>
+    </div>
+  );
 }
 
 function NoteCard(props) {
@@ -753,6 +790,7 @@ function PdfPageContainer(props) {
     updateAnnotation,
     annotations,
     page, pageNum,
+    activeId,
     scale
   } = props;
   const relevantAnnotations = filterDict(
@@ -777,6 +815,7 @@ function PdfPageContainer(props) {
           annotationScale &&
           <AnnotationLayer
               eventHandlers={eventHandlers}
+              activeId={activeId}
               toolState={toolState}
               createAnnotation={createAnnotation}
               updateAnnotation={updateAnnotation}
