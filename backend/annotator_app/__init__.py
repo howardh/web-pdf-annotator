@@ -19,12 +19,14 @@ from annotator_app.resources.auth import auth_bp
 from annotator_app.resources.users import blueprint as user_bp
 from annotator_app.resources.documents import blueprint as doc_bp
 from annotator_app.resources.annotations import blueprint as ann_bp
+from annotator_app.resources.notes import blueprint as note_bp
 from annotator_app.resources.tags import blueprint as tag_bp
 
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(user_bp, url_prefix='/api/data')
 app.register_blueprint(doc_bp, url_prefix='/api/data')
 app.register_blueprint(ann_bp, url_prefix='/api/data')
+app.register_blueprint(note_bp, url_prefix='/api/data')
 app.register_blueprint(tag_bp, url_prefix='/api/data')
 
 #db.drop_all()

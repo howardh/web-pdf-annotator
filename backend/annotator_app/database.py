@@ -7,7 +7,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 
-from sqlalchemy import Column, Integer, String, Float, Date, Time, DateTime, Boolean, Enum, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, Date, Time, DateTime, Boolean, Enum, LargeBinary, Text
 
 from flask_security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
@@ -82,6 +82,7 @@ class Document(db.Model, ModelMixin):
     __tablename__ = 'documents'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
+    note_id = Column(Integer, ForeignKey('notes.id',name='fkey_note_id'))
     url = Column(String)
     hash = Column(String)
     title = Column(String)
@@ -93,6 +94,7 @@ class Document(db.Model, ModelMixin):
     last_modified_at = Column(DateTime)
     last_accessed_at = Column(DateTime)
 
+    note = db.relationship('Note')
     annotations = db.relationship('Annotation', lazy='dynamic')
     tags = db.relationship('Tag', secondary=lambda: documents_tags)
 
@@ -129,12 +131,15 @@ class Annotation(db.Model, ModelMixin):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     doc_id = Column(Integer, ForeignKey('documents.id'))
+    note_id = Column(Integer, ForeignKey('notes.id',name='fkey_note_id'))
     page = Column(String)
     type = Column(String)
-    blob = Column(String)
-    parser = Column(String)
+    blob = Column(String) # TODO: DEPRECATED
+    parser = Column(String) # TODO: DEPRECATED
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
     deleted_at = Column(Date)
+
+    note = db.relationship('Note')
 
     def update(self,data):
         super().update(data)
@@ -145,12 +150,11 @@ class Annotation(db.Model, ModelMixin):
         return {
                 'id': self.id,
                 'user_id': self.user_id,
+                'note_id': self.note_id,
                 'doc_id': self.doc_id,
                 'page': self.page,
                 'type': self.type,
-                'blob': self.blob,
                 'position': json.loads(self.position),
-                'parser': self.parser,
                 'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
         }
 
@@ -205,6 +209,23 @@ class DocumentAccessCode(db.Model, ModelMixin):
 
     def to_dict(self):
         pass
+
+class Note(db.Model, ModelMixin):
+    __tablename__ = 'notes'
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), )
+    body = Column(Text)
+    parser = Column(String)
+    deleted_at = Column(Date)
+
+    def to_dict(self):
+        return {
+                'id': self.id,
+                'user_id': self.user_id,
+                'body': self.body,
+                'parser': self.parser,
+                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
+        }
 
 # Setup Flask-Security
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)

@@ -48,12 +48,13 @@ function createActions(dataType, path, autosortProps) {
   }
 
   return {
-    fetchSingle: function(id) {
+    fetchSingle: function(id,subresource=null) {
       console.log('FETCH '+dataType);
       return function(dispatch, getState) {
         // Send request
         return axios.get(
-          process.env.REACT_APP_SERVER_ADDRESS+path+'/'+(id || ''),
+          process.env.REACT_APP_SERVER_ADDRESS+path+'/'+(id || '')
+            + (subresource ? ('/'+subresource) : ''),
           {
             withCredentials: true
           }
@@ -321,4 +322,5 @@ export const autofillDocumentInfo = function(docId){
 
 export const documentActions = createActions('DOCUMENTS', '/data/documents');
 export const annotationActions = createActions('ANNOTATIONS', '/data/annotations');
+export const noteActions = createActions('NOTES', '/data/notes');
 export const tagActions = createActions('TAGS', '/data/tags');

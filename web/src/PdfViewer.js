@@ -9,7 +9,9 @@ import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox } from './Inputs.js';
 import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
-import {documentActions,annotationActions} from './actions/index.js';
+import {
+  documentActions,annotationActions,noteActions
+} from './actions/index.js';
 
 import './PdfViewer.scss';
 
@@ -367,49 +369,49 @@ function AnnotationLayer(props) {
   </div>;
 }
 
-function AnnotationCard(props) {
+function NoteCard(props) {
   const {
     annotation,
     isActive, setActive,
-    updateAnnotation,
     setCardInView, setAnnotationInView
   } = props;
   const dispatch = useDispatch();
   const history = useHistory();
+  const updateNote = n => dispatch(noteActions['update'](n));
+  const note = useSelector(
+    state => annotation.note_id ? state.notes.entities[annotation.note_id] : null);
   // Stores changes before they're saved
-  const [updatedBlob,setUpdatedBlob] = useState(null);
+  const [updatedNote,setUpdatedNote] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
   const [isVisibleAdvancedOptions,setIsVisibleAdvancedOptions] = useState(false);
+  const handleChange = formChangeHandler(updatedNote, x=>setUpdatedNote(x));
 
   // Mathjax
   useEffect(()=>{
     // Redo typesetting whenever the annotation changes
     window.MathJax.typeset();
-  }, [annotation]);
+  }, [note]);
 
   function startEditing() {
-    setUpdatedBlob(annotation.blob);
+    setUpdatedNote(note);
     setIsEditing(true);
   }
   function saveChanges() {
-    updateAnnotation(annotation.id, {...annotation, blob: updatedBlob});
-    setUpdatedBlob(null);
+    updateNote(updatedNote);
+    setUpdatedNote(null);
     setIsEditing(false);
   }
   function discardChanges() {
-    setUpdatedBlob(null);
+    setUpdatedNote(null);
     setIsEditing(false);
   }
-  function deleteAnnotation() {
-    let c = window.confirm('Are you sure you want to delete this annotation?');
+  function deleteNote() {
+    let c = window.confirm('Are you sure you want to delete this note?');
     if (c) {
-      dispatch(annotationActions['deleteSingle'](annotation.id));
+      dispatch(noteActions['deleteSingle'](note.id));
     }
   }
   // Event Handlers
-  function onChange(e) {
-    setUpdatedBlob(e.target.value);
-  }
   function onKeyPress(e) {
     const ENTER = 13;
     if (e.ctrlKey && e.which === ENTER) {
@@ -421,28 +423,22 @@ function AnnotationCard(props) {
     setCardInView(annotation.id);
     setAnnotationInView(annotation.id);
   }
-  function handleChangeParser(e) {
-    updateAnnotation(annotation.id, {
-      ...annotation,
-      parser: e.target.value
-    });
-  }
 
-  function parseBlob(annotation) {
-    switch (annotation.parser) {
+  function parseBody(annotation) {
+    switch (note.parser) {
       case 'plaintext': {
-        return annotation.blob;
+        return note.body;
       } case 'commonmark': {
         let reader = new commonmark.Parser();
         let writer = new commonmark.HtmlRenderer({safe: true});
-        let parsed = reader.parse(annotation.blob); // parsed is a 'Node' tree
-        let parsedBlob = writer.render(parsed);
-        return parsedBlob;
+        let parsed = reader.parse(note.body); // parsed is a 'Node' tree
+        let parsedBody = writer.render(parsed);
+        return parsedBody;
       } case 'markdown-it': {
-        let parsedBlob = md.render(annotation.blob);
-        return parsedBlob;
+        let parsedBody = md.render(note.body);
+        return parsedBody;
       } default:
-        return 'Error: Invalid Parser ('+(annotation.parser)+')';
+        return 'Error: Invalid Parser ('+(note.parser)+')';
     }
   }
 
@@ -458,16 +454,24 @@ function AnnotationCard(props) {
     setRefreshing(false);
   },[refreshing]);
 
+  if (!note) {
+    return null;
+  }
+  if (note.deleted_at) {
+    return null;
+  }
+
   let classNames = generateClassNames({
     card: true,
     active: isActive
   });
   if (isEditing) {
     return (<div className={classNames}
-        onClick={()=>setActive(true)} id={'card'+annotation.id}>
-      <textarea onChange={onChange}
+        onClick={()=>setActive(true)} id={'card'+note.id}>
+      <textarea name='body'
+          onChange={handleChange}
           onKeyPress={onKeyPress}
-          value={updatedBlob} />
+          value={updatedNote.body} />
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -480,7 +484,7 @@ function AnnotationCard(props) {
         <span onClick={discardChanges}>
           <i className='material-icons'>cancel</i>
         </span>
-        <span onClick={deleteAnnotation}>
+        <span onClick={deleteNote}>
           <i className='material-icons'>delete</i>
         </span>
         {
@@ -488,7 +492,9 @@ function AnnotationCard(props) {
             <div className='advanced'>
               <label>
                 Parser:
-                <select value={annotation.parser} onChange={handleChangeParser}>
+                <select name='parser'
+                    value={updatedNote.parser}
+                    onChange={handleChange}>
                   <option value='plaintext'>plaintext</option>
                   <option value='commonmark'>commonmark</option>
                   <option value='markdown-it'>markdown-it</option>
@@ -505,21 +511,21 @@ function AnnotationCard(props) {
       </div>
     </div>);
   } else {
-    let parsedBlobDiv = null;
-    switch (annotation.parser) {
+    let parsedBodyDiv = null;
+    switch (note.parser) {
       case 'plaintext':
-        parsedBlobDiv = (<pre>{annotation.blob}</pre>);
+        parsedBodyDiv = (<pre>{note.body}</pre>);
         break;
       case 'markdown-it':
       case 'commonmark':
       default:
-        let parsedBlob = {__html: parseBlob(annotation)};
-        parsedBlobDiv = (<div dangerouslySetInnerHTML={parsedBlob} />);
+        let parsedBody = {__html: parseBody(annotation)};
+        parsedBodyDiv = (<div dangerouslySetInnerHTML={parsedBody} />);
         break;
     }
     return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
-      { !refreshing && parsedBlobDiv }
+      { !refreshing && parsedBodyDiv }
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
@@ -529,7 +535,7 @@ function AnnotationCard(props) {
         <span onClick={startEditing}>
           <i className='material-icons'>create</i>
         </span>
-        <span onClick={deleteAnnotation}>
+        <span onClick={deleteNote}>
           <i className='material-icons'>delete</i>
         </span>
         <span onClick={refresh}>
@@ -551,7 +557,7 @@ function AnnotationCard(props) {
   }
 }
 
-function AnnotationCardsContainer(props) {
+function NoteCardsContainer(props) {
   const {
     annotations,
     activeId, setActiveId,
@@ -572,6 +578,9 @@ function AnnotationCardsContainer(props) {
       return;
     }
     let card = document.getElementById('card'+id);
+    if (!card) {
+      return;
+    }
     setScrollYPos(window.scrollY-card.offsetTop+30);
   },[cardInView]);
 
@@ -581,11 +590,11 @@ function AnnotationCardsContainer(props) {
   return (<div className='annotation-cards-container' style={style}>
     {
       Object.values(annotations).filter(
-        ann => ann.type === 'rect' || ann.type === 'point'
+        ann => ann.note_id
       ).map(function(ann){
         return (
-          <AnnotationCard
-              key={ann.id}
+          <NoteCard
+              key={ann.note_id}
               scale={scale}
               isActive={ann.id === activeId}
               setActive={(f)=>setActiveId(f ? ann.id : null)}
@@ -997,26 +1006,34 @@ export default function PdfAnnotationPage(props) {
     if (!docId) {
       return;
     }
-    dispatch(documentActions['fetchSingle'](docId));
-    dispatch(annotationActions['fetchMultiple']({doc_id: docId}));
+    // Fetch document and all associated entities (annotations, notes)
+    dispatch(documentActions['fetchSingle'](docId,'recursive'));
   },[docId]);
 
   // CRUD Functions
   function createAnnotation(ann) {
     dispatch(annotationActions['saveCheckpoint']());
-    ann['blob'] = "# Notes\nWrite your notes here";
-    // Parser to convert blob into HTML
-    // Possible values: text, commonmark, markdown-it
-    ann['parser'] = 'markdown-it';
     ann['doc_id'] = docId;
+    let note = {
+      'body': "# Notes\nWrite your notes here",
+      'parser': 'markdown-it', // text, commonmark, markdown-it
+    };
     dispatch(annotationActions['create'](ann)).then(response => {
       let newAnnotations = response.data.entities.annotations;
-      let newKeys = Object.keys(newAnnotations);
-      setActiveId(parseInt(newKeys[0]));
-      setCardInView(parseInt(newKeys[0]));
-    });
+      let newAnnotationId = Object.keys(newAnnotations)[0];
+      setActiveId(parseInt(newAnnotationId));
+      dispatch(noteActions['create'](note)).then(response2 => {
+        let newNotes = response2.data.entities.notes;
+        let newNoteId = Object.keys(newNotes)[0];
+        updateAnnotation({
+          ...newAnnotations[newAnnotationId],
+          note_id: newNoteId
+        });
+        setCardInView(parseInt(newNoteId));
+      });
+    },0);
   }
-  function updateAnnotation(id, ann) {
+  function updateAnnotation(ann) {
     dispatch(annotationActions['saveCheckpoint']());
     dispatch(annotationActions['update'](ann));
   }
@@ -1272,7 +1289,7 @@ export default function PdfAnnotationPage(props) {
         onMouseUp: function(event,data) {
           const selId = toolState.selectedAnnotationId;
           if (selId !== null && annotations[selId] && toolState.tempPosition) {
-            updateAnnotation(selId, {
+            updateAnnotation({
               ...annotations[selId],
               position: toolState.tempPosition
             });
@@ -1619,7 +1636,7 @@ export default function PdfAnnotationPage(props) {
           scale={pdfScale}
           />
     })}
-    <AnnotationCardsContainer
+    <NoteCardsContainer
         annotations={annotations}
         activeId={activeId} setActiveId={activateAnnotation}
         cardInView={cardInView} setCardInView={setCardInView}

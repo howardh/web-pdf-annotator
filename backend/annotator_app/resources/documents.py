@@ -36,6 +36,31 @@ class DocumentEndpoint(EntityEndpoint):
         entity.last_modified_at = datetime.datetime.now()
         return entity
 
+class DocumentRecursiveEndpoint(Resource):
+    def get(self, entity_id):
+        entity = db.session.query(Document) \
+                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(id=entity_id) \
+                .one()
+        if entity is None:
+            return {
+                'error': 'ID not found'
+            }, 404
+
+        doc = entity
+        # Document
+        entities = [doc]
+        # Annotations
+        annotations = doc.annotations.filter_by(deleted_at=None).all()
+        entities += annotations
+        # Notes
+        entities += [a.note for a in annotations if a.note_id is not None]
+        if doc.note_id is not None:
+            entities += [doc.note]
+        return {
+            'entities': entities_to_dict(entities)
+        }, 200
+
 def fetch_pdf(document, max_bytes):
     response = requests.get(document.url)
     content_bytes = response.headers.get('content-length', None)
@@ -165,7 +190,6 @@ def autofill_document_details(entity):
 
     return entity
 
-
 class DocumentAutoFillEndpoint(Resource):
     def post(self, entity_id):
         data = request.get_json()
@@ -190,6 +214,7 @@ class DocumentAutoFillEndpoint(Resource):
 
 api.add_resource(DocumentList, '/documents')
 api.add_resource(DocumentEndpoint, '/documents/<int:entity_id>')
+api.add_resource(DocumentRecursiveEndpoint, '/documents/<int:entity_id>/recursive')
 api.add_resource(DocumentPdfEndpoint, '/documents/<int:entity_id>/pdf')
 api.add_resource(DocumentAccessCodeEndpoint, '/documents/<int:entity_id>/access_code')
 api.add_resource(DocumentAutoFillEndpoint, '/documents/<int:entity_id>/autofill')
