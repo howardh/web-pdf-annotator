@@ -112,14 +112,14 @@ class DocumentPdfEndpoint(Resource):
         file_name = output['file_name']
         
         # Check hash
-        file_hash = get_file_hash(file_name)
-        print('hash: %s' % file_hash)
-        if entity.hash is None:
-            entity.hash = file_hash
-            db.session.flush()
-            db.session.commit()
-        elif entity.hash != file_hash:
-            print('HASH MISMATCH! FILE CHANGED!\n\tOld hash: %s\n\tNew hash:%s' % (entity.hash, file_hash))
+        #file_hash = get_file_hash(file_name)
+        #print('hash: %s' % file_hash)
+        #if entity.hash is None:
+        #    entity.hash = file_hash
+        #    db.session.flush()
+        #    db.session.commit()
+        #elif entity.hash != file_hash:
+        #    print('HASH MISMATCH! FILE CHANGED!\n\tOld hash: %s\n\tNew hash:%s' % (entity.hash, file_hash))
 
         return send_file(
                 file_name,

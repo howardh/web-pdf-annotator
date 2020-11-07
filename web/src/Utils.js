@@ -31,6 +31,22 @@ export function removeFromList(list,elem) {
   return list.slice(0,index).concat(list.slice(index+1))
 }
 // Dict utils
+export const parseQueryString = function(query) {
+  if (query.length <= 1) {
+    return {};
+  }
+  if (query[0] === '?') {
+    query = query.substr(1);
+  }
+  return query.split('&')
+    .reduce(function(acc, x) {
+      var tokens = x.split('=');
+      if (tokens.length === 2) {
+        acc[tokens[0]] = tokens[1];
+      }
+      return acc;
+    }, {});
+}
 export function filterDict(dict,filterCondition) {
   return Object.entries(dict).filter(function([k,v]) {
     return filterCondition(v);

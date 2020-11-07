@@ -8,7 +8,9 @@ import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
-import {clip,filterDict,generateClassNames,formChangeHandler} from './Utils.js';
+import {
+  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString
+} from './Utils.js';
 import {
   documentActions,annotationActions,noteActions
 } from './actions/index.js';
@@ -82,7 +84,8 @@ function AnnotationLayer(props) {
     const coords = getCoordsFromEvent(event);
     const data = {
       page: pageNum,
-      coords
+      coords,
+      ann
     };
     const classNames = event.target.className.split(' ');
 
@@ -110,7 +113,7 @@ function AnnotationLayer(props) {
       }
       let callback = eventHandlers.annotation.onClick;
       if (callback) {
-        callback(event, {id: ann.id});
+        callback(event, data);
       }
     } else if (classNames.indexOf('control') !== -1) {
       // Nothing to do
@@ -344,7 +347,8 @@ function Annotation(props) {
 
   let classNames = {
     annotation: true,
-    selected
+    selected,
+    active: isActive
   }
   switch (ann.type) {
     case 'point':
@@ -491,6 +495,12 @@ function NoteCard(props) {
     window.MathJax.typeset();
   }, [note]);
 
+  // Autocomplete
+  useEffect(()=>{
+    //let range = window.getSelection().getRangeAt(0);
+    //range.insertNode()
+  },[updatedNote]);
+
   function startEditing() {
     setUpdatedNote(note);
     setIsEditing(true);
@@ -518,8 +528,8 @@ function NoteCard(props) {
     }
   }
   function scrollIntoView() {
-    history.push('#annotation'+annotation.id);
-    setCardInView(annotation.id);
+    history.push('?annotation='+annotation.id+'&note='+note.id);
+    setCardInView(note.id);
     setAnnotationInView(annotation.id);
   }
 
@@ -567,7 +577,8 @@ function NoteCard(props) {
   if (isEditing) {
     return (<div className={classNames}
         onClick={()=>setActive(true)} id={'card'+note.id}>
-      <textarea name='body'
+      <textarea
+          name='body'
           onChange={handleChange}
           onKeyPress={onKeyPress}
           value={updatedNote.body} />
@@ -657,7 +668,7 @@ function NoteCardsContainer(props) {
     annotations,
     activeId, setActiveId,
     cardInView, setCardInView,
-    setAnnotationInView,
+    annotationInView, setAnnotationInView,
     updateAnnotation,
     scale
   } = props;
@@ -669,12 +680,18 @@ function NoteCardsContainer(props) {
     if (!id) {
       return;
     }
+    // If scrolling to an annotation, wait until it's in view
+    if (annotationInView) {
+      return;
+    }
+    // Get DOM element and scroll to it
     let card = document.getElementById('card'+id);
     if (!card) {
       return;
     }
     setScrollYPos(window.scrollY-card.offsetTop+30);
-  },[cardInView]);
+    setCardInView(null);
+  },[cardInView, annotationInView]);
 
   const style = {
     transform: 'translateY('+scrollYPos+'px)'
@@ -1018,45 +1035,20 @@ export default function PdfAnnotationPage(props) {
 
   // If linked to a specific annotation, scroll it into view
   useEffect(() => {
-    let hash = location.hash;
-    if (hash) {
-      // Parse out relevant IDs
-      let id = null;
-      if (hash.startsWith('#annotation')) {
-        id = parseInt(hash.slice('#annotation'.length));
-      } else if (hash.startsWith('#card')) {
-        id = parseInt(hash.slice('#card'.length));
-      }
+    let params = parseQueryString(location.search);
+    if (params['annotation']) {
+      let id = parseInt(params['annotation']);
       setActiveId(id);
-      setCardInView(annotations[id].note_id);
       setAnnotationInView(id);
     }
-  }, [location.hash]);
+    if (params['note']) {
+      let id = parseInt(params['note']);
+      setCardInView(id);
+    }
+  }, [location.search]);
 
   // Scrolling card into view
-  useEffect(()=>{
-    if (cardInView) {
-      function handleScroll(e) {
-        setCardInView(null);
-      }
-      window.addEventListener('scroll',handleScroll);
-      return () => {
-        window.removeEventListener('scroll',handleScroll);
-      };
-    }
-  },[cardInView]);
-  useEffect(()=>{
-    if (annotationInView) {
-      function handleScroll(e) {
-        setAnnotationInView(null);
-      }
-      window.addEventListener('scroll',handleScroll);
-      return () => {
-        window.removeEventListener('scroll',handleScroll);
-      };
-    }
-  },[annotationInView]);
-  useEffect(() => { // Do the scrolling when annotationInView changes
+  useEffect(() => {
     function scrollWhenFound() {
       if (!annotationInView) {
         return;
@@ -1074,20 +1066,10 @@ export default function PdfAnnotationPage(props) {
       window.scrollTo({
         top: window.scrollY-vpHeight/2+elemHeight/2
       });
-      // Hacky solution.
-      // Has to be set in the next update cycle, or else it gets overridden
-      let noteId = annotations[annotationInView].note_id;
-      setTimeout(()=>setCardInView(noteId),0);
+      setAnnotationInView(null);
     }
     scrollWhenFound();
   }, [annotationInView]);
-  useEffect(()=>{
-    if (!activeId) {
-      return;
-    }
-    //setCardInView(activeId); // Scroll it into view
-    //setAnnotationInView(activeId); // Scroll it into view
-  },[activeId])
 
   // Document title
   useEffect(() => {
@@ -1131,7 +1113,7 @@ export default function PdfAnnotationPage(props) {
   }
 
   // Tools
-  function handleDoubleClick(event,data) {
+  function handleDoubleClickAnnotation(event,data) {
     switch (data.ann.type) {
       case 'highlight':
       case 'rect':
@@ -1144,6 +1126,10 @@ export default function PdfAnnotationPage(props) {
       default:
         break;
     }
+  }
+  function handleClickAnnotation(event,data) {
+    setActiveId(data.ann.id);
+    setCardInView(data.ann.note_id);
   }
   const tools = {
     read: {
@@ -1164,7 +1150,8 @@ export default function PdfAnnotationPage(props) {
             setActiveId(data.id);
             setCardInView(annotations[data.id].note_id);
           },
-          onDoubleClick: handleDoubleClick,
+          onDoubleClick: handleDoubleClickAnnotation,
+          onClick: handleClickAnnotation,
         }
       }
     },
@@ -1226,9 +1213,11 @@ export default function PdfAnnotationPage(props) {
               // dragging action.
               return;
             } else {
+              setActiveId(data.ann.id);
+              setCardInView(data.ann.note_id);
               setToolState({
                 ...toolState,
-                selectedAnnotationId: data.id,
+                selectedAnnotationId: data.ann.id,
                 tempPosition: null,
               });
             }
@@ -1410,7 +1399,8 @@ export default function PdfAnnotationPage(props) {
           }
         },
         annotation: {
-          onDoubleClick: handleDoubleClick,
+          onDoubleClick: handleDoubleClickAnnotation,
+          onClick: handleClickAnnotation,
         },
         controlPoint: {
         },
@@ -1449,7 +1439,8 @@ export default function PdfAnnotationPage(props) {
           },
         },
         annotation: {
-          onDoubleClick: handleDoubleClick,
+          onDoubleClick: handleDoubleClickAnnotation,
+          onClick: handleClickAnnotation,
           onMouseDown: function(event,data) {
             if (toolState.tempAnnotation) {
               // Continue creating the annotation
@@ -1541,7 +1532,8 @@ export default function PdfAnnotationPage(props) {
           },
         },
         annotation: {
-          onDoubleClick: handleDoubleClick,
+          onDoubleClick: handleDoubleClickAnnotation,
+          onClick: handleClickAnnotation,
         },
         controlPoint: {},
         onMouseMove: function(event,data) {

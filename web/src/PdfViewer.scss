@@ -51,6 +51,10 @@ body {
 
   .annotation {
     box-sizing: border-box;
+    &:focus, &.active {
+      outline: 1px solid black;
+      z-index: $z-index-active-annotation;
+    }
     &.point {
       background-color: rgba(red,0.5);
       width: 10px;
@@ -114,11 +118,8 @@ body {
       }
     }
     &.selected {
-      border: 1px solid black;
+      outline: 1px solid black;
       cursor: move;
-      &.point {
-        box-shadow: 0 0 5px black;
-      }
     }
     .actions-container {
       position: absolute;
