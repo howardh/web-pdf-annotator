@@ -18,6 +18,9 @@
     border: 1px solid black;
     border-radius: 3px;
     cursor: pointer;
+    &:hover {
+      box-shadow: 0 0 3px $primary-colour-dark;
+    }
   }
   input[type='textfield'], input[type='password'] {
     box-sizing: border-box;

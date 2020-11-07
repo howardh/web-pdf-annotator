@@ -572,20 +572,22 @@ function NoteCard(props) {
           onKeyPress={onKeyPress}
           value={updatedNote.body} />
       <div className='controls'>
-        <span onClick={()=>setActive(!isActive)}>
+        <Button onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
             {isActive ? 'navigate_before' : 'navigate_next'}
           </i>
-        </span>
-        <span onClick={saveChanges}>
-          <i className='material-icons'>save</i>
-        </span>
-        <span onClick={discardChanges}>
-          <i className='material-icons'>cancel</i>
-        </span>
-        <span onClick={deleteNote}>
-          <i className='material-icons'>delete</i>
-        </span>
+        </Button>
+        <GroupedInputs>
+          <Button onClick={saveChanges}>
+            <i className='material-icons'>save</i>
+          </Button>
+          <Button onClick={discardChanges}>
+            <i className='material-icons'>cancel</i>
+          </Button>
+          <Button onClick={deleteNote}>
+            <i className='material-icons'>delete</i>
+          </Button>
+        </GroupedInputs>
         {
           isVisibleAdvancedOptions ? (
             <div className='advanced'>
@@ -626,31 +628,25 @@ function NoteCard(props) {
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       { !refreshing && parsedBodyDiv }
       <div className='controls'>
-        <span onClick={()=>setActive(!isActive)}>
+        <Button onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
             {isActive ? 'navigate_before' : 'navigate_next'}
           </i>
-        </span>
-        <span onClick={startEditing}>
-          <i className='material-icons'>create</i>
-        </span>
-        <span onClick={deleteNote}>
-          <i className='material-icons'>delete</i>
-        </span>
-        <span onClick={refresh}>
-          <i className='material-icons'>sync</i>
-        </span>
+        </Button>
+        <GroupedInputs>
+          <Button onClick={startEditing}>
+            <i className='material-icons'>create</i>
+          </Button>
+          <Button onClick={deleteNote}>
+            <i className='material-icons'>delete</i>
+          </Button>
+          <Button onClick={refresh}>
+            <i className='material-icons'>sync</i>
+          </Button>
+        </GroupedInputs>
         <Button onClick={scrollIntoView}>
           Scroll into view
         </Button>
-        {
-          annotation.type === 'rect' &&
-          (
-            <span>
-              <a href={process.env.REACT_APP_SERVER_ADDRESS+"/data/annotations/"+annotation.id+'/img'}>img</a>
-            </span>
-          )
-        }
       </div>
     </div>);
   }
