@@ -25,6 +25,7 @@ function AnnotationLayer(props) {
   const {
     annotations,
     activeId,
+    setCardInView,
     eventHandlers,
     toolState,
     page,
@@ -287,6 +288,7 @@ function AnnotationLayer(props) {
         <Annotation annotation={annotation}
           key={annotation.id}
           isActive={activeId===annotation.id}
+          viewNote={()=>setCardInView(annotation.note_id)}
           scale={scale}
           toolState={toolState} 
           onClick={e=>handleClick(e,annotation)}
@@ -319,6 +321,7 @@ function Annotation(props) {
     toolState,
     scale,
     isActive,
+    viewNote,
 
     onClick,
     onMouseDown,
@@ -360,7 +363,10 @@ function Annotation(props) {
         onMouseMove={onMouseMove}
         onKeyDown={onKeyDown}
         onDoubleClick={e => onDoubleClick(e,ann)}>
-        {isActive && <AnnotationActions annotation={annotation}/>}
+        {
+          isActive && 
+          <AnnotationActions annotation={annotation} viewNote={viewNote}/>
+        }
       </div>;
     case 'rect':
       style = {
@@ -393,7 +399,10 @@ function Annotation(props) {
           <div className='control se' />
           </>
         }
-        {isActive && <AnnotationActions annotation={annotation}/>}
+        {
+          isActive && 
+          <AnnotationActions annotation={annotation} viewNote={viewNote}/>
+        }
       </div>;
     default:
       return null;
@@ -402,7 +411,8 @@ function Annotation(props) {
 
 function AnnotationActions(props) {
   const {
-    annotation
+    annotation,
+    viewNote
   } = props;
 
   const dispatch = useDispatch();
@@ -433,7 +443,7 @@ function AnnotationActions(props) {
     <div className='actions-container'>
       {
         annotation.note_id ?
-          <Button onClick={null}>
+          <Button onClick={viewNote}>
             <i className='material-icons'>description</i>
           </Button>
         : <Button onClick={createNote}>
@@ -613,7 +623,7 @@ function NoteCard(props) {
         break;
     }
     return (<div className={classNames}
-        onClick={()=>isActive?null:setActive(true)} id={'card'+annotation.id}>
+        onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       { !refreshing && parsedBodyDiv }
       <div className='controls'>
         <span onClick={()=>setActive(!isActive)}>
@@ -660,10 +670,7 @@ function NoteCardsContainer(props) {
 
   useEffect(()=>{
     let id = cardInView;
-    if (!id || !annotations[id]) {
-      return;
-    }
-    if (annotations[id].type === 'highlight') {
+    if (!id) {
       return;
     }
     let card = document.getElementById('card'+id);
@@ -817,6 +824,7 @@ function PdfPageContainer(props) {
     annotations,
     page, pageNum,
     activeId,
+    setCardInView,
     scale
   } = props;
   const relevantAnnotations = filterDict(
@@ -842,6 +850,7 @@ function PdfPageContainer(props) {
           <AnnotationLayer
               eventHandlers={eventHandlers}
               activeId={activeId}
+              setCardInView={setCardInView}
               toolState={toolState}
               createAnnotation={createAnnotation}
               updateAnnotation={updateAnnotation}
@@ -1023,7 +1032,7 @@ export default function PdfAnnotationPage(props) {
         id = parseInt(hash.slice('#card'.length));
       }
       setActiveId(id);
-      setCardInView(id);
+      setCardInView(annotations[id].note_id);
       setAnnotationInView(id);
     }
   }, [location.hash]);
@@ -1071,7 +1080,8 @@ export default function PdfAnnotationPage(props) {
       });
       // Hacky solution.
       // Has to be set in the next update cycle, or else it gets overridden
-      setTimeout(()=>setCardInView(annotationInView),0);
+      let noteId = annotations[annotationInView].note_id;
+      setTimeout(()=>setCardInView(noteId),0);
     }
     scrollWhenFound();
   }, [annotationInView]);
@@ -1105,23 +1115,10 @@ export default function PdfAnnotationPage(props) {
   function createAnnotation(ann) {
     dispatch(annotationActions['saveCheckpoint']());
     ann['doc_id'] = docId;
-    let note = {
-      'body': "# Notes\nWrite your notes here",
-      'parser': 'markdown-it', // text, commonmark, markdown-it
-    };
     dispatch(annotationActions['create'](ann)).then(response => {
       let newAnnotations = response.data.entities.annotations;
       let newAnnotationId = Object.keys(newAnnotations)[0];
       setActiveId(parseInt(newAnnotationId));
-      dispatch(noteActions['create'](note)).then(response2 => {
-        let newNotes = response2.data.entities.notes;
-        let newNoteId = Object.keys(newNotes)[0];
-        updateAnnotation({
-          ...newAnnotations[newAnnotationId],
-          note_id: newNoteId
-        });
-        setCardInView(parseInt(newNoteId));
-      });
     },0);
   }
   function updateAnnotation(ann) {
@@ -1169,7 +1166,7 @@ export default function PdfAnnotationPage(props) {
         annotation: {
           onClick: function(event,data) {
             setActiveId(data.id);
-            setCardInView(data.id);
+            setCardInView(annotations[data.id].note_id);
           },
           onDoubleClick: handleDoubleClick,
         }
@@ -1615,7 +1612,7 @@ export default function PdfAnnotationPage(props) {
   function activateAnnotation(annId) {
     setActiveId(annId);
     if (annId) { // Check if we're activating or deactivating
-      setCardInView(annId);
+      setCardInView(annotations[annId].note_id);
       setToolState({
         ...tools.resize.initState(),
         selectedAnnotationId: annId,
@@ -1718,6 +1715,7 @@ export default function PdfAnnotationPage(props) {
     {Object.entries(pages).map(function([pageNum,page],i){
       return <PdfPageContainer key={pageNum}
           activeId={activeId} setActiveId={activateAnnotation}
+          setCardInView={setCardInView}
           toolState={toolState}
           eventHandlers={tools[toolState.type].eventHandlers}
           createAnnotation={createAnnotation}
