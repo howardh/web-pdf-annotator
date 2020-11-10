@@ -1,0 +1,56 @@
+@import '../variables';
+
+.text-editor {
+  position: relative;
+  box-sizing: border-box;
+  border: 1px solid black;
+  padding: 10px;
+  margin: 0;
+  height: 100vh;
+  text-align: left;
+  outline: none;
+  overflow: scroll;
+
+  .line, .hidden .size-check {
+    min-height: 1.5em;
+    line-height: 1.5em;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    &::selection { /* WebKit/Blink Browsers */
+      background: $primary-colour-dark;
+      color: $primary-colour-light;
+    }
+    &::-moz-selection { /* Gecko Browsers */
+      background: $primary-colour-dark;
+      color: $primary-colour-light;
+    }
+  }
+
+  .caret {
+    position: absolute;
+    user-select: none;
+  }
+  &:focus .caret {
+    outline: 0.5px solid black;
+    animation: blinker 1s linear infinite;
+  }
+
+  .hidden {
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    .size-check {
+      display: inline-block;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+  }
+}
+
+@keyframes blinker {
+  50% {
+    opacity: 0;
+  }
+}

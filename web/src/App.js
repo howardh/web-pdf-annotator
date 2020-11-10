@@ -18,6 +18,7 @@ import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
 import DocumentsPage from './Documents.js';
 import TagsPage from './Tags.js';
+import NoteEditorPage from './NoteEditor.js';
 
 import './App.scss';
 
@@ -68,6 +69,11 @@ function App() {
           <Navigation userId={userId} confirmed={confirmed} />
           <TagsPage userId={userId} />
         </Route>
+        <Route path="/notes/:noteId"
+          render={
+            props => <NoteEditorPage userId={userId} {...props.match.params} />
+          }
+        />
         <Route path="/">
           <Navigation userId={userId} confirmed={confirmed} />
           <LandingPage />
