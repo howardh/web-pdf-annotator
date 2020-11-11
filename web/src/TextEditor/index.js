@@ -108,7 +108,6 @@ export default function TextEditor(props) {
     sel.addRange(range);
     sel.extend(endNode,endOffset);
     setPreventCoordUpdate(2); // `addRange` and `extend` each trigger their own change events. We want to stop both.
-    console.log(['updating selection',startOffset,endOffset]);
 
     // Update displayed caret
     //updateCaretXYFromCoords(caretPos); // FIXME: Not working?
@@ -157,31 +156,84 @@ export default function TextEditor(props) {
   });
 
   // Event handlers
-  function execute(func,params) {
-    let output = func(params);
-    if ('then' in output) {
-      output.then(o => {
-        const {
-          startPos=selectionStart,
-          caretPos=caretTextCoords,
-          lines=lines
-        } = o;
-        onChangeText(lines.join('\n'));
-        setCaretTextCoords(caretPos);
-        setSelectionStart(startPos);
-        updateSelectionFromCoords(startPos,caretPos,lines);
-      });
-    } else {
-      const {
-        startPos=selectionStart,
-        caretPos=caretTextCoords,
-        lines=lines
-      } = output;
-      onChangeText(lines.join('\n'));
-      setCaretTextCoords(caretPos);
-      setSelectionStart(startPos);
-      updateSelectionFromCoords(startPos,caretPos,lines);
+  const historyLimit = 30;
+  const [past,setPast] = useState([]);
+  const [future,setFuture] = useState([]);
+  function addUndoCommand(command) {
+    setPast([
+      command,
+      ...past
+    ].slice(0,historyLimit));
+    setFuture([]);
+  }
+  function addRedoCommand(command) {
+    setFuture([
+      command,
+      ...future
+    ]);
+    setPast(past.slice(1));
+  }
+  function processCommandOutput(output) {
+    const {
+      startPos,
+      caretPos,
+      lines,
+      undo=null
+    } = output;
+    onChangeText(lines.join('\n'));
+    setCaretTextCoords(caretPos);
+    setSelectionStart(startPos);
+    updateSelectionFromCoords(startPos,caretPos,lines);
+    return output;
+  }
+  const processCommandOutput2 = {
+    execute: function(output) {
+      if (!output.undo) {
+        return;
+      }
+      setPast([
+        output.undo,
+        ...past
+      ]);
+      setFuture([]);
+    },
+    undo: function(output) {
+      setFuture([
+        output.undo,
+        ...future
+      ]);
+      setPast(past.slice(1));
+    },
+    redo: function(output) {
+      setPast([
+        output.undo,
+        ...past
+      ]);
+      setFuture(past.slice(1));
     }
+  };
+  function execute(func,params,commandType='execute') {
+    let output = func({...params,lines});
+    if ('then' in output) {
+      output
+        .then(processCommandOutput)
+        .then(processCommandOutput2[commandType]);
+    } else {
+      processCommandOutput(output);
+      processCommandOutput2[commandType](output);
+    }
+  }
+  function undo() {
+    if (past.length === 0) {
+      return;
+    }
+    execute(past[0].func,past[0].params,'undo');
+  }
+  function redo() {
+    if (future.length === 0) {
+      return;
+    }
+    execute(future[0].func,future[0].params,'redo');
   }
   const editorEventHandlers = {
     onKeyDown: function(e) {
@@ -217,6 +269,12 @@ export default function TextEditor(props) {
                 caretPos: caretTextCoords,
                 lines: lines
               });
+              break;
+            case 'y':
+              redo();
+              break;
+            case 'z':
+              undo();
               break;
           }
         }
@@ -295,9 +353,6 @@ export default function TextEditor(props) {
         }
       }
     },
-    onPaste: function(e) {
-      console.log('paste');
-    }
   }
 
   const caretStyle = {
@@ -349,6 +404,11 @@ export function textCoordToSelection(startPos,caretPos,lines,lineNodes) {
   caretCol = Math.min(lines[caretLine].length, caretCol);
   startCol = Math.min(lines[startLine].length, startCol);
 
+  // Nodes may not have updated yet. Check if they have.
+  if (!lineNodes[caretLine] || !lineNodes[startLine]) {
+    return null;
+  }
+
   // Compute range
   let endNode = lineNodes[caretLine].childNodes[0];
   let endOffset = caretCol;
@@ -361,6 +421,35 @@ export function textCoordToSelection(startPos,caretPos,lines,lineNodes) {
   };
 }
 
+export function orderCoordinates(pos1,pos2) {
+  let [lineNum1,col1] = pos1;
+  let [lineNum2,col2] = pos2;
+  if (lineNum2 < lineNum1 || (lineNum2 === lineNum1 && col2 < col1)) {
+    [lineNum1,col1] = pos2;
+    [lineNum2,col2] = pos1;
+  }
+  return {
+    lineNum1,lineNum2,col1,col2
+  };
+}
+
+function computeSelectedLines(startPos,caretPos,lines) {
+  let {
+    lineNum1, col1,
+    lineNum2, col2
+  } = orderCoordinates(startPos,caretPos);
+
+  if (lineNum1 === lineNum2) {
+    return [lines[lineNum1].slice(col1,col2)];
+  } else {
+    return [
+      lines[lineNum1].slice(col1),
+      ...lines.slice(lineNum1+1,lineNum2),
+      lines[lineNum2].slice(0,col2)
+    ];
+  }
+}
+
 export function selectAll({startPos=null,caretPos,lines}) {
   return {
     lines,
@@ -370,6 +459,23 @@ export function selectAll({startPos=null,caretPos,lines}) {
 }
 
 export function addText({startPos=null,caretPos,addedText,lines}) {
+  let {
+    lineNum1, col1,
+    lineNum2, col2
+  } = orderCoordinates(startPos,caretPos);
+
+  // Undo/redo commands
+  let removedText = computeSelectedLines(startPos,caretPos,lines).join('\n');
+  let undo = {
+    func: addText,
+    params: {
+      startPos: startPos,
+      caretPos: null, // Filled below
+      addedText: removedText
+    }
+  }
+
+  // Make changes
   if (startPos[0] !== caretPos[0] || startPos[1] !== caretPos[1]) {
     let output = backspace({ startPos,caretPos,lines });
     startPos = output.startPos;
@@ -387,10 +493,13 @@ export function addText({startPos=null,caretPos,addedText,lines}) {
   let newCol = addedLines.length === 1
     ? col+addedText.length
     : addedLines[addedLines.length-1].length;
+
+  undo.params.caretPos = [newLineNum,newCol];
   return {
     lines: newLines,
     startPos: [newLineNum,newCol],
-    caretPos: [newLineNum,newCol]
+    caretPos: [newLineNum,newCol],
+    undo
   };
 }
 
@@ -444,9 +553,12 @@ export function deleteKey({startPos=null,caretPos,lines}) {
 }
 
 export function backspace({startPos=null,caretPos,lines}) {
-  if (startPos[0] === caretPos[0] && startPos[1] === caretPos[1]) {
+  if (startPos[0] === caretPos[0] && startPos[1] === caretPos[1]) { // No selection
     let [lineNum,col] = caretPos;
-    if (col === 0) {
+    // Handle the possibility that the selection is beyond the end of the line 
+    col = Math.min(col, lines[lineNum].length);
+
+    if (col === 0) { // Deleting linebreak
       if (lineNum === 0) {
         return { lines, startPos, caretPos };
       } else {
@@ -456,38 +568,71 @@ export function backspace({startPos=null,caretPos,lines}) {
           ...lines.slice(lineNum+1)
         ];
         const newCol = lines[lineNum-1].length;
+        const newPos = [lineNum-1,newCol];
+
+        let undo = {
+          func: addText,
+          params: {
+            startPos: newPos,
+            caretPos: newPos,
+            addedText: '\n'
+          }
+        }
         return {
           lines: newLines,
-          startPos: [lineNum-1,newCol],
-          caretPos: [lineNum-1,newCol]
+          startPos: newPos,
+          caretPos: newPos,
+          undo
         };
       }
-    } else {
+    } else { // Deleting non-linebreak character
       const newLines = [...lines];
       newLines[lineNum] = lines[lineNum].slice(0,col-1)+lines[lineNum].slice(col);
+      let newPos = [lineNum,col-1];
+
+      let undo = {
+        func: addText,
+        params: {
+          startPos: newPos,
+          caretPos: newPos,
+          addedText: lines[lineNum][col-1]
+        }
+      }
       return {
         lines: newLines,
-        startPos: [lineNum,col-1],
-        caretPos: [lineNum,col-1]
+        startPos: newPos,
+        caretPos: newPos,
+        undo
       };
     }
-  } else {
-    let [lineNum1,col1] = startPos;
-    let [lineNum2,col2] = caretPos;
-    if (col2 < col1 || lineNum2 < lineNum1) { // Flip if needed
-      [lineNum1,col1] = caretPos;
-      [lineNum2,col2] = startPos;
-    }
+  } else { // Deleting selected text
+    let {
+      lineNum1, col1,
+      lineNum2, col2
+    } = orderCoordinates(startPos,caretPos);
 
     const newLines = [
       ...lines.slice(0,lineNum1),
       lines[lineNum1].slice(0,col1)+lines[lineNum2].slice(col2),
       ...lines.slice(lineNum2+1)
     ];
+    const newPos = [lineNum1,col1];
+
+    let undo = {
+      func: addText,
+      params: {
+        startPos: newPos,
+        caretPos: newPos,
+        addedText: computeSelectedLines(
+          startPos,caretPos,lines
+        ).join('\n')
+      }
+    }
     return {
       lines: newLines,
-      startPos: [lineNum1,col1],
-      caretPos: [lineNum1,col1]
+      startPos: newPos,
+      caretPos: newPos,
+      undo
     };
   }
 }
@@ -579,12 +724,10 @@ export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
 }
 
 export function cut({startPos=null,caretPos,lines}) {
-  let [lineNum1,col1] = startPos;
-  let [lineNum2,col2] = caretPos;
-  if (col2 < col1 || lineNum2 < lineNum1) { // Flip if needed
-    [lineNum1,col1] = caretPos;
-    [lineNum2,col2] = startPos;
-  }
+  let {
+    lineNum1, col1,
+    lineNum2, col2
+  } = orderCoordinates(startPos,caretPos);
 
   let copiedText;
   if (lineNum1 === lineNum2) {
