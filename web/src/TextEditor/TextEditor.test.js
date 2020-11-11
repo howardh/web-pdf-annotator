@@ -1,5 +1,5 @@
 import {
-  addText, backspace,
+  addText, backspace, del,
   moveCaretCol, moveCaretLine,
   textCoordToSelection
 } from './index.js';
@@ -353,6 +353,167 @@ describe('backspace', () => {
     let lines = ['asdf','qwer','zxcv'];
     let linesHistory = [lines];
     let func = backspace;
+    let params = {
+      lines,
+      caretPos: [2,4],
+      startPos: [0,0]
+    };
+    for (let i = 0; i < 3; i++) {
+      let output = func({...params, lines})
+      linesHistory.push(output.lines);
+      lines = output.lines;
+      func = output.undo.func;
+      params = output.undo.params;
+    }
+    expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
+    expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
+    expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+});
+
+describe('del', () => {
+  // Delete single character
+  each(Object.entries({
+    '1 line document, position: start':[0,'sdf'],
+    '1 line document, position: middle':[1,'adf'],
+    '1 line document, position: end':[4,'asdf'],
+  })).it('%s', (_,[col,expected]) => {
+    const output = del({
+      lines: ['asdf'],
+      caretPos: [0,col],
+      startPos: [0,col]
+    })
+    expect(output.lines[0]).toBe(expected);
+    expect(output.caretPos[0]).toBe(0);
+  });
+
+  // Delete selection
+  test('Full line selected (line 0)', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [1,0],
+      startPos: [0,0]
+    })
+    expect(output.lines).toStrictEqual(['qwer','zxcv']);
+    expect(output.caretPos[0]).toBe(0); // Line num
+    expect(output.caretPos[1]).toBe(0); // Col
+  });
+  test('mulitple lines selected (line 1-2)', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [2,3],
+      startPos: [1,2]
+    })
+    expect(output.lines).toStrictEqual(['asdf','qwv']);
+    expect(output.caretPos[0]).toBe(1); // Line num
+    expect(output.caretPos[1]).toBe(2); // Col
+  });
+  test('mulitple lines selected (line 1-2), flipped selection', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [1,2],
+      startPos: [2,3]
+    })
+    expect(output.lines).toStrictEqual(['asdf','qwv']);
+    expect(output.caretPos[0]).toBe(1); // Line num
+    expect(output.caretPos[1]).toBe(2); // Col
+  });
+  test('Only linebreak selected', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [1,0],
+      startPos: [0,4]
+    })
+    expect(output.lines).toStrictEqual(['asdfqwer','zxcv']);
+    expect(output.caretPos[0]).toBe(0); // Line num
+    expect(output.caretPos[1]).toBe(4); // Col
+  });
+  test('Delete when selection is past end of line', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [1,10],
+      startPos: [1,10]
+    })
+    expect(output.lines).toStrictEqual(['asdf','qwerzxcv']);
+    expect(output.caretPos[0]).toBe(1); // Line num
+    expect(output.caretPos[1]).toBe(4); // Col
+  });
+  test('Delete all', ()=>{
+    const output = del({
+      lines: ['asdf','qwer','zxcv'],
+      caretPos: [2,4],
+      startPos: [0,0]
+    })
+    expect(output.lines).toStrictEqual(['']);
+    expect(output.caretPos[0]).toBe(0); // Line num
+    expect(output.caretPos[1]).toBe(0); // Col
+  });
+
+  // Undo/Redo
+  test('Undo/Redo #1 (delete 1 char)', ()=>{
+    let lines = ['asdf','qwer','zxcv'];
+    let linesHistory = [lines];
+    let func = del;
+    let params = {
+      lines,
+      caretPos: [1,1],
+      startPos: [1,1]
+    };
+    for (let i = 0; i < 3; i++) {
+      let output = func({...params, lines})
+      linesHistory.push(output.lines);
+      lines = output.lines;
+      func = output.undo.func;
+      params = output.undo.params;
+    }
+    expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
+    expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
+    expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+  test('Undo/Redo #2 (delete line break)', ()=>{
+    let lines = ['asdf','qwer','zxcv'];
+    let linesHistory = [lines];
+    let func = del;
+    let params = {
+      lines,
+      caretPos: [0,4],
+      startPos: [0,4]
+    };
+    for (let i = 0; i < 3; i++) {
+      let output = func({...params, lines})
+      linesHistory.push(output.lines);
+      lines = output.lines;
+      func = output.undo.func;
+      params = output.undo.params;
+    }
+    expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
+    expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
+    expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+  test('Undo/Redo #2 (delete selection)', ()=>{
+    let lines = ['asdf','qwer','zxcv'];
+    let linesHistory = [lines];
+    let func = del;
+    let params = {
+      lines,
+      caretPos: [2,1],
+      startPos: [1,1]
+    };
+    for (let i = 0; i < 3; i++) {
+      let output = func({...params, lines})
+      linesHistory.push(output.lines);
+      lines = output.lines;
+      func = output.undo.func;
+      params = output.undo.params;
+    }
+    expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
+    expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
+    expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+  test('Undo/Redo #3 (delete selection)', ()=>{
+    let lines = ['asdf','qwer','zxcv'];
+    let linesHistory = [lines];
+    let func = del;
     let params = {
       lines,
       caretPos: [2,4],

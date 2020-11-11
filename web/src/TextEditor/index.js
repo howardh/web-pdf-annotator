@@ -209,7 +209,7 @@ export default function TextEditor(props) {
         output.undo,
         ...past
       ]);
-      setFuture(past.slice(1));
+      setFuture(future.slice(1));
     }
   };
   function execute(func,params,commandType='execute') {
@@ -288,7 +288,7 @@ export default function TextEditor(props) {
             });
             break;
           case 'Delete':
-            execute(deleteKey, {
+            execute(del, {
               startPos: selectionStart,
               caretPos: caretTextCoords,
               lines: lines
@@ -503,51 +503,86 @@ export function addText({startPos=null,caretPos,addedText,lines}) {
   };
 }
 
-export function deleteKey({startPos=null,caretPos,lines}) {
-  if (startPos[0] === caretPos[0] && startPos[1] === caretPos[1]) {
+export function del({startPos=null,caretPos,lines}) {
+  if (startPos[0] === caretPos[0] && startPos[1] === caretPos[1]) { // No selection
     let [lineNum,col] = caretPos;
-    if (col === 0) {
-      if (lineNum === 0) {
+    // Handle the possibility that the selection is beyond the end of the line 
+    col = Math.min(col, lines[lineNum].length);
+
+    if (col === lines[lineNum].length) { // Deleting linebreak
+      if (lineNum === lines.length-1) {
         return { lines, startPos, caretPos };
       } else {
         const newLines = [
-          ...lines.slice(0,lineNum-1),
-          lines[lineNum-1]+lines[lineNum],
-          ...lines.slice(lineNum+1)
+          ...lines.slice(0,lineNum),
+          lines[lineNum]+lines[lineNum+1],
+          ...lines.slice(lineNum+2)
         ];
-        const newCol = lines[lineNum-1].length;
+        const newPos = [lineNum,col];
+
+        let undo = {
+          func: addText,
+          params: {
+            startPos: newPos,
+            caretPos: newPos,
+            addedText: '\n'
+          }
+        }
         return {
           lines: newLines,
-          startPos: [lineNum-1,newCol],
-          caretPos: [lineNum-1,newCol]
+          startPos: newPos,
+          caretPos: newPos,
+          undo
         };
       }
-    } else {
+    } else { // Deleting non-linebreak character
       const newLines = [...lines];
       newLines[lineNum] = lines[lineNum].slice(0,col)+lines[lineNum].slice(col+1);
+      let newPos = [lineNum,col];
+
+      let undo = {
+        func: addText,
+        params: {
+          startPos: newPos,
+          caretPos: newPos,
+          addedText: lines[lineNum][col]
+        }
+      }
       return {
         lines: newLines,
-        startPos: caretPos,
-        caretPos: caretPos
+        startPos: newPos,
+        caretPos: newPos,
+        undo
       };
     }
-  } else {
-    let [lineNum1,col1] = startPos;
-    let [lineNum2,col2] = caretPos;
-    if (col2 < col1 || lineNum2 < lineNum1) { // Flip if needed
-      [lineNum1,col1] = caretPos;
-      [lineNum2,col2] = startPos;
-    }
+  } else { // Deleting selected text
+    let {
+      lineNum1, col1,
+      lineNum2, col2
+    } = orderCoordinates(startPos,caretPos);
 
     const newLines = [
       ...lines.slice(0,lineNum1),
       lines[lineNum1].slice(0,col1)+lines[lineNum2].slice(col2),
       ...lines.slice(lineNum2+1)
     ];
+    const newPos = [lineNum1,col1];
+
+    let undo = {
+      func: addText,
+      params: {
+        startPos: newPos,
+        caretPos: newPos,
+        addedText: computeSelectedLines(
+          startPos,caretPos,lines
+        ).join('\n')
+      }
+    }
     return {
       lines: newLines,
-      startPos: [lineNum1,col1],
-      caretPos: [lineNum1,col1]
+      startPos: newPos,
+      caretPos: newPos,
+      undo
     };
   }
 }
@@ -637,26 +672,8 @@ export function backspace({startPos=null,caretPos,lines}) {
   }
 }
 
-export function enter({startPos=null,caretPos,lines,shift}) {
-  if (startPos[0] !== caretPos[0] || startPos[1] !== caretPos[1]) {
-    let output = backspace({ startPos,caretPos,lines });
-    startPos = output.startPos;
-    caretPos = output.caretPos;
-    lines = output.lines;
-  }
-  let [lineNum,col] = caretPos;
-  const newLines = [
-    ...lines.slice(0,lineNum),
-    lines[lineNum].slice(0,col),
-    lines[lineNum].slice(col),
-    ...lines.slice(lineNum+1)
-  ];
-  const newCaretPos = [lineNum+1,0];
-  return {
-    startPos: newCaretPos,
-    caretPos: newCaretPos,
-    lines: newLines
-  };
+export function enter({startPos=null,caretPos,lines}) {
+  return addText({startPos,caretPos,lines,addedText:'\n'});
 }
 
 export function moveCaretLine({startPos=null,caretPos,lines,dLine,shift}) {
