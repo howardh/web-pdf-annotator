@@ -30,9 +30,12 @@ export default function TextEditor(props) {
   const [caretXYCoords,setCaretXYCoords] = useState([0,0]); // [x,y] in pixels of top-left
   const [caretTextCoords,setCaretTextCoords] = useState([0,0]); // [line num, col]
   const [selectionStart,setSelectionStart] = useState([0,0]); // [line num, col]
-  // Both the selections (from window.getSelection()) and the coordinates (i.e. caretTextCoords and selectionStart) can be updated programmatically, and they're both kept in sync. If the coordinates are updated programmatically to sync up with the selection, then this is set to `true` so that the selections don't try to update again to sync up with the coordinates.
-  const [skipSelectionUpdate,setSkipSelectionUpdate] = useState(false);
+
+  // Caret (X,Y) pixel coordinates
   function textToXYCoords(lineNum,col) {
+    if (col >= lines[lineNum].length) {
+      col = lines[lineNum].length;
+    }
     let textOffset = [
       ref.current.children[0].getBoundingClientRect().left-ref.current.getBoundingClientRect().left-border,
       ref.current.children[0].getBoundingClientRect().top-ref.current.getBoundingClientRect().top-border
@@ -42,47 +45,14 @@ export default function TextEditor(props) {
       textOffset[1]+lineNum*charDims.h
     ];
   }
-  useEffect(()=>{
-    setCaretXYCoords(textToXYCoords(caretTextCoords[0],caretTextCoords[1]));
-  },[caretTextCoords]);
-  function updateSelectionFromCoords(startPos,caretPos) {
-    let sel = window.getSelection();
-    let endNode = ref.current.children[caretPos[0]+1].childNodes[0];
-    let endOffset = caretPos[1];
-    let startNode = ref.current.children[startPos[0]+1].childNodes[0];
-    let startOffset = startPos[1];
-    // Check if selection actually changed
-    if (sel.anchorNode === startNode && sel.anchorOffset === startOffset &&
-        sel.focusNode === endNode && sel.focusOffset === endOffset) {
-      return;
-    }
-    // I don't know when this happens. It seems to just work when I put this in. Investigate this line if something breaks.
-    if (!startNode || !endNode) {
-      return; // Is this right?
-    }
-    // If the selection is length 0, remove all ranges. Otherwise, we get buggy interactions where adding text at the "selected" region causes the new text to become selected.
-    if (startNode === endNode && startOffset === endOffset) {
-      // FIXME: This also interfered with mouse selection. Upon mouse down, the start and end of the selection are equal, so this will remove the range, but removing the range prevents the user from being able to select anything with the mouse.
-      sel.removeAllRanges();
-      return;
-    }
-    // Update selection accordingly
-    let range = document.createRange();
-    range.setStart(startNode,startOffset);
-    //range.setEnd(endNode,endOffset);
-    //window.range = range;
-    sel.removeAllRanges();
-    sel.addRange(range);
-    sel.extend(endNode,endOffset);
+  function updateCaretXYFromCoords(caretPos) {
+    setCaretXYCoords(textToXYCoords(caretPos[0],caretPos[1]));
   }
   useEffect(()=>{
-    if (skipSelectionUpdate) {
-      setSkipSelectionUpdate(false);
-    }
-    //updateSelectionFromCoords(selectionStart,caretTextCoords);
-  },[selectionStart,caretTextCoords]);
+    updateCaretXYFromCoords(caretTextCoords);
+  },[caretTextCoords]);
 
-  // Selection change
+  const [preventCoordUpdate,setPreventCoordUpdate] = useState(0);
   function selectionToTextCoords(node,offset) {
     let line = null;
     if (!node) {
@@ -100,8 +70,54 @@ export default function TextEditor(props) {
     let lineNum = Array.from(ref.current.children).indexOf(line)-1;
     return [lineNum,offset];
   }
+  function updateSelectionFromCoords(startPos,caretPos,lines=lines) {
+    let sel = window.getSelection();
+
+    let newSel = textCoordToSelection(
+      startPos,caretPos,lines,
+      Array.from(ref.current.children).slice(1,-1)
+    );
+
+    if (!newSel) {
+      sel.removeAllRanges();
+      return;
+    }
+
+    let {
+      startNode,
+      startOffset,
+      endNode,
+      endOffset
+    } = newSel;
+
+    // Check if selection actually changed
+    if (sel.anchorNode === startNode && sel.anchorOffset === startOffset &&
+        sel.focusNode === endNode && sel.focusOffset === endOffset) {
+      return;
+    }
+    // If the selection is length 0, remove all ranges. Otherwise, we get buggy interactions where adding text at the "selected" region causes the new text to become selected.
+    if (startNode === endNode && startOffset === endOffset) {
+      // FIXME: This also interfered with mouse selection. Upon mouse down, the start and end of the selection are equal, so this will remove the range, but removing the range prevents the user from being able to select anything with the mouse.
+      sel.removeAllRanges();
+      return;
+    }
+    // Update selection accordingly
+    let range = document.createRange();
+    range.setStart(startNode,startOffset);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    sel.extend(endNode,endOffset);
+    setPreventCoordUpdate(2); // `addRange` and `extend` each trigger their own change events. We want to stop both.
+    console.log(['updating selection',startOffset,endOffset]);
+
+    // Update displayed caret
+    //updateCaretXYFromCoords(caretPos); // FIXME: Not working?
+  }
   function updateCoordsFromSelection() {
-    console.log('updating coords');
+    if (preventCoordUpdate) {
+      setPreventCoordUpdate(preventCoordUpdate-1);
+      return;
+    }
     if (!ref.current) {
       return;
     }
@@ -125,19 +141,20 @@ export default function TextEditor(props) {
     if (endPos[0] !== caretTextCoords[0] ||
         endPos[1] !== caretTextCoords[1]) {
       setCaretTextCoords(endPos);
+      // Update displayed caret
+      //updateCaretXYFromCoords(endPos); // FIXME: Not working?
     }
-    setSkipSelectionUpdate(true);
   }
   useEffect(()=>{
+    // No dependencies. The callbacks need to be replaced on every render so it has access to the most up to date state.
     function callback(e) {
       updateCoordsFromSelection();
-      let sel = window.getSelection();
     }
     document.addEventListener('selectionchange', callback);
     return () => {
       document.removeEventListener('selectionchange', callback);
     };
-  },[]);
+  });
 
   // Event handlers
   function execute(func,params) {
@@ -152,7 +169,7 @@ export default function TextEditor(props) {
         onChangeText(lines.join('\n'));
         setCaretTextCoords(caretPos);
         setSelectionStart(startPos);
-        updateSelectionFromCoords(startPos,caretPos);
+        updateSelectionFromCoords(startPos,caretPos,lines);
       });
     } else {
       const {
@@ -163,7 +180,7 @@ export default function TextEditor(props) {
       onChangeText(lines.join('\n'));
       setCaretTextCoords(caretPos);
       setSelectionStart(startPos);
-      updateSelectionFromCoords(startPos,caretPos);
+      updateSelectionFromCoords(startPos,caretPos,lines);
     }
   }
   const editorEventHandlers = {
@@ -189,6 +206,13 @@ export default function TextEditor(props) {
               break;
             case 'v':
               execute(paste, {
+                startPos: selectionStart,
+                caretPos: caretTextCoords,
+                lines: lines
+              });
+              break;
+            case 'x':
+              execute(cut, {
                 startPos: selectionStart,
                 caretPos: caretTextCoords,
                 lines: lines
@@ -227,6 +251,8 @@ export default function TextEditor(props) {
               dLine: -1,
               shift: e.shiftKey,
             });
+            e.preventDefault();
+            e.stopPropagation();
             break;
           case 'ArrowDown':
             execute(moveCaretLine, {
@@ -236,6 +262,8 @@ export default function TextEditor(props) {
               dLine: 1,
               shift: e.shiftKey,
             });
+            e.preventDefault();
+            e.stopPropagation();
             break;
           case 'ArrowLeft':
             execute(moveCaretCol, {
@@ -246,6 +274,8 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
               ctrl: e.ctrlKey,
             });
+            e.preventDefault();
+            e.stopPropagation();
             break;
           case 'ArrowRight':
             execute(moveCaretCol, {
@@ -256,6 +286,8 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
               ctrl: e.ctrlKey,
             });
+            e.preventDefault();
+            e.stopPropagation();
             break;
           default:
             console.log(e.key);
@@ -289,6 +321,46 @@ export default function TextEditor(props) {
   </div>);
 }
 
+export function textCoordToSelection(startPos,caretPos,lines,lineNodes) {
+  let [startLine,startCol] = startPos;
+  let [caretLine,caretCol] = caretPos;
+  // If start or end coordinate is on an empty line, then move that selection over to the next non-empty line, since we can't select an empty line
+  while (lines[startLine].length === 0) { // Starting line is empty
+    if (startLine > caretLine) { // Selecting upwards
+      startLine -= 1;
+      startCol = lines[startLine].length;
+    } else if (startLine < caretLine) { // Selecting downwards
+      startLine += 1;
+      startCol = 0;
+    } else {
+      return null;
+    }
+  }
+  while (lines[caretLine].length === 0) {
+    if (startLine > caretLine) {
+      caretLine += 1;
+      caretCol = 0;
+    } else if (startLine < caretLine) {
+      caretLine -= 1;
+      caretCol = lines[caretLine].length;
+    }
+  }
+
+  caretCol = Math.min(lines[caretLine].length, caretCol);
+  startCol = Math.min(lines[startLine].length, startCol);
+
+  // Compute range
+  let endNode = lineNodes[caretLine].childNodes[0];
+  let endOffset = caretCol;
+  let startNode = lineNodes[startLine].childNodes[0];
+  let startOffset = startCol;
+
+  return {
+    startNode, startOffset,
+    endNode, endOffset
+  };
+}
+
 export function selectAll({startPos=null,caretPos,lines}) {
   return {
     lines,
@@ -307,13 +379,18 @@ export function addText({startPos=null,caretPos,addedText,lines}) {
   let [lineNum,col] = caretPos;
   const newLines = [
     ...lines.slice(0,lineNum),
-    lines[lineNum].slice(0,col)+addedText+lines[lineNum].slice(col),
+    ...(lines[lineNum].slice(0,col)+addedText+lines[lineNum].slice(col)).split('\n'),
     ...lines.slice(lineNum+1),
   ];
+  let addedLines = addedText.split('\n');
+  let newLineNum = lineNum+addedLines.length-1;
+  let newCol = addedLines.length === 1
+    ? col+addedText.length
+    : addedLines[addedLines.length-1].length;
   return {
     lines: newLines,
-    startPos: [lineNum,col+addedText.length],
-    caretPos: [lineNum,col+addedText.length]
+    startPos: [newLineNum,newCol],
+    caretPos: [newLineNum,newCol]
   };
 }
 
@@ -441,17 +518,18 @@ export function moveCaretLine({startPos=null,caretPos,lines,dLine,shift}) {
   let [lineNum,col] = caretPos;
   let newLineNum = lineNum+dLine;
   // Check bounds
+  let newCol = col;
   if (newLineNum < 0) {
     newLineNum = 0;
-    col = 0;
+    newCol = 0;
   } else if (newLineNum >= lines.length) {
     newLineNum = lines.length-1;
-    col = lines[newLineNum].length;
+    newCol = lines[newLineNum].length;
   }
-  if (col > lines[newLineNum].length) {
-    col = lines[newLineNum].length;
-  }
-  const newCaretPos = [newLineNum,col]
+  //if (newCol > lines[newLineNum].length) {
+  //  newCol = lines[newLineNum].length;
+  //}
+  const newCaretPos = [newLineNum,newCol];
   return {
     startPos: shift ? startPos || caretPos : newCaretPos,
     caretPos: newCaretPos,
@@ -465,9 +543,15 @@ export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
   let newLineNum = lineNum;
   // Go to next space if ctrl key is held
   if (ctrl) {
-    while (lines[lineNum][newCol] !== ' ' &&
-           newCol >= 0 && newCol <= lines[lineNum].length) {
-      newCol += dCol;
+    if (dCol === -1) {
+      while (lines[lineNum][newCol-1] !== ' ' && newCol > 0) {
+        newCol += dCol;
+      }
+    } else if (dCol === 1) {
+      while (lines[lineNum][newCol] !== ' ' &&
+             newCol < lines[lineNum].length) {
+        newCol += dCol;
+      }
     }
   }
   // Check bounds
@@ -494,10 +578,43 @@ export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
   };
 }
 
+export function cut({startPos=null,caretPos,lines}) {
+  let [lineNum1,col1] = startPos;
+  let [lineNum2,col2] = caretPos;
+  if (col2 < col1 || lineNum2 < lineNum1) { // Flip if needed
+    [lineNum1,col1] = caretPos;
+    [lineNum2,col2] = startPos;
+  }
+
+  let copiedText;
+  if (lineNum1 === lineNum2) {
+    copiedText = lines[lineNum1].slice(col1,col2);
+  } else {
+    copiedText = [
+      lines[lineNum1].slice(col1),
+      ...lines.slice(lineNum1+1,lineNum2),
+      lines[lineNum2].slice(0,col2),
+    ].join('\n');
+  }
+  return window.navigator.clipboard.writeText(copiedText).then(
+    () => {
+      return backspace({
+        startPos,caretPos,lines
+      });
+    }
+  ).catch(err => {
+    console.error('Failed to read clipboard contents: ', err);
+    return {
+      startPos: startPos,
+      caretPos: caretPos,
+      lines
+    };
+  });
+}
+
 export function paste({startPos=null,caretPos,lines}) {
   return window.navigator.clipboard.readText().then(
     text => {
-      console.log('Pasted content: ', text);
       return addText({
         startPos,caretPos,lines,
         addedText: text
