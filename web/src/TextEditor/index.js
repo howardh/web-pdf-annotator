@@ -3,17 +3,32 @@ import {useEffect, useState, useRef, forwardRef} from 'react';
 
 import './TextEditor.scss';
 
+function isElementInViewport (el) {
+
+    var rect = el.getBoundingClientRect();
+
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
+    );
+}
+
 export default function TextEditor(props) {
   const {
     text,
-    onChangeText
+    onChangeText,
+    historyLimit=30
   } = props;
 
   const border = 1; // Border of .text-editor element
 
   const lines = text.split('\n');
   const ref = useRef(null);
+  const caretRef = useRef(null);
   window.r = ref.current;
+  window.cr = caretRef.current;
 
   // Measure size of a character
   const sizeCheckRef = useRef(null);
@@ -37,9 +52,9 @@ export default function TextEditor(props) {
       col = lines[lineNum].length;
     }
     let textOffset = [
-      ref.current.children[0].getBoundingClientRect().left-ref.current.getBoundingClientRect().left-border,
-      ref.current.children[0].getBoundingClientRect().top-ref.current.getBoundingClientRect().top-border
-    ]
+      ref.current.children[0].getBoundingClientRect().left-ref.current.getBoundingClientRect().left-border+ref.current.scrollLeft,
+      ref.current.children[0].getBoundingClientRect().top-ref.current.getBoundingClientRect().top-border+ref.current.scrollTop
+    ];
     return [
       textOffset[0]+col*charDims.w,
       textOffset[1]+lineNum*charDims.h
@@ -51,6 +66,30 @@ export default function TextEditor(props) {
   useEffect(()=>{
     updateCaretXYFromCoords(caretTextCoords);
   },[caretTextCoords]);
+  useEffect(()=>{ // Scroll caret into view
+    if (!caretRef.current) {
+      return;
+    }
+    const {width,height} = ref.current.getBoundingClientRect();
+    const scrollTop = ref.current.scrollTop;
+    const scrollLeft = ref.current.scrollLeft;
+    const [x,y] = caretXYCoords;
+    const marginLeft = ref.current.scrollLeft+ref.current.children[0].getBoundingClientRect().left;
+    const marginTop = ref.current.scrollTop+ref.current.children[0].getBoundingClientRect().top;
+    let st = scrollTop;
+    let sl = scrollLeft;
+    if (x > width+scrollLeft-marginLeft*2) {
+      sl += x-(width+scrollLeft)+marginLeft*2;
+    } else if (x < scrollLeft+marginLeft*2) {
+      sl = x-marginLeft*2;
+    }
+    if (y > height+scrollTop-marginTop*4) {
+      st += y-(height+scrollTop)+marginTop*4;
+    } else if (y < scrollTop+marginTop*2) {
+      st = y-marginTop*2;
+    }
+    ref.current.scroll(sl,st);
+  });
 
   const [preventCoordUpdate,setPreventCoordUpdate] = useState(0);
   function selectionToTextCoords(node,offset) {
@@ -97,7 +136,6 @@ export default function TextEditor(props) {
     }
     // If the selection is length 0, remove all ranges. Otherwise, we get buggy interactions where adding text at the "selected" region causes the new text to become selected.
     if (startNode === endNode && startOffset === endOffset) {
-      // FIXME: This also interfered with mouse selection. Upon mouse down, the start and end of the selection are equal, so this will remove the range, but removing the range prevents the user from being able to select anything with the mouse.
       sel.removeAllRanges();
       return;
     }
@@ -108,9 +146,6 @@ export default function TextEditor(props) {
     sel.addRange(range);
     sel.extend(endNode,endOffset);
     setPreventCoordUpdate(2); // `addRange` and `extend` each trigger their own change events. We want to stop both.
-
-    // Update displayed caret
-    //updateCaretXYFromCoords(caretPos); // FIXME: Not working?
   }
   function updateCoordsFromSelection() {
     if (preventCoordUpdate) {
@@ -140,8 +175,6 @@ export default function TextEditor(props) {
     if (endPos[0] !== caretTextCoords[0] ||
         endPos[1] !== caretTextCoords[1]) {
       setCaretTextCoords(endPos);
-      // Update displayed caret
-      //updateCaretXYFromCoords(endPos); // FIXME: Not working?
     }
   }
   useEffect(()=>{
@@ -156,7 +189,6 @@ export default function TextEditor(props) {
   });
 
   // Event handlers
-  const historyLimit = 30;
   const [past,setPast] = useState([]);
   const [future,setFuture] = useState([]);
   function addUndoCommand(command) {
@@ -177,13 +209,15 @@ export default function TextEditor(props) {
     const {
       startPos,
       caretPos,
-      lines,
+      lines: newLines,
       undo=null
     } = output;
-    onChangeText(lines.join('\n'));
+    if (newLines !== lines) {
+      onChangeText(newLines.join('\n'));
+    }
     setCaretTextCoords(caretPos);
     setSelectionStart(startPos);
-    updateSelectionFromCoords(startPos,caretPos,lines);
+    updateSelectionFromCoords(startPos,caretPos,newLines);
     return output;
   }
   const processCommandOutput2 = {
@@ -245,6 +279,8 @@ export default function TextEditor(props) {
             addedText: e.key,
             lines: lines
           });
+          e.preventDefault();
+          e.stopPropagation();
         } else { // Ctrl + ...
           switch (e.key) {
             case 'a':
@@ -372,7 +408,7 @@ export default function TextEditor(props) {
         </pre>
       )
     }
-    <div className='caret' style={caretStyle}></div>
+    <div className='caret' style={caretStyle} ref={caretRef}></div>
   </div>);
 }
 

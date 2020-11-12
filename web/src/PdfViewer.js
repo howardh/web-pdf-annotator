@@ -8,6 +8,7 @@ import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
+import TextEditor from './TextEditor';
 import {
   clip,filterDict,generateClassNames,formChangeHandler,parseQueryString
 } from './Utils.js';
@@ -532,6 +533,12 @@ function NoteCard(props) {
     setCardInView(note.id);
     setAnnotationInView(annotation.id);
   }
+  function handleChangeBody(text) {
+    setUpdatedNote({
+      ...updatedNote,
+      body: text
+    });
+  }
 
   function parseBody(annotation) {
     switch (note.parser) {
@@ -577,11 +584,9 @@ function NoteCard(props) {
   if (isEditing) {
     return (<div className={classNames}
         onClick={()=>setActive(true)} id={'card'+note.id}>
-      <textarea
-          name='body'
-          onChange={handleChange}
-          onKeyPress={onKeyPress}
-          value={updatedNote.body} />
+      <TextEditor
+          onChangeText={handleChangeBody}
+          text={updatedNote.body} />
       <div className='controls'>
         <Button onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
