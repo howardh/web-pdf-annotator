@@ -19,7 +19,8 @@ export default function TextEditor(props) {
   const {
     text,
     onChangeText,
-    historyLimit=30
+    historyLimit=30,
+    onKeyDown=()=>null
   } = props;
 
   const border = 1; // Border of .text-editor element
@@ -81,15 +82,15 @@ export default function TextEditor(props) {
     const marginTop = ref.current.scrollTop+ref.current.children[0].getBoundingClientRect().top;
     let st = scrollTop;
     let sl = scrollLeft;
-    if (x > width+scrollLeft-marginLeft*2) {
-      sl += x-(width+scrollLeft)+marginLeft*2;
-    } else if (x < scrollLeft+marginLeft*2) {
-      sl = x-marginLeft*2;
+    if (x > width+scrollLeft-marginLeft) {
+      sl += x-(width+scrollLeft)+marginLeft;
+    } else if (x < scrollLeft+marginLeft) {
+      sl = x-marginLeft;
     }
-    if (y > height+scrollTop-marginTop*4) {
-      st += y-(height+scrollTop)+marginTop*4;
-    } else if (y < scrollTop+marginTop*2) {
-      st = y-marginTop*2;
+    if (y > height+scrollTop-marginTop) {
+      st += y-(height+scrollTop)+marginTop;
+    } else if (y < scrollTop+marginTop) {
+      st = y-marginTop;
     }
     ref.current.scroll(sl,st);
   });
@@ -430,6 +431,9 @@ export default function TextEditor(props) {
             console.log(e.key);
             break;
         }
+      }
+      if (e.bubbles) {
+        onKeyDown(e);
       }
     },
   }

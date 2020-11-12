@@ -161,6 +161,8 @@ body {
       textarea, .text-editor {
         width: 100%;
         height: 200px;
+        resize: vertical;
+        max-height: 90vh;
       }
 
       .controls {

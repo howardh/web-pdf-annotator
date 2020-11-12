@@ -522,9 +522,8 @@ function NoteCard(props) {
     }
   }
   // Event Handlers
-  function onKeyPress(e) {
-    const ENTER = 13;
-    if (e.ctrlKey && e.which === ENTER) {
+  function onKeyDown(e) {
+    if (e.ctrlKey && e.key === 'Enter') {
       saveChanges();
     }
   }
@@ -586,7 +585,8 @@ function NoteCard(props) {
         onClick={()=>setActive(true)} id={'card'+note.id}>
       <TextEditor
           onChangeText={handleChangeBody}
-          text={updatedNote.body} />
+          text={updatedNote.body}
+          onKeyDown={onKeyDown}/>
       <div className='controls'>
         <Button onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
