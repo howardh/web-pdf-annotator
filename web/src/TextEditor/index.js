@@ -33,6 +33,9 @@ export default function TextEditor(props) {
   // Measure size of a character
   const sizeCheckRef = useRef(null);
   const [charDims,setCharDims] = useState({w:0,h:0});
+  const linesPerPage = (ref.current && charDims.h > 0) 
+    ? Math.max(Math.floor(ref.current.getBoundingClientRect().height/charDims.h)-2,1)
+    : 1;
   useEffect(()=>{
     if (!sizeCheckRef.current) {
       return;
@@ -379,6 +382,46 @@ export default function TextEditor(props) {
               dCol: 1,
               shift: e.shiftKey,
               ctrl: e.ctrlKey,
+            });
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'PageUp':
+            execute(moveCaretLine, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
+              dLine: -linesPerPage,
+              shift: e.shiftKey,
+            });
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'PageDown':
+            execute(moveCaretLine, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
+              dLine: linesPerPage,
+              shift: e.shiftKey,
+            });
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'Home':
+            execute(home, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
+            });
+            e.preventDefault();
+            e.stopPropagation();
+            break;
+          case 'End':
+            execute(end, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
             });
             e.preventDefault();
             e.stopPropagation();
@@ -773,6 +816,24 @@ export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
     startPos: shift ? startPos || caretPos : newCaretPos,
     caretPos: newCaretPos,
     lines
+  };
+}
+
+export function home({startPos=null,caretPos,lines}) {
+  const newPos = [caretPos[0],0];
+  return {
+    startPos: newPos,
+    caretPos: newPos,
+    lines,
+  };
+}
+
+export function end({startPos=null,caretPos,lines}) {
+  const newPos = [caretPos[0],lines[caretPos[0]].length];
+  return {
+    startPos: newPos,
+    caretPos: newPos,
+    lines,
   };
 }
 
