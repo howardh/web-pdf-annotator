@@ -1,5 +1,6 @@
 import React from 'react';
 import {useEffect, useState, useRef, forwardRef} from 'react';
+import { generateClassNames } from '../Utils.js';
 
 import './TextEditor.scss';
 
@@ -27,15 +28,18 @@ export default function TextEditor(props) {
 
   const lines = text.split('\n');
   const ref = useRef(null);
+  const linesRef = useRef(null);
   const caretRef = useRef(null);
+  const autocompleteRef = useRef(null);
   window.r = ref.current;
+  window.lr = linesRef.current;
   window.cr = caretRef.current;
 
   // Measure size of a character
   const sizeCheckRef = useRef(null);
   const [charDims,setCharDims] = useState({w:0,h:0});
-  const linesPerPage = (ref.current && charDims.h > 0) 
-    ? Math.max(Math.floor(ref.current.getBoundingClientRect().height/charDims.h)-2,1)
+  const linesPerPage = (linesRef.current && charDims.h > 0) 
+    ? Math.max(Math.floor(linesRef.current.getBoundingClientRect().height/charDims.h)-2,1)
     : 1;
   useEffect(()=>{
     if (!sizeCheckRef.current) {
@@ -56,8 +60,8 @@ export default function TextEditor(props) {
       col = lines[lineNum].length;
     }
     let textOffset = [
-      ref.current.children[0].getBoundingClientRect().left-ref.current.getBoundingClientRect().left-border+ref.current.scrollLeft,
-      ref.current.children[0].getBoundingClientRect().top-ref.current.getBoundingClientRect().top-border+ref.current.scrollTop
+      linesRef.current.children[0].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left-border+linesRef.current.scrollLeft,
+      linesRef.current.children[0].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top-border+linesRef.current.scrollTop
     ];
     return [
       textOffset[0]+col*charDims.w,
@@ -74,12 +78,12 @@ export default function TextEditor(props) {
     if (!caretRef.current) {
       return;
     }
-    const {width,height} = ref.current.getBoundingClientRect();
-    const scrollTop = ref.current.scrollTop;
-    const scrollLeft = ref.current.scrollLeft;
+    const {width,height} = linesRef.current.getBoundingClientRect();
+    const scrollTop = linesRef.current.scrollTop;
+    const scrollLeft = linesRef.current.scrollLeft;
     const [x,y] = caretXYCoords;
-    const marginLeft = ref.current.scrollLeft+ref.current.children[0].getBoundingClientRect().left;
-    const marginTop = ref.current.scrollTop+ref.current.children[0].getBoundingClientRect().top;
+    const marginLeft = linesRef.current.scrollLeft+linesRef.current.children[0].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left;
+    const marginTop = linesRef.current.scrollTop+linesRef.current.children[0].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top;
     let st = scrollTop;
     let sl = scrollLeft;
     if (x > width+scrollLeft-marginLeft) {
@@ -87,13 +91,13 @@ export default function TextEditor(props) {
     } else if (x < scrollLeft+marginLeft) {
       sl = x-marginLeft;
     }
-    if (y > height+scrollTop-marginTop) {
-      st += y-(height+scrollTop)+marginTop;
+    if (y > height+scrollTop-marginTop*2+charDims.h) {
+      st += y-(height+scrollTop)+marginTop*2+charDims.h;
     } else if (y < scrollTop+marginTop) {
       st = y-marginTop;
     }
-    ref.current.scroll(sl,st);
-  });
+    linesRef.current.scroll(sl,st);
+  }, [caretXYCoords]);
 
   const [preventCoordUpdate,setPreventCoordUpdate] = useState(0);
   function selectionToTextCoords(node,offset) {
@@ -110,7 +114,7 @@ export default function TextEditor(props) {
       console.error('Unable to find selected line');
       return null;
     }
-    let lineNum = Array.from(ref.current.children).indexOf(line)-1;
+    let lineNum = Array.from(linesRef.current.children).indexOf(line);
     return [lineNum,offset];
   }
   function updateSelectionFromCoords(startPos,caretPos,lines=lines) {
@@ -118,7 +122,7 @@ export default function TextEditor(props) {
 
     let newSel = textCoordToSelection(
       startPos,caretPos,lines,
-      Array.from(ref.current.children).slice(1,-1)
+      Array.from(linesRef.current.children).slice(0,-1)
     );
 
     if (!newSel) {
@@ -156,15 +160,15 @@ export default function TextEditor(props) {
       setPreventCoordUpdate(preventCoordUpdate-1);
       return;
     }
-    if (!ref.current) {
+    if (!linesRef.current) {
       return;
     }
     let sel = window.getSelection();
     // Make sure that there is a selection and it is within the text editor
-    if (!sel.anchorNode || !ref.current.contains(sel.anchorNode)) {
+    if (!sel.anchorNode || !linesRef.current.contains(sel.anchorNode)) {
       return;
     }
-    if (!sel.focusNode || !ref.current.contains(sel.focusNode)) {
+    if (!sel.focusNode || !linesRef.current.contains(sel.focusNode)) {
       return;
     }
     // Selection start
@@ -192,6 +196,93 @@ export default function TextEditor(props) {
     };
   });
 
+  // Autocomplete
+  const [currentWord, setCurrentWord] = useState(null);
+  const [autocompleteXYCoords,setAutocompleteXYCoords] = useState([0,0]);
+  const [autocompleteSuggestions,setAutocompleteSuggestions] = useState([]);
+  const [autocompleteSelection,setAutocompleteSelection] = useState(null);
+  function updateAutocompleteXYCoords() {
+    if (!linesRef.current || !autocompleteRef.current) {
+      return;
+    }
+    // top-left corner of div corresponds to bottom of the caret
+    let left = caretXYCoords[0]-linesRef.current.scrollLeft;
+    let top = caretXYCoords[1]+charDims.h-linesRef.current.scrollTop;
+    // Check if the div is outside of the viewport
+    let {
+      width: vpWidth,
+      height: vpHeight
+    } = document.body.getBoundingClientRect();
+    let {
+      width: acWidth,
+      height: acHeight
+    } = autocompleteRef.current.getBoundingClientRect();
+    if (left+acWidth > window.scrollX+vpWidth) {
+      /*
+       * left+acWidth = window.scrollX+vpWidth
+       * left = window.scrollX+vpWidth-acWidth
+       * Then subtract 1 so the border isn't cut off
+       */
+      left = window.scrollX+vpWidth-acWidth-1;
+    }
+    if (top+acHeight > window.scrollY+vpHeight) {
+      // If it goes offscreen from below, then move the div above the caret
+      top = caretXYCoords[1]-acHeight;
+    }
+    
+    // Update coordinates only if they've changed
+    if (left !== autocompleteXYCoords[0] || top !== autocompleteXYCoords[1]) {
+      setAutocompleteXYCoords([left,top]);
+    }
+  }
+  function handleScroll(e) {
+    updateAutocompleteXYCoords();
+  }
+  useEffect(()=>{ // Update suggestions
+    if (!currentWord) {
+      setAutocompleteSuggestions([]);
+      setAutocompleteSelection(null);
+    } else {
+      const dictionary = [ // TODO: Fill with more appropriate text.
+        'hello','world'
+      ];
+      setAutocompleteSuggestions(dictionary.filter(w => w.startsWith(currentWord.before)));
+      setAutocompleteSelection(0);
+    }
+  },[currentWord]);
+  updateAutocompleteXYCoords();
+  function computeCurrentWord(caretPos,lines) {
+    const [lineNum,col2] = caretPos;
+    let line = lines[lineNum];
+    // Find closest preceeding space
+    let col1 = col2;
+    while (line[col1] !== ' ' && col1 > 0) {
+      col1 -= 1;
+    }
+    if (line[col1] === ' ') {
+      col1 += 1;
+    }
+    // Find closest following space
+    let col3 = col2;
+    while (line[col3] !== ' ' && col3 < line.length) {
+      col3 += 1;
+    }
+
+    if (col1 === col2) {
+      return null;
+    }
+
+    return {
+      before: line.slice(col1,col2),
+      after: line.slice(col2,col3),
+      startPos: [lineNum,col1],
+      endPos: [lineNum,col3]
+    };
+  }
+  function updateCurrentWord(caretPos,lines) {
+    setCurrentWord(computeCurrentWord(caretPos,lines));
+  }
+
   // Event handlers
   const [past,setPast] = useState([]);
   const [future,setFuture] = useState([]);
@@ -218,6 +309,9 @@ export default function TextEditor(props) {
     } = output;
     if (newLines !== lines) {
       onChangeText(newLines.join('\n'));
+      updateCurrentWord(caretPos,newLines);
+    } else {
+      setCurrentWord(null);
     }
     setCaretTextCoords(caretPos);
     setSelectionStart(startPos);
@@ -284,7 +378,6 @@ export default function TextEditor(props) {
             lines: lines
           });
           e.preventDefault();
-          e.stopPropagation();
         } else { // Ctrl + ...
           switch (e.key) {
             case 'a':
@@ -294,7 +387,6 @@ export default function TextEditor(props) {
                 lines: lines
               });
               e.preventDefault();
-              e.stopPropagation();
               break;
             case 'v':
               execute(paste, {
@@ -320,6 +412,9 @@ export default function TextEditor(props) {
         }
       } else {
         switch(e.key) {
+          case 'Escape':
+            setCurrentWord(null);
+            break;
           case 'Backspace':
             execute(backspace, {
               startPos: selectionStart,
@@ -335,33 +430,54 @@ export default function TextEditor(props) {
             });
             break;
           case 'Enter':
-            execute(enter, {
-              startPos: selectionStart,
-              caretPos: caretTextCoords,
-              lines: lines
-            });
+            if (autocompleteSuggestions.length === 0) {
+              execute(enter, {
+                startPos: selectionStart,
+                caretPos: caretTextCoords,
+                lines: lines
+              });
+            } else {
+              execute(addText, {
+                startPos: currentWord.startPos,
+                caretPos: caretTextCoords,
+                addedText: autocompleteSuggestions[autocompleteSelection],
+                lines: lines
+              });
+              setAutocompleteSelection([]);
+              setCurrentWord(null);
+            }
             break;
           case 'ArrowUp':
-            execute(moveCaretLine, {
-              startPos: selectionStart,
-              caretPos: caretTextCoords,
-              lines: lines,
-              dLine: -1,
-              shift: e.shiftKey,
-            });
+            if (autocompleteSuggestions.length === 0) {
+              execute(moveCaretLine, {
+                startPos: selectionStart,
+                caretPos: caretTextCoords,
+                lines: lines,
+                dLine: -1,
+                shift: e.shiftKey,
+              });
+            } else {
+              setAutocompleteSelection(
+                (autocompleteSelection-1+autocompleteSuggestions.length)%autocompleteSuggestions.length
+              );
+            }
             e.preventDefault();
-            e.stopPropagation();
             break;
           case 'ArrowDown':
-            execute(moveCaretLine, {
-              startPos: selectionStart,
-              caretPos: caretTextCoords,
-              lines: lines,
-              dLine: 1,
-              shift: e.shiftKey,
-            });
+            if (autocompleteSuggestions.length === 0) {
+              execute(moveCaretLine, {
+                startPos: selectionStart,
+                caretPos: caretTextCoords,
+                lines: lines,
+                dLine: 1,
+                shift: e.shiftKey,
+              });
+            } else {
+              setAutocompleteSelection(
+                (autocompleteSelection+1)%autocompleteSuggestions.length
+              );
+            }
             e.preventDefault();
-            e.stopPropagation();
             break;
           case 'ArrowLeft':
             execute(moveCaretCol, {
@@ -396,7 +512,6 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
             });
             e.preventDefault();
-            e.stopPropagation();
             break;
           case 'PageDown':
             execute(moveCaretLine, {
@@ -407,7 +522,6 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
             });
             e.preventDefault();
-            e.stopPropagation();
             break;
           case 'Home':
             execute(home, {
@@ -416,7 +530,6 @@ export default function TextEditor(props) {
               lines: lines,
             });
             e.preventDefault();
-            e.stopPropagation();
             break;
           case 'End':
             execute(end, {
@@ -425,7 +538,6 @@ export default function TextEditor(props) {
               lines: lines,
             });
             e.preventDefault();
-            e.stopPropagation();
             break;
           default:
             console.log(e.key);
@@ -444,10 +556,16 @@ export default function TextEditor(props) {
     width: 0,
     height: charDims.h,
   };
+  const autocompleteStyle = {
+    top: autocompleteXYCoords[1]+'px',
+    left: autocompleteXYCoords[0]+'px',
+    display: autocompleteSuggestions.length > 0 ? 'block' : 'none',
+  };
   return (<div className='text-editor' ref={ref} tabIndex={-1} {...editorEventHandlers}>
     <div className='hidden'>
       <pre className='size-check' ref={sizeCheckRef}>a</pre>
     </div>
+    <div className='lines-container' ref={linesRef} onScroll={handleScroll} >
     {
       lines.map((line,lineNum) =>
         <pre className='line' key={lineNum}>
@@ -456,6 +574,21 @@ export default function TextEditor(props) {
       )
     }
     <div className='caret' style={caretStyle} ref={caretRef}></div>
+    </div>
+    <div className='autocomplete-container' style={autocompleteStyle}
+      ref={autocompleteRef}>
+      {
+        autocompleteSuggestions.map((sug,i) => {
+          let cn = generateClassNames({
+            suggestion: true,
+            selected: autocompleteSelection === i
+          });
+          return (<div key={i} className={cn}>
+            {sug}
+          </div>);
+        })
+      }
+    </div>
   </div>);
 }
 

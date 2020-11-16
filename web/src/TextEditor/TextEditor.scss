@@ -4,12 +4,20 @@
   position: relative;
   box-sizing: border-box;
   border: 1px solid black;
-  padding: 15px;
   margin: 0;
-  height: 30vh;
+  height: 100vh;
   text-align: left;
   outline: none;
-  overflow: scroll;
+
+  .lines-container {
+    position: relative;
+    box-sizing: border-box;
+    padding: 15px;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: scroll;
+  }
 
   .line, .hidden .size-check {
     min-height: 1.5em;
@@ -34,6 +42,19 @@
   &:focus .caret {
     outline: 0.5px solid black;
     animation: blinker 1s linear infinite;
+  }
+
+  .autocomplete-container {
+    position: absolute;
+    background-color: white;
+    border: 1px solid black;
+    .suggestion {
+      padding: 5px;
+    }
+    .selected {
+      background-color: $primary-colour-dark;
+      color: $primary-colour-light;
+    }
   }
 
   .hidden {
