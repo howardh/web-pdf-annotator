@@ -282,6 +282,41 @@ export default function TextEditor(props) {
   function updateCurrentWord(caretPos,lines) {
     setCurrentWord(computeCurrentWord(caretPos,lines));
   }
+  function autocompleteOnKeyDown(e) {
+    if (autocompleteSuggestions.length === 0) {
+      return;
+    }
+    switch(e.key) {
+      case 'Enter':
+        console.log('dootdoot');
+        execute(addText, {
+          startPos: currentWord.startPos,
+          caretPos: caretTextCoords,
+          addedText: autocompleteSuggestions[autocompleteSelection],
+          lines: lines
+        });
+        setAutocompleteSelection([]);
+        setCurrentWord(null);
+        e.stopPropagation();
+        break;
+      case 'ArrowUp':
+        setAutocompleteSelection(
+          (autocompleteSelection-1+autocompleteSuggestions.length)%autocompleteSuggestions.length
+        );
+        e.preventDefault();
+        e.stopPropagation();
+        break;
+      case 'ArrowDown':
+        setAutocompleteSelection(
+          (autocompleteSelection+1)%autocompleteSuggestions.length
+        );
+        e.preventDefault();
+        e.stopPropagation();
+        break;
+      default:
+        break;
+    }
+  }
 
   // Event handlers
   const [past,setPast] = useState([]);
@@ -370,9 +405,15 @@ export default function TextEditor(props) {
   const editorEventHandlers = {
     onKeyDown: function(e) {
       onKeyDown(e);
-      if (!e.bubbles) {
+      if (e.nativeEvent.cancelBubble) {
         return;
       }
+
+      autocompleteOnKeyDown(e);
+      if (e.nativeEvent.cancelBubble) {
+        return;
+      }
+
       if (e.key.length === 1) {
         if (!e.ctrlKey) {
           execute(addText, {
@@ -434,53 +475,30 @@ export default function TextEditor(props) {
             });
             break;
           case 'Enter':
-            if (autocompleteSuggestions.length === 0) {
-              execute(enter, {
-                startPos: selectionStart,
-                caretPos: caretTextCoords,
-                lines: lines
-              });
-            } else {
-              execute(addText, {
-                startPos: currentWord.startPos,
-                caretPos: caretTextCoords,
-                addedText: autocompleteSuggestions[autocompleteSelection],
-                lines: lines
-              });
-              setAutocompleteSelection([]);
-              setCurrentWord(null);
-            }
+            execute(enter, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines
+            });
             break;
           case 'ArrowUp':
-            if (autocompleteSuggestions.length === 0) {
-              execute(moveCaretLine, {
-                startPos: selectionStart,
-                caretPos: caretTextCoords,
-                lines: lines,
-                dLine: -1,
-                shift: e.shiftKey,
-              });
-            } else {
-              setAutocompleteSelection(
-                (autocompleteSelection-1+autocompleteSuggestions.length)%autocompleteSuggestions.length
-              );
-            }
+            execute(moveCaretLine, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
+              dLine: -1,
+              shift: e.shiftKey,
+            });
             e.preventDefault();
             break;
           case 'ArrowDown':
-            if (autocompleteSuggestions.length === 0) {
-              execute(moveCaretLine, {
-                startPos: selectionStart,
-                caretPos: caretTextCoords,
-                lines: lines,
-                dLine: 1,
-                shift: e.shiftKey,
-              });
-            } else {
-              setAutocompleteSelection(
-                (autocompleteSelection+1)%autocompleteSuggestions.length
-              );
-            }
+            execute(moveCaretLine, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              lines: lines,
+              dLine: 1,
+              shift: e.shiftKey,
+            });
             e.preventDefault();
             break;
           case 'ArrowLeft':
