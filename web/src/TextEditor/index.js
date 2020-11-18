@@ -369,6 +369,10 @@ export default function TextEditor(props) {
   }
   const editorEventHandlers = {
     onKeyDown: function(e) {
+      onKeyDown(e);
+      if (!e.bubbles) {
+        return;
+      }
       if (e.key.length === 1) {
         if (!e.ctrlKey) {
           execute(addText, {
@@ -543,9 +547,6 @@ export default function TextEditor(props) {
             console.log(e.key);
             break;
         }
-      }
-      if (e.bubbles) {
-        onKeyDown(e);
       }
     },
   }
