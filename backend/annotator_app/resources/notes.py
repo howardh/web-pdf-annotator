@@ -1,3 +1,4 @@
+from flask import request
 from flask import current_app as app
 from flask import Blueprint, send_file
 from flask_restful import Api, Resource
@@ -53,5 +54,17 @@ class NoteEndpoint(EntityEndpoint):
                 return [entity,entity2]
         return [entity]
 
+class NoteSuggestionsEndpoint(Resource):
+    def post(self):
+        data = request.get_json()
+        prefix = data.pop('prefix','')
+
+        vocabulary = ['hello','world', 'horse', 'battery', 'staple']
+
+        return {
+                'suggestions': [w for w in vocabulary if w.startswith(prefix)]
+        }, 200
+
 api.add_resource(NoteList, '/notes')
 api.add_resource(NoteEndpoint, '/notes/<int:entity_id>')
+api.add_resource(NoteSuggestionsEndpoint, '/notes/suggestions')

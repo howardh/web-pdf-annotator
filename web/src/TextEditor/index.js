@@ -1,8 +1,22 @@
 import React from 'react';
 import {useEffect, useState, useRef, forwardRef} from 'react';
 import { generateClassNames } from '../Utils.js';
+import axios from 'axios';
 
 import './TextEditor.scss';
+
+function fetchAutocompleteSuggestions(prefix,suffix){
+  return axios.post(
+    process.env.REACT_APP_SERVER_ADDRESS+"/data/notes/suggestions",
+    {prefix,suffix},
+    {withCredentials: true}
+  ).then(function(response){
+    return response.data.suggestions;
+  }).catch(error => {
+    console.error(error);
+    return [];
+  });
+}
 
 function isElementInViewport (el) {
 
@@ -243,11 +257,10 @@ export default function TextEditor(props) {
       setAutocompleteSuggestions([]);
       setAutocompleteSelection(null);
     } else {
-      const dictionary = [ // TODO: Fill with more appropriate text.
-        'hello','world'
-      ];
-      setAutocompleteSuggestions(dictionary.filter(w => w.startsWith(currentWord.before)));
-      setAutocompleteSelection(0);
+      fetchAutocompleteSuggestions(currentWord.before).then(sug => {
+        setAutocompleteSuggestions(sug);
+        setAutocompleteSelection(0);
+      });
     }
   },[currentWord]);
   updateAutocompleteXYCoords();
