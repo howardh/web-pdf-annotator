@@ -98,7 +98,11 @@ function AnnotationLayer(props) {
         setFocusedId(annId);
         let callback = eventHandlers.annotation.onClick;
         if (callback) {
-          callback(event, {id: annId});
+          callback(event, {
+            ...data,
+            ann: annotations[annId],
+            id: annId
+          });
         }
         return;
       }
