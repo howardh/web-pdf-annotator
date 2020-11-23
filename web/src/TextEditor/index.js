@@ -19,15 +19,13 @@ function fetchAutocompleteSuggestions(prefix,suffix){
 }
 
 function isElementInViewport (el) {
-
-    var rect = el.getBoundingClientRect();
-
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
-    );
+  let rect = el.getBoundingClientRect();
+  return (
+    rect.top >= 0 &&
+    rect.left >= 0 &&
+    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
+    rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
+  );
 }
 
 export default function TextEditor(props) {
@@ -1039,19 +1037,23 @@ export function cut({startPos=null,caretPos,lines}) {
 }
 
 export function paste({startPos=null,caretPos,lines}) {
-  return window.navigator.clipboard.readText().then(
-    text => {
-      return addText({
-        startPos,caretPos,lines,
-        addedText: text
-      });
-    }
-  ).catch(err => {
-    console.error('Failed to read clipboard contents: ', err);
-    return {
-      startPos: startPos,
-      caretPos: caretPos,
-      lines
-    };
-  });
+  if (window.navigator.clipboard.readText) {
+    return window.navigator.clipboard.readText().then(
+      text => {
+        return addText({
+          startPos,caretPos,lines,
+          addedText: text
+        });
+      }
+    ).catch(err => {
+      console.error('Failed to read clipboard contents: ', err);
+      return {
+        startPos: startPos,
+        caretPos: caretPos,
+        lines
+      };
+    });
+  } else {
+    document.execCommand('paste');
+  }
 }

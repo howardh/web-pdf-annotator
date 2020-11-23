@@ -2,13 +2,11 @@ import React from 'react';
 import { useEffect, useState, useRef } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
-import * as commonmark from 'commonmark';
-import * as MarkdownIt from 'markdown-it';
-import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
 import TextEditor from './TextEditor';
+import { NoteViewer } from './NoteEditor.js';
 import {
   clip,filterDict,generateClassNames,formChangeHandler,parseQueryString
 } from './Utils.js';
@@ -17,8 +15,6 @@ import {
 } from './actions/index.js';
 
 import './PdfViewer.scss';
-
-const md = MarkdownIt().use(MarkdownItMathjax());
 
 //////////////////////////////////////////////////
 // Annotations
@@ -494,18 +490,6 @@ function NoteCard(props) {
   const [isVisibleAdvancedOptions,setIsVisibleAdvancedOptions] = useState(false);
   const handleChange = formChangeHandler(updatedNote, x=>setUpdatedNote(x));
 
-  // Mathjax
-  useEffect(()=>{
-    // Redo typesetting whenever the annotation changes
-    window.MathJax.typeset();
-  }, [note]);
-
-  // Autocomplete
-  useEffect(()=>{
-    //let range = window.getSelection().getRangeAt(0);
-    //range.insertNode()
-  },[updatedNote]);
-
   function startEditing() {
     setUpdatedNote(note);
     setIsEditing(true);
@@ -541,24 +525,6 @@ function NoteCard(props) {
       ...updatedNote,
       body: text
     });
-  }
-
-  function parseBody(annotation) {
-    switch (note.parser) {
-      case 'plaintext': {
-        return note.body;
-      } case 'commonmark': {
-        let reader = new commonmark.Parser();
-        let writer = new commonmark.HtmlRenderer({safe: true});
-        let parsed = reader.parse(note.body); // parsed is a 'Node' tree
-        let parsedBody = writer.render(parsed);
-        return parsedBody;
-      } case 'markdown-it': {
-        let parsedBody = md.render(note.body);
-        return parsedBody;
-      } default:
-        return 'Error: Invalid Parser ('+(note.parser)+')';
-    }
   }
 
   const [refreshing,setRefreshing] = useState(false);
@@ -632,21 +598,9 @@ function NoteCard(props) {
       </div>
     </div>);
   } else {
-    let parsedBodyDiv = null;
-    switch (note.parser) {
-      case 'plaintext':
-        parsedBodyDiv = (<pre>{note.body}</pre>);
-        break;
-      case 'markdown-it':
-      case 'commonmark':
-      default:
-        let parsedBody = {__html: parseBody(annotation)};
-        parsedBodyDiv = (<div dangerouslySetInnerHTML={parsedBody} />);
-        break;
-    }
     return (<div className={classNames}
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
-      { !refreshing && parsedBodyDiv }
+      <NoteViewer note={note} />
       <div className='controls'>
         <Button onClick={()=>setActive(!isActive)}>
           <i className='material-icons'>
