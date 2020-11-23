@@ -120,6 +120,8 @@ export default function TextEditor(props) {
     }
     if (node.nodeName === '#text') {
       line = node.parentNode;
+    } else if (node === linesRef.current) {
+      return [0,0];
     } else {
       line = node.closest('.line');
     }
