@@ -4,7 +4,7 @@ import {useDispatch,useSelector} from 'react-redux';
 import { Link, useHistory } from "react-router-dom";
 
 import {
-  filterDict,formChangeHandler,generateClassNames,removeFromList
+  filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
 } from './Utils.js';
 import {
   Checkbox, TextField, Button, GroupedInputs
@@ -114,7 +114,7 @@ export default function DocumentsPage(props) {
       className: 'title'
     },{
       heading: 'Last Modified',
-      render: doc => new Date(doc.last_modified_at).toLocaleString(),
+      render: doc => toRelativeDateString(new Date(doc.last_modified_at)),
       className: 'lastmodified'
     }
   ];

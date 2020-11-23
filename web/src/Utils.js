@@ -55,6 +55,54 @@ export function filterDict(dict,filterCondition) {
     return acc;
   }, {});
 }
+// Date utils
+export function toRelativeDateString(date) {
+  if (date - new Date(0) === 0) {
+    return 'Never';
+  }
+  const now = new Date();
+  const diff = now - date;
+  const SEC = 1000;
+  const MIN = SEC*60;
+  const HOUR = MIN*60;
+  const DAY = HOUR*24;
+  const YEAR = DAY*365;
+  const MONTH = YEAR/12;
+  if (diff < 1*HOUR) {
+    return Math.floor(diff/MIN)+" min ago";
+  }
+  if (diff < 1*DAY) {
+    let x = Math.floor(diff/HOUR);
+    if (x === 1) {
+      return "1 hour ago";
+    } else {
+      return x+" hours ago";
+    }
+  }
+  if (diff < 1*MONTH) {
+    let x = Math.floor(diff/DAY);
+    if (x === 1) {
+      return "1 day ago";
+    } else {
+      return x+" days ago";
+    }
+  }
+  if (diff < 1*YEAR) {
+    let x = Math.floor(diff/MONTH);
+    if (x === 1) {
+      return "1 month ago";
+    } else {
+      return x+" months ago";
+    }
+  }
+
+  let x = Math.floor(diff/YEAR);
+  if (x === 1) {
+    return "1 year ago";
+  } else {
+    return x+" years ago";
+  }
+}
 // Math
 export function clip(val,min,max) {
   if (val < min) return min;

@@ -4,7 +4,7 @@ import {useDispatch,useSelector} from 'react-redux';
 import { Link, useHistory } from "react-router-dom";
 
 import {
-  filterDict,formChangeHandler,generateClassNames,removeFromList
+  filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
 } from './Utils.js';
 import {
   Checkbox, TextField, Button
@@ -84,7 +84,7 @@ export default function NotesPage(props) {
       },
     },{
       heading: 'Last Modified',
-      render: note => new Date(note.last_modified_at).toLocaleString(),
+      render: note => toRelativeDateString(new Date(note.last_modified_at)),
       className: 'lastmodified'
     }
   ];
