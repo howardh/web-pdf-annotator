@@ -44,6 +44,20 @@
     animation: blinker 1s linear infinite;
   }
 
+  textarea {
+    position: absolute;
+    font-size: 14pt;
+    height: 1em;
+    width: 0px;
+    outline: currentcolor none medium;
+    resize: none;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background-color: inherit;
+    box-sizing: border-box;
+  }
+
   .autocomplete-container {
     position: absolute;
     background-color: white;

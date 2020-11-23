@@ -41,6 +41,7 @@ export default function TextEditor(props) {
   const lines = text.split('\n');
   const ref = useRef(null);
   const linesRef = useRef(null);
+  const textareaRef = useRef(null);
   const caretRef = useRef(null);
   const autocompleteRef = useRef(null);
   window.r = ref.current;
@@ -72,8 +73,8 @@ export default function TextEditor(props) {
       col = lines[lineNum].length;
     }
     let textOffset = [
-      linesRef.current.children[0].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left-border+linesRef.current.scrollLeft,
-      linesRef.current.children[0].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top-border+linesRef.current.scrollTop
+      linesRef.current.children[2].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left-border+linesRef.current.scrollLeft,
+      linesRef.current.children[2].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top-border+linesRef.current.scrollTop
     ];
     return [
       textOffset[0]+col*charDims.w,
@@ -94,8 +95,8 @@ export default function TextEditor(props) {
     const scrollTop = linesRef.current.scrollTop;
     const scrollLeft = linesRef.current.scrollLeft;
     const [x,y] = caretXYCoords;
-    const marginLeft = linesRef.current.scrollLeft+linesRef.current.children[0].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left;
-    const marginTop = linesRef.current.scrollTop+linesRef.current.children[0].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top;
+    const marginLeft = linesRef.current.scrollLeft+linesRef.current.children[2].getBoundingClientRect().left-linesRef.current.getBoundingClientRect().left;
+    const marginTop = linesRef.current.scrollTop+linesRef.current.children[2].getBoundingClientRect().top-linesRef.current.getBoundingClientRect().top;
     let st = scrollTop;
     let sl = scrollLeft;
     if (x > width+scrollLeft-marginLeft) {
@@ -126,7 +127,7 @@ export default function TextEditor(props) {
       console.error('Unable to find selected line');
       return null;
     }
-    let lineNum = Array.from(linesRef.current.children).indexOf(line);
+    let lineNum = Array.from(linesRef.current.children).indexOf(line)-2;
     return [lineNum,offset];
   }
   function updateSelectionFromCoords(startPos,caretPos,lines=lines) {
@@ -134,7 +135,7 @@ export default function TextEditor(props) {
 
     let newSel = textCoordToSelection(
       startPos,caretPos,lines,
-      Array.from(linesRef.current.children).slice(0,-1)
+      Array.from(linesRef.current.children).slice(2)
     );
 
     if (!newSel) {
@@ -299,7 +300,6 @@ export default function TextEditor(props) {
     }
     switch(e.key) {
       case 'Enter':
-        console.log('dootdoot');
         execute(addText, {
           startPos: currentWord.startPos,
           caretPos: caretTextCoords,
@@ -427,13 +427,7 @@ export default function TextEditor(props) {
 
       if (e.key.length === 1) {
         if (!e.ctrlKey) {
-          execute(addText, {
-            startPos: selectionStart,
-            caretPos: caretTextCoords,
-            addedText: e.key,
-            lines: lines
-          });
-          e.preventDefault();
+          textareaRef.current.focus();
         } else { // Ctrl + ...
           switch (e.key) {
             case 'a':
@@ -445,11 +439,7 @@ export default function TextEditor(props) {
               e.preventDefault();
               break;
             case 'v':
-              execute(paste, {
-                startPos: selectionStart,
-                caretPos: caretTextCoords,
-                lines: lines
-              });
+              textareaRef.current.focus();
               break;
             case 'x':
               execute(cut, {
@@ -486,11 +476,7 @@ export default function TextEditor(props) {
             });
             break;
           case 'Enter':
-            execute(enter, {
-              startPos: selectionStart,
-              caretPos: caretTextCoords,
-              lines: lines
-            });
+            textareaRef.current.focus();
             break;
           case 'ArrowUp':
             execute(moveCaretLine, {
@@ -579,12 +565,33 @@ export default function TextEditor(props) {
       }
     },
   }
+  const textareaEventHandlers = {
+    onKeyDown: function(e) {
+      if (e.target.value.length === 0) {
+        ref.current.focus();
+      }
+    },
+    onChange: function(e) {
+      execute(addText, {
+        startPos: selectionStart,
+        caretPos: caretTextCoords,
+        addedText: e.target.value,
+        lines: lines
+      });
+      ref.current.focus();
+    },
+  }
+
 
   const caretStyle = {
     top: caretXYCoords[1]+'px',
     left: caretXYCoords[0]+'px',
     width: 0,
     height: charDims.h,
+  };
+  const textareaStyle = {
+    top: caretXYCoords[1]+'px',
+    left: caretXYCoords[0]+'px',
   };
   const autocompleteStyle = {
     top: autocompleteXYCoords[1]+'px',
@@ -596,14 +603,15 @@ export default function TextEditor(props) {
       <pre className='size-check' ref={sizeCheckRef}>a</pre>
     </div>
     <div className='lines-container' ref={linesRef} onScroll={handleScroll} >
-    {
-      lines.map((line,lineNum) =>
-        <pre className='line' key={lineNum}>
-          {line}
-        </pre>
-      )
-    }
-    <div className='caret' style={caretStyle} ref={caretRef}></div>
+      <div className='caret' style={caretStyle} ref={caretRef}></div>
+      <textarea ref={textareaRef} style={textareaStyle} value={''} {...textareaEventHandlers}/>
+      {
+        lines.map((line,lineNum) =>
+          <pre className='line' key={lineNum}>
+            {line}
+          </pre>
+        )
+      }
     </div>
     <div className='autocomplete-container' style={autocompleteStyle}
       ref={autocompleteRef}>
