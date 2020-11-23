@@ -6,6 +6,7 @@ from flask_security import current_user
 
 import os
 import requests
+import datetime
 
 from annotator_app.extensions import db
 from annotator_app.database import Note, Annotation, Document
@@ -36,12 +37,17 @@ class NoteList(ListEndpoint):
             if doc is not None:
                 doc.note_id = entity.id
                 return [entity,doc]
+        entity.created_at = datetime.datetime.now()
+        entity.last_modified_at = datetime.datetime.now()
         return [entity]
 
 class NoteEndpoint(EntityEndpoint):
     class Meta:
         model = Note
         filterable_params = ['id', 'user_id']
+    def after_update(self,entity,data):
+        entity.last_modified_at = datetime.datetime.now()
+        return [entity]
     def after_delete(self,entity):
         for model in [Annotation,Document]:
             # Check for associated annotation

@@ -1,0 +1,58 @@
+@import 'variables';
+
+.table-container {
+  display: inline-block;
+  .table-actions {
+    height: $input-height;
+    text-align: left;
+    > * {
+      margin-left: 3px;
+    }
+  }
+  table {
+    margin: 0;
+    thead {
+      background-color: $primary-colour-dark;
+      color: $primary-colour-light;
+      th {
+        padding: 5px 20px;
+      }
+    }
+    tbody {
+      text-align: left;
+      tr{
+        &:nth-child(even) {
+          background-color: white;
+        }
+        &:hover {
+          background-color: $primary-colour-light;
+        }
+        td {
+          padding: 5px 10px;
+          &.checkbox {
+            text-align: center;
+          }
+          &.title {
+            span.title {
+              font-weight: bold;
+              &.read {
+                font-weight: unset;
+              }
+            }
+          }
+          &.lastmodified {
+          }
+          &.actions {
+            i.material-icons {
+              color: black;
+              cursor: pointer;
+              &:hover {
+                color: $primary-colour-dark;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

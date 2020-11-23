@@ -48,6 +48,16 @@ class ModelMixin(object):
                 val = v
             self.__setattr__(k,val)
 
+def date_to_str(d):
+    if d is None:
+        return None
+    return d.strftime('%Y-%m-%d')
+
+def datetime_to_str(d):
+    if d is None:
+        return None
+    return d.strftime('%Y-%m-%dT%H:%M:%S')
+
 roles_users = db.Table('roles_users',
         db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
         db.Column('role_id', db.Integer(), db.ForeignKey('roles.id')))
@@ -99,19 +109,10 @@ class Document(db.Model, ModelMixin):
     tags = db.relationship('Tag', secondary=lambda: documents_tags)
 
     tag_names = association_proxy('tags', 'name',
-            #creator=lambda name: Tag(user_id=current_user.get_id(),name=name)
             creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.get_id(),name=name).first()
     )
 
     def to_dict(self):
-        def date_to_str(d):
-            if d is None:
-                return None
-            return d.strftime('%Y-%m-%d')
-        def datetime_to_str(d):
-            if d is None:
-                return None
-            return d.strftime('%Y-%m-%dT%H:%M:%S')
         return {
                 'id': self.id,
                 'user_id': self.user_id,
@@ -134,8 +135,6 @@ class Annotation(db.Model, ModelMixin):
     note_id = Column(Integer, ForeignKey('notes.id',name='fkey_note_id'))
     page = Column(String)
     type = Column(String)
-    blob = Column(String) # TODO: DEPRECATED
-    parser = Column(String) # TODO: DEPRECATED
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
     deleted_at = Column(Date)
 
@@ -165,6 +164,10 @@ documents_tags = db.Table('documents_tags',
 annotations_tags = db.Table('annotations_tags',
         db.Column('annotation_id', db.Integer(), db.ForeignKey('annotations.id')),
         db.Column('tag_id', db.Integer(), db.ForeignKey('tags.id')))
+
+notes_tags = db.Table('notes_tags',
+        db.Column('note_id', db.Integer(), db.ForeignKey('notes.id',name='fkey_note_id')),
+        db.Column('tag_id', db.Integer(), db.ForeignKey('tags.id',name='fkey_tag_id')))
 
 class Tag(db.Model, ModelMixin):
     __tablename__ = 'tags'
@@ -217,6 +220,15 @@ class Note(db.Model, ModelMixin):
     body = Column(Text)
     parser = Column(String)
     deleted_at = Column(Date)
+    created_at = Column(DateTime)
+    last_modified_at = Column(DateTime)
+    last_accessed_at = Column(DateTime)
+
+    tags = db.relationship('Tag', secondary=lambda: notes_tags)
+
+    tag_names = association_proxy('tags', 'name',
+            creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.get_id(),name=name).first()
+    )
 
     def to_dict(self):
         return {
@@ -224,7 +236,10 @@ class Note(db.Model, ModelMixin):
                 'user_id': self.user_id,
                 'body': self.body,
                 'parser': self.parser,
-                'deleted_at': self.deleted_at.strftime('%Y-%m-%d') if self.deleted_at is not None else None
+                'deleted_at': date_to_str(self.deleted_at),
+                'last_modified_at': datetime_to_str(self.last_modified_at),
+                'last_accessed_at': datetime_to_str(self.last_accessed_at),
+                'tag_names': list(self.tag_names),
         }
 
 # Setup Flask-Security

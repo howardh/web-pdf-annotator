@@ -7,8 +7,11 @@ import {
   filterDict,formChangeHandler,generateClassNames,removeFromList
 } from './Utils.js';
 import {
-  Checkbox, TextField, Button
+  Checkbox, TextField, Button, GroupedInputs
 } from './Inputs.js';
+import {
+  EntityTable
+} from './EntityTable.js';
 import {documentActions,tagActions,autofillDocumentInfo} from './actions/index.js';
 
 import './Documents.scss';
@@ -18,6 +21,7 @@ function useDocuments(uid) {
 
 export default function DocumentsPage(props) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const {
     userId
   } = props;
@@ -46,6 +50,9 @@ export default function DocumentsPage(props) {
       }
       return true;
     }
+  );
+  const sortedDocs = Object.values(filteredDocs).sort(
+    (doc1,doc2) => new Date(doc2.last_modified_at) - new Date(doc1.last_modified_at)
   );
 
   // Selected documents
@@ -78,6 +85,11 @@ export default function DocumentsPage(props) {
       dispatch(documentActions['deleteSingle'](id));
     }
   }
+  function deleteDoc(doc) {
+    if (window.confirm('Are you sure you want to delete document '+doc.url+'?')) {
+      dispatch(documentActions['deleteSingle'](doc.id));
+    }
+  }
 
   // Render
   if (!userId) {
@@ -86,19 +98,83 @@ export default function DocumentsPage(props) {
     </main>);
   }
 
+  let columns = [
+    {
+      heading: 'Title',
+      render: doc => {
+        return <>
+          <span className='tags'>
+            {doc.tag_names.length > 0 && '['+doc.tag_names.join('][')+'] '}
+          </span>
+          <span className={generateClassNames({title:true,read:doc.read})}>
+            {doc.title || doc.url}
+          </span>
+        </>;
+      },
+      className: 'title'
+    },{
+      heading: 'Last Modified',
+      render: doc => new Date(doc.last_modified_at).toLocaleString(),
+      className: 'lastmodified'
+    }
+  ];
+  function renderActionsColumn(doc) {
+    return <>
+      <Link to={'/annotate/'+doc.id}>
+        <i className='material-icons'>create</i>
+      </Link>
+      <i className='material-icons' onClick={()=>deleteDoc(doc)}>
+        delete
+      </i>
+    </>;
+  }
+  let actions = [
+    {
+      render: () => {
+        let id = Array.from(selectedDocIds)[0];
+        return (
+          <Button onClick={()=>history.push('/annotate/'+id)}>
+            <i className='material-icons'>create</i>
+          </Button>
+        );
+      },
+      renderCondition: selectedDocIds => selectedDocIds.size === 1,
+    },{
+      render: () => {
+        return (
+          <Button onClick={deleteSelectedDocs}>
+            <i className='material-icons'>delete</i>
+          </Button>
+        );
+      },
+      renderCondition: selectedDocIds => selectedDocIds.size > 0,
+    },{
+      render: () => {
+        return (
+          <TagEditor documents={selectedDocs} />
+        );
+      },
+      renderCondition: selectedDocIds => selectedDocIds.size > 0,
+    },{
+      render: () => {
+        return (
+          <TagFilter selectedTags={tagFilters}
+            onChangeSelectedTags={setTagFilters}/>
+        );
+      },
+      renderCondition: () => true,
+    },
+  ];
   return (<main className='documents-page'>
     <h1>Documents</h1>
     <NewDocumentForm />
-    <DocumentsTableActions
-        selectedDocs={selectedDocs}
-        selectedDocIds={selectedDocIds}
-        tagFilters={tagFilters} setTagFilters={setTagFilters}
-        deleteSelectedDocs={deleteSelectedDocs}/>
-    <DocumentsTable documents={filteredDocs} 
-        selectedDocIds={selectedDocIds}
-        selectedAllDocs={selectedAllDocs}
-        toggleSelectDoc={toggleSelectDoc}
-        toggleSelectAllDocs={toggleSelectAllDocs}/>
+    <EntityTable entities={sortedDocs}
+      selectedIds={selectedDocIds}
+      onChangeSelectedIds={setSelectedDocIds}
+      columns={columns}
+      renderActionsColumn={renderActionsColumn}
+      actions={actions}
+    />
   </main>);
 }
 
@@ -129,156 +205,87 @@ function NewDocumentForm(props) {
     <div className='new-doc-form-container'>
       <label>
         URL: 
-        <TextField name='url'
-            value={values['url']}
-            onKeyPress={handleKeyPress}
-            onChange={handleChange} />
+        <GroupedInputs>
+          <TextField name='url'
+              value={values['url']}
+              onKeyPress={handleKeyPress}
+              onChange={handleChange} />
+          <Button onClick={createDoc}>Create</Button>
+        </GroupedInputs>
       </label>
-      <Button onClick={createDoc}>Create</Button>
     </div>
   );
 }
 
-function DocumentsTableActions(props) {
+
+function TagSelector(props) {
   const {
-    selectedDocs,
-    selectedDocIds,
-    tagFilters, setTagFilters,
-    deleteSelectedDocs
-  } = props;
-
-  const history = useHistory();
-  const [tagEditorVisible,setTagEditorVisible] = useState(false);
-  const [tagFilterVisible,setTagFilterVisible] = useState(false);
-
-  if (selectedDocIds.size === 0) {
-    return (<div className='documents-table-actions'>
-      <div className='tag-filter-container'>
-        <button onClick={()=>setTagFilterVisible(!tagFilterVisible)}>
-          <i className='material-icons'>filter_list</i>
-        </button>
-        <TagFilter visible={tagFilterVisible} selectedTags={tagFilters}
-            onChangeSelectedTags={setTagFilters} setVisible={setTagFilterVisible}/>
-      </div>
-    </div>);
-  }
-
-  if (selectedDocIds.size === 1) {
-    const id = selectedDocIds.values().next().value;
-    return (<div className='documents-table-actions'>
-      <button onClick={()=>history.push('/annotate/'+id)}>
-        <i className='material-icons'>create</i>
-      </button>
-      <button onClick={deleteSelectedDocs}>
-        <i className='material-icons'>delete</i>
-      </button>
-      <div className='tag-editor-container'>
-        <button onClick={()=>setTagEditorVisible(!tagEditorVisible)}>
-          <i className='material-icons'>label</i>
-        </button>
-        <TagEditor documents={selectedDocs} visible={tagEditorVisible} setVisible={setTagEditorVisible}/>
-      </div>
-    </div>);
-  }
-
-  return (<div className='documents-table-actions'>
-    <button onClick={deleteSelectedDocs}>
-      <i className='material-icons'>delete</i>
-    </button>
-    <div className='tag-editor-container'>
-      <button onClick={()=>setTagEditorVisible(!tagEditorVisible)}>
-        <i className='material-icons'>label</i>
-      </button>
-      <TagEditor documents={selectedDocs} visible={tagEditorVisible} setVisible={setTagEditorVisible}/>
-    </div>
-  </div>);
-}
-
-function DocumentsTable(props) {
-  const {
-    documents,
-    selectedDocIds,
-    selectedAllDocs,
-    toggleSelectDoc,
-    toggleSelectAllDocs
+    tags,
+    selectedTags=new Set(), partiallySelectedTags=new Set(),
+    onToggleTagId,
+    allowCreation,
   } = props;
   const dispatch = useDispatch();
 
-  if (documents.length === 0) {
-    return null;
+  const [tagSearchValue,setTagSearchValue] = useState('');
+  const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
+  const exactMatch = Object.values(filteredTags).filter(t => t.name === tagSearchValue);
+
+  function createTag() {
+    let tag = {
+      name: tagSearchValue
+    };
+    dispatch(tagActions['create'](tag)).then(()=>{
+      setTagSearchValue('');
+    });
   }
 
-  function deleteDoc(doc) {
-    if (window.confirm('Are you sure you want to delete document '+doc.url+'?')) {
-      dispatch(documentActions['deleteSingle'](doc.id));
-    }
-  }
-
-  const sortedDocs = Object.values(documents).sort(
-    (doc1,doc2) => new Date(doc2.last_modified_at) - new Date(doc1.last_modified_at)
-  )
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th><Checkbox checked={selectedAllDocs} onChange={toggleSelectAllDocs}/></th>
-          <th>Title</th>
-          <th>Last Modified</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {
-          sortedDocs.map(doc=>{
-            if (!doc) {
-              return null;
-            }
-            return (<tr key={doc.id}>
-              <td className='checkbox'>
-                <Checkbox checked={selectedDocIds.has(doc.id)}
-                    onChange={()=>toggleSelectDoc(doc.id)}/>
-              </td>
-              <td className='title'>
-                <span className='tags'>
-                  {doc.tag_names.length > 0 && '['+doc.tag_names.join('][')+'] '}
-                </span>
-                <span className={generateClassNames({title:true,read:doc.read})}>
-                  {doc.title || doc.url}
-                </span>
-              </td>
-              <td className='lastmodified'>
-                {new Date(doc.last_modified_at).toLocaleString()}
-              </td>
-              <td className='actions'>
-                <Link to={'/annotate/'+doc.id}>
-                  <i className='material-icons'>create</i>
-                </Link>
-                <i className='material-icons' onClick={()=>deleteDoc(doc)}>
-                  delete
-                </i>
-              </td>
-            </tr>);
+  return (<div className='tag-selector'>
+    <div className='selector'>
+      <div className='selected-tags'></div>
+      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)}/>
+    </div>
+    <div className='dropdown'>
+      {
+        exactMatch.length === 0 &&
+        tagSearchValue.trim().length > 0 &&
+        (
+          allowCreation &&
+          <Button onClick={createTag}>
+            Create Tag: {tagSearchValue}
+          </Button>
+        )
+      }
+      {
+        Object.values(filteredTags).map(tag => {
+          const classNames = generateClassNames({
+            tag: true,
+            selected: selectedTags.has(tag.name),
+            partial: partiallySelectedTags.has(tag.name)
           })
-        }
-      </tbody>
-    </table>
-  );
+          return (
+            <div className={classNames} key={tag.id}
+                onClick={()=>onToggleTagId(tag.id)}>
+              {tag.name}
+            </div>
+          );
+        })
+      }
+    </div>
+  </div>);
 }
 
 function TagEditor(props) {
   const {
     documents, // Documents whose tags are being modified
-    visible,
-    setVisible = () => null
   } = props;
 
   const dispatch = useDispatch();
 
+  const [visible,setVisible] = useState(false);
+
   const numDocs = Object.keys(documents).length;
-  const [tagSearchValue,setTagSearchValue] = useState('');
   const tags = useSelector(state => state.tags.entities);
-  const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
-  const exactMatch = Object.values(filteredTags).filter(t => t.name === tagSearchValue);
   const ref = useRef(null);
 
   useEffect(()=>{
@@ -287,7 +294,7 @@ function TagEditor(props) {
     }
     if (setVisible) {
       function handleClick(e) {
-        if (ref.current && e.target.contains(ref.current)) {
+        if (ref.current && !ref.current.contains(e.target)) {
           setVisible(false);
         }
       }
@@ -313,14 +320,6 @@ function TagEditor(props) {
     return acc;
   }, {});
 
-  function createTag() {
-    let tag = {
-      name: tagSearchValue
-    };
-    dispatch(tagActions['create'](tag)).then(()=>{
-      setTagSearchValue('');
-    });
-  }
   function toggleTag(tagId) {
     const name = tags[tagId].name;
     if (tagSelectionCount[name] > 0) {
@@ -345,59 +344,41 @@ function TagEditor(props) {
     }
   }
 
-  if (!visible) {
-    return null;
-  }
-
-  return (<div className='tag-editor' ref={ref}>
-    <div className='editor'>
-      <div className='selected-tags'>
-      </div>
-      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)}/>
-    </div>
-    <div className='dropdown'>
-      {
-        exactMatch.length === 0 &&
-        tagSearchValue.trim().length > 0 &&
-        (
-          <button onClick={createTag}>
-            Create Tag: {tagSearchValue}
-          </button>
-        )
-      }
-      {
-        Object.values(filteredTags).map(tag => {
-          const classNames = generateClassNames({
-            tag: true,
-            selected: tagSelectionCount[tag.name] === numDocs,
-            partial: tagSelectionCount[tag.name] > 0 &&
-                     tagSelectionCount[tag.name] < numDocs
-          })
-          return (
-            <div className={classNames} key={tag.id}
-                onClick={()=>toggleTag(tag.id)}>
-              {tag.name}
-            </div>
-          );
-        })
+  let selectedTags = new Set(Object.entries(tagSelectionCount).filter(
+    ([k,v]) => v === numDocs
+  ).map( ([k,v]) => k ));
+  let partiallySelectedTags = new Set(Object.entries(tagSelectionCount).filter(
+    ([k,v]) => v > 0 && v < numDocs
+  ).map( ([k,v]) => k ));
+  return (
+    <div className='tag-editor-container' ref={ref}>
+      <Button onClick={()=>setVisible(!visible)}>
+        <i className='material-icons'>label</i>
+      </Button>
+      { visible &&
+        <TagSelector
+          tags={tags}
+          selectedTags={selectedTags}
+          partiallySelectedTags={partiallySelectedTags}
+          onToggleTagId={toggleTag}
+          allowCreation={true}
+        />
       }
     </div>
-  </div>);
+  );
 }
 
 function TagFilter(props) {
   const {
-    visible,
-    setVisible = () => null,
     selectedTags,
     onChangeSelectedTags,
   } = props;
 
   const dispatch = useDispatch();
 
-  const [tagSearchValue,setTagSearchValue] = useState('');
+  const [visible,setVisible] = useState(false);
+
   const tags = useSelector(state => state.tags.entities);
-  const filteredTags = filterDict(tags, t => t.name.includes(tagSearchValue));
   const ref = useRef(null);
 
   useEffect(()=>{
@@ -406,7 +387,7 @@ function TagFilter(props) {
     }
     if (setVisible) {
       function handleClick(e) {
-        if (ref.current && e.target.contains(ref.current)) {
+        if (ref.current && !ref.current.contains(e.target)) {
           setVisible(false);
         }
       }
@@ -417,7 +398,8 @@ function TagFilter(props) {
     }
   },[visible]);
 
-  function toggleTag(tagName) {
+  function toggleTag(tagId) {
+    const tagName = tags[tagId].name;
     if (selectedTags.has(tagName)) {
       let temp = new Set(selectedTags);
       temp.delete(tagName);
@@ -427,31 +409,19 @@ function TagFilter(props) {
     }
   }
 
-  if (!visible) {
-    return null;
-  }
-
-  return (<div className='tag-editor' ref={ref}>
-    <div className='editor'>
-      <div className='selected-tags'>
-      </div>
-      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)}/>
-    </div>
-    <div className='dropdown'>
-      {
-        Object.values(filteredTags).map(tag => {
-          const classNames = generateClassNames({
-            tag: true,
-            selected: selectedTags.has(tag.name),
-          })
-          return (
-            <div className={classNames} key={tag.id}
-                onClick={()=>toggleTag(tag.name)}>
-              {tag.name}
-            </div>
-          );
-        })
+  return (
+    <div className='tag-filter-container' ref={ref}>
+      <Button onClick={()=>setVisible(!visible)}>
+        <i className='material-icons'>filter_list</i>
+      </Button>
+      { visible &&
+        <TagSelector
+          tags={tags}
+          selectedTags={selectedTags}
+          onToggleTagId={toggleTag}
+          allowCreation={false}
+        />
       }
     </div>
-  </div>);
+  );
 }

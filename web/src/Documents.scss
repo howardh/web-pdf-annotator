@@ -51,19 +51,19 @@
     }
   }
 
+  .tag-editor-container, .tag-filter-container {
+    display: inline-block;
+    position: relative;
+  }
+
   .documents-table-actions {
     text-align: center;
     margin: 10px;
     margin-top: 20px;
-
-    .tag-editor-container, .tag-filter-container {
-      display: inline-block;
-      position: relative;
-    }
   }
 }
 
-.tag-editor {
+.tag-selector {
   position: absolute;
   top: 100%;
   left: 0;
@@ -72,7 +72,7 @@
   width: 300px;
   background-color: white;
 
-  .editor {
+  .selector {
     text-align: left;
     border: 1px solid black;
     input {

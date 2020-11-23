@@ -24,6 +24,7 @@ class DocumentList(ListEndpoint):
         model = Document
         filterable_params = ['id', 'user_id', 'title']
     def after_create(self,entity,data):
+        entity.created_at = datetime.datetime.now()
         entity.last_modified_at = datetime.datetime.now()
         entity = autofill_document_details(entity)
         return [entity]

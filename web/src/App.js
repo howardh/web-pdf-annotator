@@ -17,6 +17,7 @@ import { LogoutPage } from './Login.js';
 import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
 import DocumentsPage from './Documents.js';
+import NotesPage from './Notes.js';
 import TagsPage from './Tags.js';
 import NoteEditorPage from './NoteEditor.js';
 
@@ -74,6 +75,10 @@ function App() {
             props => <NoteEditorPage userId={userId} {...props.match.params} />
           }
         />
+        <Route path="/notes">
+          <Navigation userId={userId} confirmed={confirmed} />
+          <NotesPage userId={userId} />
+        </Route>
         <Route path="/">
           <Navigation userId={userId} confirmed={confirmed} />
           <LandingPage />
@@ -91,6 +96,7 @@ function Navigation(props) {
   if (userId) {
     return (<nav>
       <Link to='/docs'>Documents</Link>
+      <Link to='/notes'>Notes</Link>
       <Link to='/logout'>Logout</Link>
       <span>
         Currently logged in as {userId}
