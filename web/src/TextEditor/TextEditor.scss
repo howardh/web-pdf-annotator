@@ -64,6 +64,11 @@
     border: 1px solid black;
     .suggestion {
       padding: 5px;
+      cursor: pointer;
+      &:hover {
+        background-color: $primary-colour-light;
+        color: black;
+      }
     }
     .selected {
       background-color: $primary-colour-dark;

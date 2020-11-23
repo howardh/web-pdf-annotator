@@ -296,20 +296,23 @@ export default function TextEditor(props) {
   function updateCurrentWord(caretPos,lines) {
     setCurrentWord(computeCurrentWord(caretPos,lines));
   }
+  function selectSuggestion(suggestion) {
+    execute(addText, {
+      startPos: currentWord.startPos,
+      caretPos: caretTextCoords,
+      addedText: suggestion,
+      lines: lines
+    });
+    setAutocompleteSelection([]);
+    setCurrentWord(null);
+  }
   function autocompleteOnKeyDown(e) {
     if (autocompleteSuggestions.length === 0) {
       return;
     }
     switch(e.key) {
       case 'Enter':
-        execute(addText, {
-          startPos: currentWord.startPos,
-          caretPos: caretTextCoords,
-          addedText: autocompleteSuggestions[autocompleteSelection],
-          lines: lines
-        });
-        setAutocompleteSelection([]);
-        setCurrentWord(null);
+        selectSuggestion(autocompleteSuggestions[autocompleteSelection]);
         e.stopPropagation();
         break;
       case 'ArrowUp':
@@ -584,7 +587,6 @@ export default function TextEditor(props) {
     },
   }
 
-
   const caretStyle = {
     top: caretXYCoords[1]+'px',
     left: caretXYCoords[0]+'px',
@@ -623,7 +625,7 @@ export default function TextEditor(props) {
             suggestion: true,
             selected: autocompleteSelection === i
           });
-          return (<div key={i} className={cn}>
+          return (<div key={i} className={cn} onClick={()=>selectSuggestion(sug)}>
             {sug}
           </div>);
         })
