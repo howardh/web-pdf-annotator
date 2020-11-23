@@ -957,6 +957,11 @@ export function moveCaretLine({startPos=null,caretPos,lines,dLine,shift}) {
 
 export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
   let [lineNum,col] = caretPos;
+  // Check bounds (in case the caret starts beyond the line length)
+  if (col > lines[lineNum].length) {
+    col = lines[lineNum].length;
+  }
+  // Move caret
   let newCol = col+dCol;
   let newLineNum = lineNum;
   // Go to next space if ctrl key is held

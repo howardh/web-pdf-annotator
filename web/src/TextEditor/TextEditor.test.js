@@ -562,6 +562,17 @@ describe('moveCaretCol', () => {
     expect(output.caretPos).toStrictEqual(expected);
     expect(output.startPos).toStrictEqual(expected);
   });
+  test('Starting beyond line length (left)', () => {
+    const output = moveCaretCol({
+      lines: ['asdf','','qwer'],
+      caretPos: [1,2],
+      startPos: [1,2],
+      dCol: -1,
+      shift: false
+    })
+    expect(output.caretPos).toStrictEqual([0,4]);
+    expect(output.startPos).toStrictEqual([0,4]);
+  });
 
   // Deselect
   each(Object.entries({
