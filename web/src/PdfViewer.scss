@@ -53,7 +53,6 @@ body {
     box-sizing: border-box;
     &:focus, &.active {
       outline: 1px solid black;
-      z-index: $z-index-active-annotation;
     }
     &.point {
       background-color: rgba(red,0.5);

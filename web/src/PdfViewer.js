@@ -282,6 +282,7 @@ function AnnotationLayer(props) {
     }
   },[page, ref.current, annotations, toolState, scale]);
 
+  console.log([activeId,annotations[activeId],annotations]);
   return <div className='annotation-layer'>
     <canvas ref={ref} onDoubleClick={handleDoubleClick}
         onKeyDown={handleKeyDown} tabIndex={-1}
@@ -289,9 +290,10 @@ function AnnotationLayer(props) {
         onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} />
     {
       Object.values(annotations).map(annotation =>
+        activeId===annotation.id ? null :
         <Annotation annotation={annotation}
           key={annotation.id}
-          isActive={activeId===annotation.id}
+          isActive={false}
           viewNote={()=>setCardInView(annotation.note_id)}
           scale={scale}
           toolState={toolState} 
@@ -302,6 +304,20 @@ function AnnotationLayer(props) {
           onMouseUp={handleMouseUp}
           onMouseMove={handleMouseMove} />
       )
+    }
+    {
+      activeId && annotations[activeId] &&
+      <Annotation annotation={annotations[activeId]}
+        isActive={true}
+        viewNote={()=>setCardInView(annotations[activeId].note_id)}
+        scale={scale}
+        toolState={toolState} 
+        onClick={e=>handleClick(e,annotations[activeId])}
+        onKeyDown={e=>handleKeyDown(e,annotations[activeId])} 
+        onDoubleClick={e=>handleDoubleClick(e,annotations[activeId])}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove} />
     }
     { 
       toolState.tempAnnotation && 
