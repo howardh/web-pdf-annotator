@@ -96,6 +96,12 @@ export default function NotesPage(props) {
       <i className='material-icons' onClick={()=>deleteNote(note)}>
         delete
       </i>
+      {
+        note.document_id &&
+        <Link to={'/annotate/'+note.document_id}>
+          <i className='material-icons'>description</i>
+        </Link>
+      }
     </>;
   }
   let actions = [

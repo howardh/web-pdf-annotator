@@ -138,6 +138,7 @@ class Annotation(db.Model, ModelMixin):
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
     deleted_at = Column(Date)
 
+    document = db.relationship("Document")
     note = db.relationship('Note')
 
     def update(self,data):
@@ -216,7 +217,7 @@ class DocumentAccessCode(db.Model, ModelMixin):
 class Note(db.Model, ModelMixin):
     __tablename__ = 'notes'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), )
+    user_id = Column(Integer, ForeignKey('users.id'))
     body = Column(Text)
     parser = Column(String)
     deleted_at = Column(Date)
@@ -224,6 +225,7 @@ class Note(db.Model, ModelMixin):
     last_modified_at = Column(DateTime)
     last_accessed_at = Column(DateTime)
 
+    annotations = db.relationship('Annotation', lazy='dynamic')
     tags = db.relationship('Tag', secondary=lambda: notes_tags)
 
     tag_names = association_proxy('tags', 'name',
@@ -231,6 +233,12 @@ class Note(db.Model, ModelMixin):
     )
 
     def to_dict(self):
+        annotations = self.annotations.all()
+        doc_id = None
+        if len(annotations) > 0 and annotations[0].deleted_at is None:
+            doc = annotations[0].document
+            if doc.deleted_at is None:
+                doc_id = doc.id
         return {
                 'id': self.id,
                 'user_id': self.user_id,
@@ -240,6 +248,7 @@ class Note(db.Model, ModelMixin):
                 'last_modified_at': datetime_to_str(self.last_modified_at),
                 'last_accessed_at': datetime_to_str(self.last_accessed_at),
                 'tag_names': list(self.tag_names),
+                'document_id': doc_id,
         }
 
 # Setup Flask-Security
