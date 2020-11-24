@@ -282,7 +282,6 @@ function AnnotationLayer(props) {
     }
   },[page, ref.current, annotations, toolState, scale]);
 
-  console.log([activeId,annotations[activeId],annotations]);
   return <div className='annotation-layer'>
     <canvas ref={ref} onDoubleClick={handleDoubleClick}
         onKeyDown={handleKeyDown} tabIndex={-1}
@@ -739,7 +738,7 @@ function PdfViewer(props) {
     page.render(renderContext).promise.then(x => {
       setDoneRendering(true);
       onRenderingStatusChange(true);
-    });
+    }).catch(error => console.error(error));
     setNeedsRender(false);
     setDoneRendering(false);
     onRenderingStatusChange(false);
@@ -790,7 +789,7 @@ function PdfTextLayer(props) {
       pdfjsLib.renderTextLayer(renderContext).promise.then(x => {
         setDoneRendering(true);
         onRenderingStatusChange(true);
-      });
+      }).catch(console.error);
       setNeedsRender(false);
       setDoneRendering(false);
       onRenderingStatusChange(false);
@@ -864,7 +863,6 @@ function usePdfPages(doc) {
   const [pages,setPages] = useState({});
   const [progress,setProgress] = useState(null);
   const [error,setError] = useState(null);
-  const pagesRef = useRef({}); // Ref is needed because multiple setPages in one update cycle will overwrite each other.
   const docId = doc && doc.id;
   useEffect(()=>{
     if (docId === null || docId === undefined) {
@@ -898,15 +896,18 @@ function usePdfPages(doc) {
     }
     for (let i = 1; i <= pdf.numPages; i++) {
       pdf.getPage(i).then(p => {
-        pagesRef.current[i] = p;
-        let loadedPages = Object.values(pagesRef.current).length;
-        setProgress({
-          totalPages: pdf.numPages,
-          loadedPages
+        setPages(pages => {
+          return {
+            ...pages,
+            [i]: p
+          };
         });
-        if (loadedPages === pdf.numPages) {
-          setPages(pagesRef.current);
-        }
+        setProgress(progress => {
+          return {
+            ...progress,
+            loadedPages: progress.loadedPages + 1
+          };
+        });
       });
     }
   },[pdf]);
