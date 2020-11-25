@@ -1,7 +1,8 @@
 import React from 'react';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
+import { createSelector } from 'reselect';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
@@ -1002,10 +1003,13 @@ export default function PdfAnnotationPage(props) {
 
   const [pdfScale,setPdfScale] = useState(2);
   const annotations = useSelector(
-    state => filterDict( 
-      state.annotations.entities,
-      ann => !ann.deleted_at && ann.doc_id === parseInt(docId)
-    )
+    useCallback(createSelector(
+      state => state.annotations.entities,
+      annotations => filterDict(
+        annotations,
+        ann => !ann.deleted_at && ann.doc_id === parseInt(docId)
+      )
+    ),[docId])
   );
   const [activeId, setActiveId] = useState(null);
   const [cardInView, setCardInView] = useState(null);
@@ -1625,8 +1629,10 @@ export default function PdfAnnotationPage(props) {
         // Only scroll when not in a text field/area
         if (event.key === 'ArrowRight') {
           scrollToNextPage();
+          event.preventDefault();
         } else if (event.key === 'ArrowLeft') {
           scrollToPrevPage();
+          event.preventDefault();
         }
       }
     }
