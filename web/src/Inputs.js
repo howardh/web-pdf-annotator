@@ -51,7 +51,7 @@ function Checkbox(props) {
       toggle();
     }
   }
-  return (<div className={inputClassName} tabIndex={-1} onKeyDown={handleKeyDown} onClick={toggle}>
+  return (<div className={inputClassName+' checkbox'} tabIndex={-1} onKeyDown={handleKeyDown} onClick={toggle}>
     <i className='material-icons'>
       {checked ? 'check_box' : 'check_box_outline_blank'}
     </i>

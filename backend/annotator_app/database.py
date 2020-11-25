@@ -33,6 +33,7 @@ class ModelMixin(object):
                 attr = cls.__getattribute__(cls,k)
             except AttributeError:
                 print('Invalid attribute %s' % k)
+                continue
 
             if type(attr) is AssociationProxy:
                 self.__setattr__(k,v)
@@ -121,6 +122,7 @@ class Document(db.Model, ModelMixin):
                 'author': self.author,
                 'bibtex': self.bibtex,
                 'read': self.read,
+                'note_id': self.note_id,
                 'deleted_at': date_to_str(self.deleted_at),
                 'last_modified_at': datetime_to_str(self.last_modified_at),
                 'last_accessed_at': datetime_to_str(self.last_accessed_at),

@@ -51,18 +51,6 @@
     }
   }
 
-  .tag-editor-container, .tag-filter-container {
-    display: inline-block;
-    position: relative;
-    .tag-selector {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      height: 32px;
-      width: 300px;
-    }
-  }
-
   .documents-table-actions {
     text-align: center;
     margin: 10px;

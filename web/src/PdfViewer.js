@@ -491,15 +491,16 @@ function AnnotationActions(props) {
 
 function NoteCard(props) {
   const {
-    annotation,
-    isActive, setActive,
-    setCardInView, setAnnotationInView
+    noteId,
+    annotationId=null,
+    isActive, setActive=()=>null,
+    setCardInView, setAnnotationInView,
   } = props;
   const dispatch = useDispatch();
   const history = useHistory();
   const updateNote = n => dispatch(noteActions['update'](n));
   const note = useSelector(
-    state => annotation.note_id ? state.notes.entities[annotation.note_id] : null);
+    state => noteId ? state.notes.entities[noteId] : null);
   // Stores changes before they're saved
   const [updatedNote,setUpdatedNote] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
@@ -532,9 +533,9 @@ function NoteCard(props) {
     }
   }
   function scrollIntoView() {
-    history.push('?annotation='+annotation.id+'&note='+note.id);
+    history.push('?annotation='+annotationId+'&note='+note.id);
     setCardInView(note.id);
-    setAnnotationInView(annotation.id);
+    setAnnotationInView(annotationId);
   }
   function handleChangeBody(text) {
     setUpdatedNote({
@@ -555,6 +556,9 @@ function NoteCard(props) {
     setRefreshing(false);
   },[refreshing]);
 
+  if (refreshing) {
+    return null;
+  }
   if (!note) {
     return null;
   }
@@ -574,11 +578,6 @@ function NoteCard(props) {
           text={updatedNote.body}
           onKeyDown={onKeyDown}/>
       <div className='controls'>
-        <Button onClick={()=>setActive(!isActive)}>
-          <i className='material-icons'>
-            {isActive ? 'navigate_before' : 'navigate_next'}
-          </i>
-        </Button>
         <GroupedInputs>
           <Button onClick={saveChanges}>
             <i className='material-icons'>save</i>
@@ -618,11 +617,6 @@ function NoteCard(props) {
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       <NoteViewer note={note} />
       <div className='controls'>
-        <Button onClick={()=>setActive(!isActive)}>
-          <i className='material-icons'>
-            {isActive ? 'navigate_before' : 'navigate_next'}
-          </i>
-        </Button>
         <GroupedInputs>
           <Button onClick={startEditing}>
             <i className='material-icons'>create</i>
@@ -634,9 +628,12 @@ function NoteCard(props) {
             <i className='material-icons'>sync</i>
           </Button>
         </GroupedInputs>
-        <Button onClick={scrollIntoView}>
-          Scroll into view
-        </Button>
+        {
+          annotationId &&
+          <Button onClick={scrollIntoView}>
+            Scroll into view
+          </Button>
+        }
       </div>
     </div>);
   }
@@ -672,10 +669,7 @@ function NoteCardsContainer(props) {
     setCardInView(null);
   },[cardInView, annotationInView]);
 
-  const style = {
-    transform: 'translateY('+scrollYPos+'px)'
-  };
-  return (<div className='annotation-cards-container' style={style}>
+  return (<div className='note-cards-container' >
     {
       Object.values(annotations).filter(
         ann => ann.note_id
@@ -683,10 +677,10 @@ function NoteCardsContainer(props) {
         return (
           <NoteCard
               key={ann.note_id}
-              scale={scale}
+              noteId={ann.note_id}
+              annotationId={ann.id}
               isActive={ann.id === activeId}
               setActive={(f)=>setActiveId(f ? ann.id : null)}
-              annotation={ann}
               updateAnnotation={updateAnnotation}
               setCardInView={setCardInView}
               setAnnotationInView={setAnnotationInView} />
@@ -921,31 +915,8 @@ function usePdfPages(doc) {
 }
 
 //////////////////////////////////////////////////
-// Doc Info
+// Side Bar
 //////////////////////////////////////////////////
-
-function DocInfoContainer(props) {
-  const {
-    doc,
-    updateDoc
-  } = props;
-  const [hidden,setHidden] = useState(true);
-  let classNames = generateClassNames({
-    'doc-info-container': true,
-    'hidden': hidden
-  })
-  return (<div className={classNames}>
-    <div className='controls' onClick={()=>setHidden(!hidden)}>
-    {
-      hidden ?
-      <i className='material-icons'>navigate_before</i> :
-      <i className='material-icons'>navigate_next</i>
-    }
-    </div>
-    <h1>Details</h1>
-    <DocInfoForm doc={doc} updateDoc={updateDoc} />
-  </div>);
-}
 
 function DocInfoForm(props) {
   const {
@@ -979,6 +950,99 @@ function DocInfoForm(props) {
       <Checkbox name='read' checked={doc['read']} onChange={handleChange} />
       <span>Read</span>
     </label>
+  </div>);
+}
+
+function DocNotes(props) {
+  const {
+    doc,
+  } = props;
+  const dispatch = useDispatch();
+
+  const note = useSelector(
+    state => doc.note_id ? state.notes.entities[doc.note_id] : null
+  );
+
+  function handleCreateNote(e) {
+    dispatch(noteActions['create']({
+      'document_id': doc.id,
+      'body': '# '+ (doc.title || 'Note'),
+      'parser': 'markdown-it',
+    }));
+  }
+  function updateAnnotation(ann) {
+    dispatch(annotationActions['saveCheckpoint']());
+    dispatch(annotationActions['update'](ann));
+  }
+
+  return (<div className='doc-notes-container'>
+    {
+      !doc.note_id &&
+      <Button onClick={handleCreateNote}>
+        Create Note
+      </Button>
+    }
+    {
+      doc.note_id &&
+      <NoteCard
+        key={note.id}
+        noteId={note.id}
+        isActive={false}
+        updateAnnotation={updateAnnotation}
+      />
+    }
+  </div>);
+}
+
+function SideBar(props) {
+  const {
+    tabs = [],
+    activeTabIndex,
+    onChangeActiveTabIndex,
+    visible,
+    onChangeVisible
+  } = props;
+  //const [hidden,setHidden] = useState(true);
+  //const [activeTabIndex,setActiveTabIndex] = useState(0);
+
+  function handleKeyDown(e,i) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      onChangeActiveTabIndex(i);
+      e.preventDefault();
+    }
+  }
+
+  let classNames = generateClassNames({
+    'sidebar': true,
+    'hidden': !visible
+  })
+  const activeTab = tabs[activeTabIndex];
+  return (<div className={classNames}>
+    <div className='controls' onClick={()=>onChangeVisible(!visible)}>
+    {
+      visible
+        ? <i className='material-icons'>navigate_next</i>
+        : <i className='material-icons'>navigate_before</i> 
+    }
+    </div>
+    <div className='tab-container'>
+      {
+        tabs.map((tab,i) => {
+          let classNames = generateClassNames({
+            'tab': true,
+            'active': activeTabIndex === i
+          });
+          return (<div key={tab.title}
+              className={classNames}
+              tabIndex={0}
+              onKeyDown={e=>handleKeyDown(e,i)}
+              onClick={()=>onChangeActiveTabIndex(i)}>
+            {tab.title}
+          </div>);
+        })
+      }
+    </div>
+    {activeTab.render()}
   </div>);
 }
 
@@ -1016,6 +1080,8 @@ export default function PdfAnnotationPage(props) {
   const [annotationInView, setAnnotationInView] = useState(null);
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
+  const [sidebarActiveTabIndex, setSidebarActiveTabIndex] = useState(0);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   // If linked to a specific annotation, scroll it into view
   useEffect(() => {
@@ -1031,8 +1097,7 @@ export default function PdfAnnotationPage(props) {
     }
   }, [location.search]);
 
-  // Scrolling card into view
-  useEffect(() => {
+  useEffect(() => { // Scroll annotation into view
     function scrollWhenFound() {
       if (!annotationInView) {
         return;
@@ -1054,6 +1119,23 @@ export default function PdfAnnotationPage(props) {
     }
     scrollWhenFound();
   }, [annotationInView]);
+  useEffect(() => { // Scroll card into view
+    function scrollWhenFound() {
+      if (!cardInView) {
+        return;
+      }
+      let cardElemId = 'card'+cardInView;
+      let elem = document.getElementById(cardElemId);
+      if (!elem) { // Try again later
+        window.setTimeout(scrollWhenFound, 100);
+        return;
+      }
+      elem.scrollIntoView();
+      setCardInView(null);
+    }
+    setSidebarActiveTabIndex(1); // FIXME: need some mapping from tab index to tab title, or something else more human-readible
+    scrollWhenFound();
+  }, [cardInView]);
 
   // Document title
   useEffect(() => {
@@ -1679,35 +1761,55 @@ export default function PdfAnnotationPage(props) {
   }
   if (pagesLoadingError) {
     window.error = pagesLoadingError;
-    return (<main className='annotation-container'>
+    return (<main className='annotation-page'>
       {pagesLoadingError}
-      <DocInfoContainer doc={doc} updateDoc={updateDoc} />
     </main>);
   }
 
-  return (<main className='annotation-container' onKeyDown={handleKeyDown}>
-    {Object.entries(pages).map(function([pageNum,page],i){
-      return <PdfPageContainer key={pageNum}
-          activeId={activeId} setActiveId={activateAnnotation}
-          setCardInView={setCardInView}
-          toolState={toolState}
-          eventHandlers={tools[toolState.type].eventHandlers}
-          createAnnotation={createAnnotation}
-          updateAnnotation={updateAnnotation}
-          annotations={annotations}
-          page={page} pageNum={pageNum}
-          scale={pdfScale}
-          />
-    })}
-    <NoteCardsContainer
-        annotations={annotations}
-        activeId={activeId} setActiveId={activateAnnotation}
-        cardInView={cardInView} setCardInView={setCardInView}
-        annotationInView={annotationInView}
-        setAnnotationInView={setAnnotationInView}
-        updateAnnotation={updateAnnotation}
-        scale={pdfScale} />
-    <DocInfoContainer doc={doc} updateDoc={updateDoc} />
+  const tabs = [
+    {
+      title: 'Details',
+      render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
+    },{
+      title: 'Annotation Notes',
+      render: () => 
+        <NoteCardsContainer
+            annotations={annotations}
+            activeId={activeId} setActiveId={activateAnnotation}
+            cardInView={cardInView} setCardInView={setCardInView}
+            annotationInView={annotationInView}
+            setAnnotationInView={setAnnotationInView}
+            updateAnnotation={updateAnnotation}
+            scale={pdfScale} />
+    },{
+      title: 'Notes',
+      render: () => <DocNotes doc={doc} />
+    }
+  ];
+  return (<main className='annotation-page' onKeyDown={handleKeyDown}>
+    <div className='pages-container'>
+      {Object.entries(pages).map(function([pageNum,page],i){
+        return <PdfPageContainer key={pageNum}
+            activeId={activeId} setActiveId={activateAnnotation}
+            setCardInView={setCardInView}
+            toolState={toolState}
+            eventHandlers={tools[toolState.type].eventHandlers}
+            createAnnotation={createAnnotation}
+            updateAnnotation={updateAnnotation}
+            annotations={annotations}
+            page={page} pageNum={pageNum}
+            scale={pdfScale}
+            />
+      })}
+    </div>
+    <div className='sidebar-container'>
+      <SideBar tabs={tabs}
+        activeTabIndex={sidebarActiveTabIndex}
+        onChangeActiveTabIndex={setSidebarActiveTabIndex}
+        visible={sidebarVisible}
+        onChangeVisible={setSidebarVisible}
+      />
+    </div>
     <div className='controls'>
       <GroupedInputs>
         <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
