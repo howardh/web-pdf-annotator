@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {Fragment} from 'react';
 import {useEffect, useState, useRef} from 'react';
 import { Link, useHistory } from "react-router-dom";
 
@@ -60,7 +60,9 @@ function TableActions(props) {
       actions.filter(
         action => action.renderCondition(selectedIds)
       ).map(
-        action => action.render()
+        action => <Fragment key={action.tooltip}>
+          { action.render() }
+        </Fragment>
       )
     }
   </div>);
@@ -91,7 +93,7 @@ function Table(props) {
         <tr>
           <th><Checkbox checked={selectedAllEntities} onChange={toggleSelectAll}/></th>
           {
-            columns.map(col => <th>{col.heading}</th>)
+            columns.map(col => <th key={col.heading}>{col.heading}</th>)
           }
           <th>Actions</th>
         </tr>
@@ -109,7 +111,7 @@ function Table(props) {
               </td>
               {
                 columns.map(col =>
-                  <td className={col.className}>
+                  <td key={col.heading} className={col.className}>
                     {col.render(entity)}
                   </td>
                 )

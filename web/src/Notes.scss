@@ -2,6 +2,33 @@
 
 main.notes-page {
   text-align: center;
+  .notes-list-container {
+    display: grid;
+    grid-template-columns: 1fr auto auto 1fr;
+    column-gap: 10px;
+    > * {
+      justify-self: center;
+    }
+    .note-filter-container {
+      grid-column: 2 / 2;
+      text-align: left;
+      padding: 10px;
+      border: 1px solid black;
+      label {
+        display: grid;
+        grid-template-columns: min-content auto;
+        > * {
+          justify-self: start;
+        }
+      }
+      .tag-selector {
+        width: 100%;
+        .dropdown {
+          position: relative;
+        }
+      }
+    }
+  }
   table {
     tr td .title {
       font-weight: bold;

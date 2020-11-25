@@ -1,0 +1,64 @@
+@import 'variables';
+
+.tag-selector {
+  display: inline-block;
+  background-color: white;
+  position: relative;
+
+  .selector {
+    text-align: left;
+    border: 1px solid black;
+    input {
+      box-sizing: border-box;
+      display: inline-block;
+      border: none;
+      height: 30px;
+      padding-left: 10px;
+      outline: none;
+      width: 100%;
+    }
+  }
+
+  .dropdown {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+    top: 100%;
+    width: 100%;
+    background-color: white;
+    z-index: 1;
+    border: 1px solid black;
+
+    .tag, button {
+      display: inline-block;
+      border: 1px solid black;
+      margin: 5px;
+      padding: 3px 5px;
+      cursor: pointer;
+      border-radius: 3px;
+      &:hover {
+        background-color: $primary-colour-light;
+      }
+      &.partial {
+        color: $primary-colour-dark;
+      }
+      &.selected {
+        background-color: $primary-colour-dark;
+        color: $primary-colour-light;
+      }
+    }
+  }
+}
+
+.tag-editor-container, .tag-filter-container {
+  display: inline-block;
+  position: relative;
+  .tag-selector {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    height: 32px;
+    width: 300px;
+  }
+}

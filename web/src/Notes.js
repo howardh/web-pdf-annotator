@@ -1,7 +1,8 @@
 import React from 'react';
-import {useEffect, useState, useRef} from 'react';
+import {useEffect, useState, useRef, useMemo} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link, useHistory } from "react-router-dom";
+import { createSelector } from 'reselect';
 
 import {
   filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
@@ -12,9 +13,17 @@ import {
 import {
   EntityTable
 } from './EntityTable.js';
+import {
+  TagSelector, TagEditor
+} from './TagSelector.js';
 import {noteActions,tagActions} from './actions/index.js';
 
 import './Notes.scss';
+
+const noteSelector = createSelector(
+  [state => state.notes.entities],
+  (notes) => filterDict(notes, e => e && !e.deleted_at)
+);
 
 export default function NotesPage(props) {
   const {
@@ -24,12 +33,14 @@ export default function NotesPage(props) {
   const history = useHistory();
 
   // All notes, including those owned by someone else but shared with me
-  const notes = filterDict(
-    useSelector(state => state.notes.entities),
-    e => e && !e.deleted_at
-  );
-  const sortedNotes = Object.values(notes).sort(
-    (a,b) => new Date(b.last_modified_at) - new Date(a.last_modified_at)
+  const notes = useSelector( noteSelector );
+  const [filteredNotes,setFilteredNotes] = useState({});
+  const sortedNotes = useMemo(() => 
+    Object.values(filteredNotes)
+      .sort(
+        (a,b) => new Date(b.last_modified_at) - new Date(a.last_modified_at)
+      ),
+    [filteredNotes]
   );
 
   // Load notes
@@ -39,6 +50,8 @@ export default function NotesPage(props) {
 
   // Selected notes
   const [selectedNoteIds, setSelectedNoteIds] = useState(new Set());
+  const selectedNotes = filterDict(filteredNotes,
+    note=>selectedNoteIds.has(note.id));
 
   // Callbacks
   function deleteSelectedNotes() {
@@ -77,7 +90,14 @@ export default function NotesPage(props) {
       heading: 'Note',
       render: note => {
         if (note.body.startsWith('#')) {
-          return <span className='title'>{note.body.split('\n')[0].slice(1)}</span>
+          return (<>
+            <span className='tags'>
+              {note.tag_names.length > 0 && '['+note.tag_names.join('][')+'] '}
+            </span>
+            <span className='title'>
+              {note.body.split('\n')[0].slice(1)}
+            </span>
+          </>);
         } else {
           return <span>{note.body.slice(0,100)+'...'}</span>;
         }
@@ -114,6 +134,7 @@ export default function NotesPage(props) {
         );
       },
       renderCondition: selectedNoteIds => selectedNoteIds.size === 0,
+      tooltip: 'Create a new note',
     },{
       render: () => {
         let id = Array.from(selectedNoteIds)[0];
@@ -124,6 +145,16 @@ export default function NotesPage(props) {
         );
       },
       renderCondition: selectedNoteIds => selectedNoteIds.size === 1,
+      tooltip: 'Edit selected note',
+    },{
+      render: () => {
+        return (
+          <TagEditor entities={selectedNotes}
+            updateEntity={e=>dispatch(noteActions['update'](e))} />
+        );
+      },
+      renderCondition: selectedDocIds => selectedDocIds.size > 0,
+      tooltip: 'Edit tags',
     },{
       render: () => {
         return (
@@ -133,17 +164,91 @@ export default function NotesPage(props) {
         );
       },
       renderCondition: selectedNoteIds => selectedNoteIds.size > 0,
+      tooltip: 'Delete selected note(s)',
     },
   ];
   return (<main className='notes-page'>
     <h1>Notes</h1>
-    <EntityTable entities={Object.values(sortedNotes)} 
-      selectedIds={selectedNoteIds}
-      onChangeSelectedIds={setSelectedNoteIds}
-      columns={columns}
-      renderActionsColumn={renderActionsColumn}
-      actions={actions}
-    />
+    <div className='notes-list-container'>
+      <NoteFilterMenu notes={notes} onChangeFilteredNotes={setFilteredNotes} />
+      <EntityTable entities={Object.values(sortedNotes)} 
+        selectedIds={selectedNoteIds}
+        onChangeSelectedIds={setSelectedNoteIds}
+        columns={columns}
+        renderActionsColumn={renderActionsColumn}
+        actions={actions}
+      />
+    </div>
   </main>);
 }
 
+function NoteFilterMenu(props) {
+  const {
+    notes,
+    onChangeFilteredNotes
+  } = props;
+  const dispatch = useDispatch();
+
+  const tags = useSelector(state => state.tags.entities);
+
+  const [showAnn, setShowAnn] = useState(false);
+  const [showDoc, setShowDoc] = useState(false);
+  const [showOrphan, setShowOrphan] = useState(false);
+  const [tagFilters, setTagFilters] = useState(new Set());
+
+  function toggleTag(tagId) {
+    let temp = new Set(tagFilters);
+    let tagName = tags[tagId].name;
+    if (tagFilters.has(tagName)) {
+      temp.delete(tagName);
+    } else {
+      temp.add(tagName);
+    }
+    setTagFilters(temp);
+  }
+
+  useEffect(() => {
+    dispatch(tagActions['fetchMultiple']());
+  },[]);
+
+  useEffect(() => {
+    onChangeFilteredNotes(filterDict(
+      notes,
+      note => {
+        if (!showDoc && note.document_id) {
+          return false;
+        }
+        if (!showAnn && note.annotation_id) {
+          return false;
+        }
+        if (!showOrphan && note.orphaned) {
+          return false;
+        }
+        for (let t of tagFilters) {
+          if (note.tag_names.indexOf(t) === -1) {
+            return false;
+          }
+        }
+        return true;
+      }
+    ));
+  }, [notes, showAnn, showDoc, showOrphan, tagFilters]);
+
+  return (<div className='note-filter-container'>
+    <h2>Filters</h2>
+    <label>
+      <Checkbox checked={showAnn} onChange={()=>setShowAnn(!showAnn)} />
+      <span>Show notes associated with an annotation</span>
+    </label>
+    <label>
+      <Checkbox checked={showDoc} onChange={()=>setShowDoc(!showDoc)} />
+      <span>Show notes associated with a pdf document</span>
+    </label>
+    <label>
+      <Checkbox checked={showOrphan} onChange={()=>setShowOrphan(!showOrphan)} />
+      <span>Show orphaned notes</span>
+    </label>
+    <h3>Tag Filters</h3>
+    <TagSelector tags={tags} selectedTags={tagFilters} onToggleTagId={toggleTag}/>
+  </div>);
+}

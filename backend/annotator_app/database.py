@@ -235,7 +235,9 @@ class Note(db.Model, ModelMixin):
     def to_dict(self):
         annotations = self.annotations.all()
         doc_id = None
+        ann_id = None
         if len(annotations) > 0 and annotations[0].deleted_at is None:
+            ann_id = annotations[0].id
             doc = annotations[0].document
             if doc.deleted_at is None:
                 doc_id = doc.id
@@ -249,6 +251,8 @@ class Note(db.Model, ModelMixin):
                 'last_accessed_at': datetime_to_str(self.last_accessed_at),
                 'tag_names': list(self.tag_names),
                 'document_id': doc_id,
+                'annotation_id': ann_id,
+                'orphaned': len(annotations) > 0 and annotations[0].deleted_at is not None
         }
 
 # Setup Flask-Security
