@@ -1,13 +1,14 @@
 .note-editor-page {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  height: 100vh;
   .editor-container {
     resize: horizontal;
   }
   .preview-container {
-    resize: horizontal;
     text-align: left;
     padding: 20px;
     background-color: white;
+    overflow: scroll;
   }
 }
