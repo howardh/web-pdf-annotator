@@ -483,6 +483,14 @@ export default function TextEditor(props) {
           case 'Enter':
             textareaRef.current.focus();
             break;
+          case 'Tab':
+            execute(addText, {
+              startPos: selectionStart,
+              caretPos: caretTextCoords,
+              addedText: '  '
+            });
+            e.preventDefault();
+            break;
           case 'ArrowUp':
             execute(moveCaretLine, {
               startPos: selectionStart,
