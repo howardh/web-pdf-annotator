@@ -39,7 +39,7 @@
     position: absolute;
     user-select: none;
   }
-  &:focus .caret {
+  &:focus-within .caret {
     border-left: 1px solid black;
     animation: blinker 1s linear infinite;
   }

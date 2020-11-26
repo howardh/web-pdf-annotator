@@ -1,5 +1,5 @@
 import React from 'react';
-import {useEffect, useState, useRef, forwardRef} from 'react';
+import {useEffect, useState, useRef, forwardRef, useMemo} from 'react';
 import { generateClassNames } from '../Utils.js';
 import axios from 'axios';
 
@@ -571,19 +571,16 @@ export default function TextEditor(props) {
     },
   }
   const textareaEventHandlers = {
-    onKeyDown: function(e) {
-      if (e.target.value.length === 0) {
-        ref.current.focus();
-      }
-    },
     onChange: function(e) {
+      if (e.target.value.length === 0) {
+        return;
+      }
       execute(addText, {
         startPos: selectionStart,
         caretPos: caretTextCoords,
         addedText: e.target.value,
         lines: lines
       });
-      ref.current.focus();
     },
   }
 
