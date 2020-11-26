@@ -738,6 +738,17 @@ export function addText({startPos=null,caretPos,addedText,lines}) {
     }
   }
 
+  // Check for autoindent
+  if (addedText === '\n' && lines[lineNum1].startsWith(' ')) {
+    // Count the number of spaces
+    for (let i = 0; i < col1; i++) {
+      if (lines[lineNum1][i] !== ' ') {
+        break;
+      }
+      addedText = addedText+' ';
+    }
+  }
+
   // Make changes
   if (startPos[0] !== caretPos[0] || startPos[1] !== caretPos[1]) {
     let output = backspace({ startPos,caretPos,lines });

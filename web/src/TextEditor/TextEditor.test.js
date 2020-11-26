@@ -91,7 +91,7 @@ describe('addText', () => {
       addedText: '*',
       caretPos: [0,col+1],
       startPos: [0,col]
-    })
+    });
     expect(output.lines.join('\n')).toBe(expected);
     expect(output.caretPos[0]).toBe(0);
     expect(output.caretPos[1]).toBe(col+1);
@@ -207,6 +207,38 @@ describe('addText', () => {
     expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
     expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
     expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+
+  // Autoindent
+  test('Autoindent 1 space', ()=>{
+    const output = addText({
+      lines: ['asdf',' qwer','zxcv'],
+      addedText: '\n',
+      caretPos: [1,5],
+      startPos: [1,5]
+    });
+    expect(output.lines).toStrictEqual(['asdf',' qwer',' ','zxcv']);
+    expect(output.caretPos).toStrictEqual([2,1]);
+  });
+  test('Autoindent 2 spaces', ()=>{
+    const output = addText({
+      lines: ['asdf','  qwer','zxcv'],
+      addedText: '\n',
+      caretPos: [1,6],
+      startPos: [1,6]
+    });
+    expect(output.lines).toStrictEqual(['asdf','  qwer','  ','zxcv']);
+    expect(output.caretPos).toStrictEqual([2,2]);
+  });
+  test('Autoindent 2 spaces, line of only spaces', ()=>{
+    const output = addText({
+      lines: ['asdf','  ','zxcv'],
+      addedText: '\n',
+      caretPos: [1,2],
+      startPos: [1,2]
+    });
+    expect(output.lines).toStrictEqual(['asdf','  ','  ','zxcv']);
+    expect(output.caretPos).toStrictEqual([2,2]);
   });
 });
 
