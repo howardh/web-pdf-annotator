@@ -1,9 +1,11 @@
 .note-editor-page {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: min-content auto;
   height: 100vh;
   .editor-container {
-    resize: horizontal;
+    .lines-container {
+      resize: horizontal;
+    }
   }
   .preview-container {
     text-align: left;
