@@ -122,6 +122,11 @@ export default function TextEditor(props) {
       line = node.parentNode;
     } else if (node === linesRef.current) {
       return [0,0];
+    } else if (node.classList.contains('line')) {
+      line = node;
+      if (offset === 1) {
+        offset = node.textContent.length;
+      }
     } else {
       line = node.closest('.line');
     }
@@ -195,6 +200,7 @@ export default function TextEditor(props) {
     }
     // Caret follows the end of the selection [XXX: What did I mean by this comment?]
     let endPos = selectionToTextCoords(sel.focusNode,sel.focusOffset);
+    console.log([sel.focusNode,sel.focusOffset]);
     if (endPos[0] !== caretTextCoords[0] ||
         endPos[1] !== caretTextCoords[1]) {
       setCaretTextCoords(endPos);
