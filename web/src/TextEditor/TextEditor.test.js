@@ -690,6 +690,17 @@ describe('moveCaretCol', () => {
     expect(output.caretPos).toStrictEqual(expected);
     expect(output.startPos).toStrictEqual(expected);
   });
+  test('With non-alphanumeric characters #1', () => {
+    const output = moveCaretCol({
+      lines: ['asdf!qwer'],
+      caretPos: [0,2],
+      startPos: [0,2],
+      dCol: 1,
+      ctrl: true
+    })
+    expect(output.caretPos).toStrictEqual([0,4]);
+    expect(output.startPos).toStrictEqual([0,4]);
+  });
 });
 
 describe('moveCaretLine', () => {

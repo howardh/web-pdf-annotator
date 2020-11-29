@@ -982,14 +982,20 @@ export function moveCaretCol({startPos=null,caretPos,lines,dCol,shift,ctrl}) {
   // Move caret
   let newCol = col+dCol;
   let newLineNum = lineNum;
-  // Go to next space if ctrl key is held
+  // Go to next non-alphanumeric if ctrl key is held
+  function isAlphanumeric(c) {
+    if ('a' <= c && c <= 'z') return true;
+    if ('A' <= c && c <= 'Z') return true;
+    if ('0' <= c && c <= '9') return true;
+    return false;
+  }
   if (ctrl) {
     if (dCol === -1) {
-      while (lines[lineNum][newCol-1] !== ' ' && newCol > 0) {
+      while (isAlphanumeric(lines[lineNum][newCol-1]) && newCol > 0) {
         newCol += dCol;
       }
     } else if (dCol === 1) {
-      while (lines[lineNum][newCol] !== ' ' &&
+      while (isAlphanumeric(lines[lineNum][newCol]) &&
              newCol < lines[lineNum].length) {
         newCol += dCol;
       }
