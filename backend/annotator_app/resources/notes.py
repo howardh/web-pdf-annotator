@@ -82,7 +82,12 @@ class NoteSuggestionsEndpoint(Resource):
         data = request.get_json()
         prefix = data.pop('prefix','')
 
-        vocabulary = ['hello','world', 'horse', 'battery', 'staple']
+        vocabulary = [
+            'hello','world', 'horse', 'battery', 'staple',
+            '\\begin{equation}\\end{equation}',
+            '\\begin{bmatrix}\\end{bmatrix}',
+            '\\begin{align*}\\end{align*}',
+        ]
 
         return {
                 'suggestions': [w for w in vocabulary if w.startswith(prefix)]

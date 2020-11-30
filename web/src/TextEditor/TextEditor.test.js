@@ -1,7 +1,8 @@
 import {
   addText, backspace, del,
   moveCaretCol, moveCaretLine,
-  textCoordToSelection
+  textCoordToSelection,
+  orderCoordinates
 } from './index.js';
 import each from 'jest-each';
 
@@ -196,6 +197,27 @@ describe('addText', () => {
       addedText: '***',
       caretPos: [2,1],
       startPos: [1,1]
+    };
+    for (let i = 0; i < 3; i++) {
+      let output = func({...params, lines})
+      linesHistory.push(output.lines);
+      lines = output.lines;
+      func = output.undo.func;
+      params = output.undo.params;
+    }
+    expect(linesHistory[0]).toStrictEqual(linesHistory[2]);
+    expect(linesHistory[1]).toStrictEqual(linesHistory[3]);
+    expect(linesHistory[0]).not.toStrictEqual(linesHistory[1]);
+  });
+  test('Undo/Redo #3', ()=>{
+    let lines = ['asdf','qwer','zxcv'];
+    let linesHistory = [lines];
+    let func = addText;
+    let params = {
+      lines,
+      addedText: '***',
+      caretPos: [1,1],
+      startPos: [2,1]
     };
     for (let i = 0; i < 3; i++) {
       let output = func({...params, lines})
@@ -1019,5 +1041,29 @@ describe('textCoordToSelection', () => {
     expect(output.endNode).toBe(lineNodes[1].childNodes[0]);
     expect(output.startOffset).toBe(4);
     expect(output.endOffset).toBe(2);
+  });
+});
+
+describe('orderCoordinates', () => {
+  const coords = [
+    [[0,0],[0,0]],
+    [[0,0],[1,0]],
+    [[0,2],[1,0]],
+    [[0,2],[1,2]],
+    [[0,2],[1,3]],
+  ];
+  each(coords).it('%s%s', (pos1,pos2) => {
+    let output = orderCoordinates(pos1,pos2);
+    expect(output.lineNum1).toBe(pos1[0]);
+    expect(output.lineNum2).toBe(pos2[0]);
+    expect(output.col1).toBe(pos1[1]);
+    expect(output.col2).toBe(pos2[1]);
+  });
+  each(coords).it('%s%s flipped', (pos1,pos2) => {
+    let output = orderCoordinates(pos2,pos1);
+    expect(output.lineNum1).toBe(pos1[0]);
+    expect(output.lineNum2).toBe(pos2[0]);
+    expect(output.col1).toBe(pos1[1]);
+    expect(output.col2).toBe(pos2[1]);
   });
 });

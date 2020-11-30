@@ -200,7 +200,6 @@ export default function TextEditor(props) {
     }
     // Caret follows the end of the selection [XXX: What did I mean by this comment?]
     let endPos = selectionToTextCoords(sel.focusNode,sel.focusOffset);
-    console.log([sel.focusNode,sel.focusOffset]);
     if (endPos[0] !== caretTextCoords[0] ||
         endPos[1] !== caretTextCoords[1]) {
       setCaretTextCoords(endPos);
@@ -343,6 +342,8 @@ export default function TextEditor(props) {
   // Event handlers
   const [past,setPast] = useState([]);
   const [future,setFuture] = useState([]);
+  window.past = past;
+  window.future = future;
   function addUndoCommand(command) {
     setPast([
       command,
@@ -732,13 +733,15 @@ export function addText({startPos=null,caretPos,addedText,lines}) {
     lineNum1, col1,
     lineNum2, col2
   } = orderCoordinates(startPos,caretPos);
+  startPos = [lineNum1,col1];
+  caretPos = [lineNum2,col2];
 
   // Undo/redo commands
   let removedText = computeSelectedLines(startPos,caretPos,lines).join('\n');
   let undo = {
     func: addText,
     params: {
-      startPos: startPos,
+      startPos: [lineNum1, col1],
       caretPos: null, // Filled below
       addedText: removedText
     }
