@@ -112,16 +112,17 @@ export default function TextEditor(props) {
     linesRef.current.scroll(sl,st);
   }, [caretXYCoords]);
 
-  const [preventCoordUpdate,setPreventCoordUpdate] = useState(0);
   function selectionToTextCoords(node,offset) {
     let line = null;
     if (!node) {
       return null;
     }
     if (node.nodeName === '#text') {
-      line = node.parentNode;
+      line = node.parentNode.closest('.line');
     } else if (node === linesRef.current) {
       return [0,0];
+    } else if (node.matches('.selected')) {
+      line = node.parentNode;
     } else if (node.classList.contains('line')) {
       line = node;
       if (offset === 1) {
@@ -134,87 +135,58 @@ export default function TextEditor(props) {
       console.error('Unable to find selected line');
       return null;
     }
-    let lineNum = Array.from(linesRef.current.children).indexOf(line)-2;
+    let lineNum = Array.from(linesRef.current.children).indexOf(line);
+    if (lineNum === -1) {
+      // This should never happen
+      console.error('Line not found in DOM');
+      return null;
+    }
+    lineNum -= 2; // First two elements are the size check divs and the caret
     return [lineNum,offset];
   }
-  function updateSelectionFromCoords(startPos,caretPos,lines=lines) {
-    let sel = window.getSelection();
-
-    let newSel = textCoordToSelection(
-      startPos,caretPos,lines,
-      Array.from(linesRef.current.children).slice(2)
-    );
-
-    if (!newSel) {
-      sel.removeAllRanges();
-      return;
-    }
-
-    let {
-      startNode,
-      startOffset,
-      endNode,
-      endOffset
-    } = newSel;
-
-    // Check if selection actually changed
-    if (sel.anchorNode === startNode && sel.anchorOffset === startOffset &&
-        sel.focusNode === endNode && sel.focusOffset === endOffset) {
-      return;
-    }
-    // If the selection is length 0, remove all ranges. Otherwise, we get buggy interactions where adding text at the "selected" region causes the new text to become selected.
-    if (startNode === endNode && startOffset === endOffset) {
-      sel.removeAllRanges();
-      return;
-    }
-    // Update selection accordingly
-    let range = document.createRange();
-    range.setStart(startNode,startOffset);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    sel.extend(endNode,endOffset);
-    setPreventCoordUpdate(2); // `addRange` and `extend` each trigger their own change events. We want to stop both.
-  }
   function updateCoordsFromSelection() {
-    if (preventCoordUpdate) {
-      setPreventCoordUpdate(preventCoordUpdate-1);
-      return;
-    }
     if (!linesRef.current) {
       return;
     }
     let sel = window.getSelection();
-    // Make sure that there is a selection and it is within the text editor
-    if (!sel.anchorNode || !linesRef.current.contains(sel.anchorNode)) {
+    if (sel.rangeCount === 0) {
       return;
     }
-    if (!sel.focusNode || !linesRef.current.contains(sel.focusNode)) {
-      return;
-    }
-    // Selection start
-    let startPos = selectionToTextCoords(sel.anchorNode,sel.anchorOffset);
-    if (selectionStart === null ||
-        startPos[0] !== selectionStart[0] ||
-        startPos[1] !== selectionStart[1]) {
-      setSelectionStart(startPos);
-    }
-    // Caret follows the end of the selection [XXX: What did I mean by this comment?]
-    let endPos = selectionToTextCoords(sel.focusNode,sel.focusOffset);
-    if (endPos[0] !== caretTextCoords[0] ||
-        endPos[1] !== caretTextCoords[1]) {
-      setCaretTextCoords(endPos);
+    for (let i = 0; i < sel.rangeCount; i++) {
+      const range = sel.getRangeAt(i);
+      window.ran = range;
+      // Make sure that there is a selection and it is within the text editor
+      if (!linesRef.current.contains(range.startContainer)) {
+        continue;
+      }
+      if (!range.endContainer) {
+        console.error('I don\'t think this should happen anymore');
+        continue;
+      }
+      // Selection start
+      let startPos = selectionToTextCoords(range.startContainer,range.startOffset);
+      if (selectionStart === null ||
+          startPos[0] !== selectionStart[0] ||
+          startPos[1] !== selectionStart[1]) {
+        setSelectionStart(startPos);
+      }
+      // Selection end
+      let endPos;
+      if (linesRef.current.contains(range.endContainer)) {
+        endPos = selectionToTextCoords(range.endContainer,range.endOffset);
+      } else if (range.intersectsNode(linesRef.current.children[0])) {
+        endPos = [0,0];
+      } else {
+        endPos = [lines.length-1,lines[lines.length-1].length];
+      }
+      if (endPos[0] !== caretTextCoords[0] ||
+          endPos[1] !== caretTextCoords[1]) {
+        setCaretTextCoords(endPos);
+      }
+      sel.removeAllRanges();
+      break;
     }
   }
-  useEffect(()=>{
-    // No dependencies. The callbacks need to be replaced on every render so it has access to the most up to date state.
-    function callback(e) {
-      updateCoordsFromSelection();
-    }
-    document.addEventListener('selectionchange', callback);
-    return () => {
-      document.removeEventListener('selectionchange', callback);
-    };
-  });
 
   // Autocomplete
   const [currentWord, setCurrentWord] = useState(null);
@@ -342,8 +314,6 @@ export default function TextEditor(props) {
   // Event handlers
   const [past,setPast] = useState([]);
   const [future,setFuture] = useState([]);
-  window.past = past;
-  window.future = future;
   function addUndoCommand(command) {
     setPast([
       command,
@@ -373,7 +343,6 @@ export default function TextEditor(props) {
     }
     setCaretTextCoords(caretPos);
     setSelectionStart(startPos);
-    updateSelectionFromCoords(startPos,caretPos,newLines);
     return output;
   }
   const processCommandOutput2 = {
@@ -506,6 +475,7 @@ export default function TextEditor(props) {
               dLine: -1,
               shift: e.shiftKey,
             });
+            window.getSelection().removeAllRanges();
             e.preventDefault();
             break;
           case 'ArrowDown':
@@ -516,6 +486,7 @@ export default function TextEditor(props) {
               dLine: 1,
               shift: e.shiftKey,
             });
+            window.getSelection().removeAllRanges();
             e.preventDefault();
             break;
           case 'ArrowLeft':
@@ -527,6 +498,7 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
               ctrl: e.ctrlKey,
             });
+            window.getSelection().removeAllRanges();
             e.preventDefault();
             e.stopPropagation();
             break;
@@ -539,6 +511,7 @@ export default function TextEditor(props) {
               shift: e.shiftKey,
               ctrl: e.ctrlKey,
             });
+            window.getSelection().removeAllRanges();
             e.preventDefault();
             e.stopPropagation();
             break;
@@ -584,6 +557,16 @@ export default function TextEditor(props) {
         }
       }
     },
+    onMouseUp: function(e) {
+      updateCoordsFromSelection();
+    },
+    onMouseEnter: function(e) {
+      if (e.buttons === 0) { // Left moues button down
+        updateCoordsFromSelection();
+      } else {
+        // Put focus back onto the text area
+      }
+    },
   }
   const textareaEventHandlers = {
     onChange: function(e) {
@@ -621,13 +604,9 @@ export default function TextEditor(props) {
     <div className='lines-container' ref={linesRef} onScroll={handleScroll} >
       <div className='caret' style={caretStyle} ref={caretRef}></div>
       <textarea ref={textareaRef} style={textareaStyle} value={''} {...textareaEventHandlers}/>
-      {
-        lines.map((line,lineNum) =>
-          <pre className='line' key={lineNum}>
-            {line}
-          </pre>
-        )
-      }
+      <Lines lines={lines}
+          selectionStart={selectionStart}
+          caretPos={caretTextCoords} />
     </div>
     <div className='autocomplete-container' style={autocompleteStyle}
       ref={autocompleteRef}>
@@ -644,6 +623,70 @@ export default function TextEditor(props) {
       }
     </div>
   </div>);
+}
+
+function Lines(props) {
+  const {
+    lines = [],
+    selectionStart,
+    caretPos
+  } = props;
+
+  let {
+    lineNum1, col1,
+    lineNum2, col2
+  } = orderCoordinates(selectionStart,caretPos);
+
+  function lineHasSelection(lineNum) {
+    if (lineNum1 === lineNum2 && col1 === col2) return false;
+    if (lineNum < lineNum1) return false;
+    if (lineNum > lineNum2) return false;
+    return true;
+  }
+
+  return (<>
+    {
+      lines.map((line,lineNum) => {
+        if (lineHasSelection(lineNum)) {
+          if (lineNum1 === lineNum2) {
+            return (
+              <pre className='line' key={lineNum}>
+                {line.slice(0,col1)}
+                <span className='selected'>{line.slice(col1,col2)}</span>
+                {line.slice(col2)}
+              </pre>
+            );
+          } else if (lineNum === lineNum1) {
+            return (
+              <pre className='line' key={lineNum}>
+                {line.slice(0,col1)}
+                <span className='selected'>{line.slice(col1)}</span>
+              </pre>
+            );
+          } else if (lineNum === lineNum2) {
+            return (
+              <pre className='line' key={lineNum}>
+                <span className='selected'>{line.slice(0,col2)}</span>
+                {line.slice(col2)}
+              </pre>
+            );
+          } else {
+            return (
+              <pre className='line' key={lineNum}>
+                <span className='selected'>{line}</span>
+              </pre>
+            );
+          }
+        } else {
+          return (
+            <pre className='line' key={lineNum}>
+              {line}
+            </pre>
+          );
+        }
+      })
+    }
+  </>)
 }
 
 export function textCoordToSelection(startPos,caretPos,lines,lineNodes) {

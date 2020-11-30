@@ -25,12 +25,16 @@
     font-size: 16px;
     margin: 0;
     padding: 0;
+    span.selected {
+      background-color: $primary-colour-dark;
+      color: $primary-colour-light;
+    }
     &::selection { /* WebKit/Blink Browsers */
-      background: $primary-colour-dark;
+      background-color: $primary-colour-dark;
       color: $primary-colour-light;
     }
     &::-moz-selection { /* Gecko Browsers */
-      background: $primary-colour-dark;
+      background-color: $primary-colour-dark;
       color: $primary-colour-light;
     }
   }
