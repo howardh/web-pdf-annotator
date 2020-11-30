@@ -42,9 +42,11 @@ export default function TextEditor(props) {
   const ref = useRef(null);
   const linesRef = useRef(null);
   const textareaRef = useRef(null);
+  const textarea2Ref = useRef(null);
   const caretRef = useRef(null);
   const autocompleteRef = useRef(null);
   window.r = ref.current;
+  window.ta = textareaRef.current;
   window.lr = linesRef.current;
   window.cr = caretRef.current;
 
@@ -425,6 +427,11 @@ export default function TextEditor(props) {
               });
               e.preventDefault();
               break;
+            case 'c':
+              textarea2Ref.current.select();
+              document.execCommand("copy");
+              textareaRef.current.focus();
+              break;
             case 'v':
               textareaRef.current.focus();
               break;
@@ -606,10 +613,13 @@ export default function TextEditor(props) {
   return (<div className='text-editor' ref={ref} tabIndex={-1} {...editorEventHandlers}>
     <div className='hidden'>
       <pre className='size-check' ref={sizeCheckRef}>a</pre>
+      <textarea ref={textarea2Ref}
+        value={computeSelectedLines(selectionStart,caretTextCoords,lines).join('\n')} />
     </div>
     <div className='lines-container' ref={linesRef} onScroll={handleScroll} >
       <div className='caret' style={caretStyle} ref={caretRef}></div>
-      <textarea ref={textareaRef} style={textareaStyle} value={''} {...textareaEventHandlers}/>
+      <textarea ref={textareaRef} style={textareaStyle}
+        value={''} {...textareaEventHandlers}/>
       <Lines lines={lines}
           selectionStart={selectionStart}
           caretPos={caretTextCoords} />
