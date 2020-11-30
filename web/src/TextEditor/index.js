@@ -306,6 +306,12 @@ export default function TextEditor(props) {
         e.preventDefault();
         e.stopPropagation();
         break;
+      case 'ArrowLeft':
+      case 'ArrowRight':
+      case 'Escape':
+        setAutocompleteSelection(null);
+        setAutocompleteSuggestions([])
+        break;
       default:
         break;
     }
