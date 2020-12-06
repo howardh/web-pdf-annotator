@@ -189,6 +189,30 @@ def autofill_document_details(entity):
             #if entity.author is None:
             entity.author = authors
 
+    match = re.search("^https://proceedings.neurips.cc/paper/2020/file/([a-zA-Z0-9]+)-Paper.pdf", url)
+    if match is not None:
+        neurips_abs_url = 'https://proceedings.neurips.cc/paper/2020/hash/%s-Abstract.html' % match.group(1)
+
+        headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '3600',
+            'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0'
+        }
+        response = requests.get(neurips_abs_url, headers)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        # Title
+        title = soup.select('.container-fluid .col h4')[0].text
+        if entity.title is None:
+            entity.title = title
+        # Authors
+        authors_header = soup.find('h4', string="Authors").parent
+        authors_container = authors_header.find_next('p')
+        if entity.author is None:
+            entity.author = authors_container.text
+
     return entity
 
 class DocumentAutoFillEndpoint(Resource):
