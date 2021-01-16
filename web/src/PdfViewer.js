@@ -496,6 +496,7 @@ function NoteCard(props) {
     isActive, setActive=()=>null,
     setCardInView, setAnnotationInView,
   } = props;
+  const localStorageId = 'note'+noteId;
   const dispatch = useDispatch();
   const history = useHistory();
   const updateNote = n => dispatch(noteActions['update'](n));
@@ -508,6 +509,25 @@ function NoteCard(props) {
   const handleChange = formChangeHandler(updatedNote, x=>setUpdatedNote(x));
 
   function startEditing() {
+    // Check if there's unsaved changes
+    let data = window.localStorage.getItem(localStorageId);
+    if (data) {
+      data = JSON.parse(data);
+      let message = 'Unsaved changes detected from '+data.date+'. Would you like to restore?'
+      if (window.confirm(message)) {
+        // Restore unsaved changes
+        setUpdatedNote({
+          ...note,
+          body: data.body
+        });
+        setIsEditing(true);
+        return;
+      } else {
+        // User decided not to restore unsaved changes
+        window.localStorage.removeItem(localStorageId);
+      }
+    }
+    // If there's no unsaved changes, or the user chose not to restore them, then load the note as is
     setUpdatedNote(note);
     setIsEditing(true);
   }
@@ -515,15 +535,18 @@ function NoteCard(props) {
     updateNote(updatedNote);
     setUpdatedNote(null);
     setIsEditing(false);
+    window.localStorage.removeItem(localStorageId);
   }
   function discardChanges() {
     setUpdatedNote(null);
     setIsEditing(false);
+    window.localStorage.removeItem(localStorageId);
   }
   function deleteNote() {
     let c = window.confirm('Are you sure you want to delete this note?');
     if (c) {
       dispatch(noteActions['deleteSingle'](note.id));
+      window.localStorage.removeItem(localStorageId);
     }
   }
   // Event Handlers
@@ -542,6 +565,12 @@ function NoteCard(props) {
       ...updatedNote,
       body: text
     });
+    // Save changes to local storage
+    let data = {
+      body: text,
+      date: new Date().toLocaleString()
+    };
+    window.localStorage.setItem(localStorageId, JSON.stringify(data));
   }
 
   const [refreshing,setRefreshing] = useState(false);
