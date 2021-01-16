@@ -604,6 +604,7 @@ export default function TextEditor(props) {
   const textareaStyle = {
     top: caretXYCoords[1]+'px',
     left: caretXYCoords[0]+'px',
+    width: 0
   };
   const autocompleteStyle = {
     top: autocompleteXYCoords[1]+'px',
