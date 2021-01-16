@@ -698,7 +698,8 @@ function PdfViewer(props) {
   const {
     page,
     scale,
-    onRenderingStatusChange = ()=>null
+    onRenderingStatusChange = ()=>null,
+    shouldBeRendered,
   } = props;
   const ref = useRef(null);
 
@@ -737,11 +738,24 @@ function PdfViewer(props) {
     setNeedsRender(false);
     setDoneRendering(false);
     onRenderingStatusChange(false);
+    window.page = page;
   }, [ref.current, needsRender, doneRendering]);
 
-  return (
-    <canvas ref={ref}></canvas>
-  );
+  useEffect(()=>{
+    if (!shouldBeRendered) {
+      page.cleanup();
+    } else {
+      setNeedsRender(true);
+    }
+  },[shouldBeRendered]);
+
+  if (!shouldBeRendered) {
+    return null;
+  } else {
+    return (
+      <canvas ref={ref}></canvas>
+    );
+  }
 }
 
 function PdfTextLayer(props) {
@@ -811,10 +825,11 @@ function PdfPageContainer(props) {
     page, pageNum,
     activeId,
     setCardInView,
+    shouldBeRendered,
     scale
   } = props;
   const relevantAnnotations = filterDict(
-    annotations, ann => ann && ann.page === pageNum
+    annotations, ann => ann && parseInt(ann.page) === pageNum
   );
 
   // Delay rendering annotations until the pdf is rendered
@@ -826,11 +841,54 @@ function PdfPageContainer(props) {
     }
   },[scale,renderingStatus]);
 
+  // Page is visible
+  const ref = useRef(null);
+  const [isInViewport,setIsInViewport] = useState(false);
+  function isElementInViewport(el, margin) {
+    if (!margin) {
+      margin = 0;
+    }
+    const rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
+    );
+  }
+  useEffect(()=>{
+    return; // Skip
+    function updateViewport() {
+      if (!ref.current) {
+        return;
+      }
+      const val = isElementInViewport(ref.current,0)
+      setIsInViewport(val);
+      if (val) {
+        console.log('Page '+pageNum+' in view');
+      } else {
+        console.log('Page '+pageNum+' not in view');
+      }
+    }
+    updateViewport();
+    document.addEventListener('scroll',updateViewport);
+    return ()=>{
+      document.removeEventListener('scroll',updateViewport);
+    };
+  },[]);
+
+  let viewport = page.getViewport({ scale: scale, });
+  let style = {
+    height: viewport.height,
+    width: viewport.width,
+  };
+
   return (
-    <div className='pdf-page-container'>
-      <div className='pdf-container'>
+    <div className='pdf-page-container' ref={ref}>
+      <div className='pdf-container' style={style}>
         <PdfViewer page={page} scale={scale}
-            onRenderingStatusChange={setRenderingStatus}/>
+            onRenderingStatusChange={setRenderingStatus}
+            shouldBeRendered={shouldBeRendered} />
         {
           annotationScale &&
           <AnnotationLayer
@@ -843,11 +901,13 @@ function PdfPageContainer(props) {
               annotations={relevantAnnotations}
               page={page}
               pageNum={pageNum}
-              scale={annotationScale} />
+              scale={annotationScale}
+              shouldBeRendered={shouldBeRendered} />
         }
         <PdfTextLayer page={page} scale={scale}
             onRenderingStatusChange={setRenderingStatus}
-            hidden={toolState.type !== 'text'}/>
+            hidden={toolState.type !== 'text'}
+            shouldBeRendered={shouldBeRendered} />
       </div>
     </div>
   );
@@ -855,7 +915,7 @@ function PdfPageContainer(props) {
 
 function usePdfPages(doc) {
   const [pdf,setPdf] = useState(null);
-  const [pages,setPages] = useState({});
+  const [pages,setPages] = useState([]);
   const [progress,setProgress] = useState(null);
   const [error,setError] = useState(null);
   const docId = doc && doc.id;
@@ -869,6 +929,7 @@ function usePdfPages(doc) {
     })
     loadingTask.promise.then(pdf => {
       setPdf(pdf);
+      setPages(new Array(pdf.numPages));
       setProgress({
         totalPages: pdf.numPages,
         loadedPages: 0
@@ -892,10 +953,9 @@ function usePdfPages(doc) {
     for (let i = 1; i <= pdf.numPages; i++) {
       pdf.getPage(i).then(p => {
         setPages(pages => {
-          return {
-            ...pages,
-            [i]: p
-          };
+          let output = pages.slice();
+          output[i-1] = p;
+          return output;
         });
         setProgress(progress => {
           return {
@@ -1078,6 +1138,7 @@ export default function PdfAnnotationPage(props) {
   const [activeId, setActiveId] = useState(null);
   const [cardInView, setCardInView] = useState(null);
   const [annotationInView, setAnnotationInView] = useState(null);
+  const [pagesToRender, setPagesToRender] = useState(new Set([0]));
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
   const [sidebarActiveTabIndex, setSidebarActiveTabIndex] = useState(0);
@@ -1154,6 +1215,44 @@ export default function PdfAnnotationPage(props) {
     // Fetch document and all associated entities (annotations, notes)
     dispatch(documentActions['fetchSingle'](docId,'recursive'));
   },[docId]);
+
+  // Visible pages
+  function computeVisiblePage(e) {
+    const el = e.closest('.pages-container');
+    const margin = 5;
+    const pageHeights = pages.map(
+      page => page.getViewport({scale: pdfScale}).height+margin
+    );
+    let currentPage = 0;
+    let pos = el.scrollTop;
+    for (let ph of pageHeights) {
+      if (pos <= ph) {
+        break;
+      }
+      currentPage += 1;
+      pos -= ph;
+    }
+    console.log(['current page',currentPage]);
+    return currentPage;
+  }
+  function handleScroll(e) {
+    if (pages.length <= 20) {
+      setPagesToRender(new Set(Array.from(pages.keys())));
+      return;
+    }
+    let currentPage = computeVisiblePage(e.target);
+    if (currentPage === 0) {
+      setPagesToRender(new Set([0,1,2]));
+    } else if (currentPage === pages.length-1) {
+      setPagesToRender(new Set([
+        pages.length-1,pages.length-2,pages.length-3
+      ]));
+    } else {
+      setPagesToRender(new Set([
+        currentPage-1, currentPage, currentPage+1
+      ]));
+    }
+  }
 
   // CRUD Functions
   function createAnnotation(ann) {
@@ -1361,7 +1460,8 @@ export default function PdfAnnotationPage(props) {
           const deltaX = coords[0]-startMouseCoord[0];
           const deltaY = coords[1]-startMouseCoord[1];
           const selId = toolState.selectedAnnotationId;
-          const vp = pages[annotations[selId].page].getViewport({scale:1});
+          const pageIndex = annotations[selId].page-1
+          const vp = pages[pageIndex].getViewport({scale:1});
           if (toolState.dragAction === 'move') {
             const selType = annotations[selId].type;
             const pos = annotations[selId].position;
@@ -1710,22 +1810,23 @@ export default function PdfAnnotationPage(props) {
           event.target.tagName !== 'TEXTAREA') {
         // Only scroll when not in a text field/area
         if (event.key === 'ArrowRight') {
-          scrollToNextPage();
+          scrollToNextPage(event);
           event.preventDefault();
         } else if (event.key === 'ArrowLeft') {
-          scrollToPrevPage();
+          scrollToPrevPage(event);
           event.preventDefault();
         }
       }
     }
   }
-  function scrollToNextPage() {
+  function scrollToNextPage(e) {
+    const el = e.target.closest('.pages-container');
     const margin = 5;
-    const pageHeights = Object.values(pages).map(
+    const pageHeights = pages.map(
       page => page.getViewport({scale: pdfScale}).height+margin
-    ); // FIXME: This assumes we iterate the object in the order of the pages.
+    );
     let scrollTo = 0;
-    let pos = window.scrollY+1;
+    let pos = el.scrollTop+1;
     for (let ph of pageHeights) {
       scrollTo += ph;
       if (pos < ph) {
@@ -1733,15 +1834,16 @@ export default function PdfAnnotationPage(props) {
       }
       pos -= ph;
     }
-    window.scrollTo(window.scrollX,scrollTo);
+    el.scrollTo(el.scrollLeft,scrollTo);
   }
-  function scrollToPrevPage() {
+  function scrollToPrevPage(e) {
+    const el = e.target.closest('.pages-container');
     const margin = 5;
-    const pageHeights = Object.values(pages).map(
+    const pageHeights = pages.map(
       page => page.getViewport({scale: pdfScale}).height+margin
-    ); // FIXME: This assumes we iterate the object in the order of the pages.
+    );
     let scrollTo = 0;
-    let pos = window.scrollY;
+    let pos = el.scrollTop;
     for (let ph of pageHeights) {
       if (pos <= ph) {
         break;
@@ -1749,14 +1851,14 @@ export default function PdfAnnotationPage(props) {
       scrollTo += ph;
       pos -= ph;
     }
-    window.scrollTo(window.scrollX,scrollTo);
+    el.scrollTo(el.scrollLeft,scrollTo);
   }
 
   // Can't render until everything is initialized
   if (toolState === null) {
     return null;
   }
-  if (pdf && Object.entries(pages).length !== pdf.numPages) {
+  if (pdf && pages.length !== pdf.numPages) {
     return null;
   }
   if (pagesLoadingError) {
@@ -1786,10 +1888,10 @@ export default function PdfAnnotationPage(props) {
       render: () => <DocNotes doc={doc} />
     }
   ];
-  return (<main className='annotation-page' onKeyDown={handleKeyDown}>
-    <div className='pages-container'>
-      {Object.entries(pages).map(function([pageNum,page],i){
-        return <PdfPageContainer key={pageNum}
+  return (<main className='annotation-page'>
+    <div className='pages-container' onScroll={handleScroll} onKeyDown={handleKeyDown}>
+      {pages.map(function(page,i){
+        return <PdfPageContainer key={i+1}
             activeId={activeId} setActiveId={activateAnnotation}
             setCardInView={setCardInView}
             toolState={toolState}
@@ -1797,7 +1899,8 @@ export default function PdfAnnotationPage(props) {
             createAnnotation={createAnnotation}
             updateAnnotation={updateAnnotation}
             annotations={annotations}
-            page={page} pageNum={pageNum}
+            page={page} pageNum={i+1}
+            shouldBeRendered={pagesToRender.has(i)}
             scale={pdfScale}
             />
       })}

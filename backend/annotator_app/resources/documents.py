@@ -63,22 +63,23 @@ class DocumentRecursiveEndpoint(Resource):
         }, 200
 
 def fetch_pdf(document, max_bytes):
-    response = requests.get(document.url)
-    content_bytes = response.headers.get('content-length', None)
-    if content_bytes is None:
-        return {
-            'error': 'No file found at %s' % document.url,
-            'code': 404
-        }
-    if len(content_bytes) > max_bytes:
-        return {
-            'error': 'File too large.',
-            'code': 413
-        }
-
     file_name = os.path.join(app.config['UPLOAD_DIRECTORY'],'%d.pdf'%document.id)
-    with open(file_name,'wb') as f:
-        f.write(response.content)
+    if not os.path.isfile(file_name):
+        response = requests.get(document.url)
+        content_bytes = response.headers.get('content-length', None)
+        if content_bytes is None:
+            return {
+                'error': 'No file found at %s' % document.url,
+                'code': 404
+            }
+        if len(content_bytes) > max_bytes:
+            return {
+                'error': 'File too large.',
+                'code': 413
+            }
+
+        with open(file_name,'wb') as f:
+            f.write(response.content)
     return { 'file_name': file_name }
 
 def get_file_hash(file_name):
