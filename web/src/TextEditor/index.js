@@ -614,7 +614,7 @@ export default function TextEditor(props) {
     <div className='hidden'>
       <pre className='size-check' ref={sizeCheckRef}>a</pre>
       <textarea ref={textarea2Ref}
-        value={computeSelectedLines(selectionStart,caretTextCoords,lines).join('\n')} />
+        value={computeSelectedLines(selectionStart,caretTextCoords,lines).join('\n')} readOnly={true}/>
     </div>
     <div className='lines-container' ref={linesRef} onScroll={handleScroll} >
       <div className='caret' style={caretStyle} ref={caretRef}></div>
