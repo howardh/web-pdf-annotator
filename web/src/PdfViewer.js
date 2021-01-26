@@ -550,11 +550,6 @@ function NoteCard(props) {
     }
   }
   // Event Handlers
-  function onKeyDown(e) {
-    if (e.ctrlKey && e.key === 'Enter') {
-      saveChanges();
-    }
-  }
   function scrollIntoView() {
     history.push('?annotation='+annotationId+'&note='+note.id);
     setCardInView(note.id);
@@ -599,13 +594,13 @@ function NoteCard(props) {
     card: true,
     active: isActive
   });
-  if (isEditing) {
+  if (isEditing && updatedNote) {
     return (<div className={classNames}
         onClick={()=>setActive(true)} id={'card'+note.id}>
       <TextEditor
           onChangeText={handleChangeBody}
           text={updatedNote.body}
-          onKeyDown={onKeyDown}/>
+          onSave={saveChanges}/>
       <div className='controls'>
         <GroupedInputs>
           <Button onClick={saveChanges}>
