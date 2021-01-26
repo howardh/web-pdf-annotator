@@ -28,9 +28,12 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script>
       MathJax = {
-          tex: {
-                inlineMath: [['\\(', '\\)']]
-              }
+        tex: {
+          inlineMath: [['\\(', '\\)']]
+        },
+        options: { // See http://docs.mathjax.org/en/latest/options/document.html
+          ignoreHtmlClass: ['text-editor']
+        }
       };
     </script>
     <script id="MathJax-script" async
