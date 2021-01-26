@@ -84,9 +84,10 @@ class NoteSuggestionsEndpoint(Resource):
 
         vocabulary = [
             'hello','world', 'horse', 'battery', 'staple',
-            '\\begin{equation}\\end{equation}',
-            '\\begin{bmatrix}\\end{bmatrix}',
-            '\\begin{align*}\\end{align*}',
+            '\\begin{equation}\n\t${1:eqn}\n\\end{equation}',
+            '\\begin{bmatrix}\n\t${1:eqn}\n\\end{bmatrix}',
+            '\\begin{align*}\n\t${1:eqn}\n\\end{align*}',
+            '[[example]]'
         ]
 
         return {

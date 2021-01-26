@@ -36,23 +36,38 @@ export default function TextEditor(props) {
       return;
     }
 
-    monaco.languages.registerCompletionItemProvider('markdown',{
+    monaco.languages.register({ id: 'my-markdown' });
+
+    monaco.languages.registerCompletionItemProvider('my-markdown',{
       provideCompletionItems: (model, position, context, token)=>{
-        let prefix = model.getWordAtPosition(position).word;
-        return fetchAutocompleteSuggestions(prefix,'').then(
+        let line = model.getLinesContent()[position.lineNumber-1];
+        let prefix = line.slice(0,position.column-1);
+        let suffix = line.slice(position.column-1);
+        let nearestSpaceIndex = prefix.lastIndexOf(' ');
+        let wordFromSpace = prefix.slice(nearestSpaceIndex+1);
+        return fetchAutocompleteSuggestions(wordFromSpace,suffix).then(
           response=>{
             return {
               suggestions: response.map(val => {
                 return {
                   label: val,
-                  kind: monaco.languages.CompletionItemKind.Text,
+                  kind: monaco.languages.CompletionItemKind.Snippet,
                   insertText: val,
+                  range: {
+                    startLineNumber: position.lineNumber,
+                    startColumn: nearestSpaceIndex+2, // XXX: Why do I need +2?
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column-1,
+                  },
+                  insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
                 };
-              })
+              }),
+              incomplete: true
             }
           }
         )
-      }
+      },
+      triggerCharacters: ['\\','[']
     });
   },[monaco]);
 
@@ -70,7 +85,7 @@ export default function TextEditor(props) {
     <Editor
       height="100%"
       width="100%"
-      defaultLanguage="markdown"
+      defaultLanguage="my-markdown"
       defaultValue={text}
       onChange={onChangeText}
       onMount={(editor,m) => { editorRef.current=editor; }}
