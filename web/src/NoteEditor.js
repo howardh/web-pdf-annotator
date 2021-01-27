@@ -5,6 +5,7 @@ import { useParams, useLocation, useHistory } from "react-router-dom";
 import * as commonmark from 'commonmark';
 import * as MarkdownIt from 'markdown-it';
 import * as MarkdownItMathjax from 'markdown-it-mathjax';
+import MarkdownItLineNumber from './MarkdownItPlugins/linenumber.js';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { noteActions } from './actions';
@@ -12,7 +13,7 @@ import TextEditor from './TextEditor';
 
 import './NoteEditor.scss';
 
-const md = MarkdownIt().use(MarkdownItMathjax());
+const md = MarkdownIt().use(MarkdownItMathjax()).use(MarkdownItLineNumber());
 
 export default function NoteEditorPage(props) {
   const dispatch = useDispatch();
