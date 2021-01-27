@@ -6,6 +6,7 @@ import * as commonmark from 'commonmark';
 import * as MarkdownIt from 'markdown-it';
 import * as MarkdownItMathjax from 'markdown-it-mathjax';
 import MarkdownItLineNumber from './MarkdownItPlugins/linenumber.js';
+import MarkdownItLink from './MarkdownItPlugins/link.js';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
 import { noteActions } from './actions';
@@ -13,7 +14,10 @@ import TextEditor from './TextEditor';
 
 import './NoteEditor.scss';
 
-const md = MarkdownIt().use(MarkdownItMathjax()).use(MarkdownItLineNumber());
+const md = MarkdownIt()
+  .use(MarkdownItMathjax())
+  .use(MarkdownItLineNumber())
+  .use(MarkdownItLink());
 
 export default function NoteEditorPage(props) {
   const dispatch = useDispatch();
