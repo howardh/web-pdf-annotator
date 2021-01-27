@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: 50% 50%;
   height: 100vh;
+  overflow-y: hidden;
   .editor-container {
     .lines-container {
       resize: horizontal;
