@@ -43,7 +43,7 @@ class ListEndpoint(CustomResource):
                     filter_params[p] = val
         # Query database
         entities = db.session.query(self.Meta.model) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(deleted_at=None) \
                 .filter_by(**filter_params) \
                 .all()
@@ -61,7 +61,7 @@ class ListEndpoint(CustomResource):
             return {
                     'error': str(e)
             }, 400
-        entity.user_id = current_user.get_id()
+        entity.user_id = current_user.id
         db.session.add(entity)
         db.session.flush()
 
@@ -79,7 +79,7 @@ class ListEndpoint(CustomResource):
 class EntityEndpoint(CustomResource):
     def get(self, entity_id):
         entity = db.session.query(self.Meta.model) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .one()
         if entity is None:
@@ -93,7 +93,7 @@ class EntityEndpoint(CustomResource):
         data = request.get_json()
         entity = db.session.query(self.Meta.model) \
                 .filter_by(id=entity_id) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .first()
 
         if entity is None:
@@ -116,7 +116,7 @@ class EntityEndpoint(CustomResource):
     def delete(self, entity_id):
         entity = db.session.query(self.Meta.model) \
                 .filter_by(id=entity_id) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .one()
         if entity is None:
             return {

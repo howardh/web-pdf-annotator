@@ -40,7 +40,7 @@ class DocumentEndpoint(EntityEndpoint):
 class DocumentRecursiveEndpoint(Resource):
     def get(self, entity_id):
         entity = db.session.query(Document) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .one()
         if entity is None:
@@ -96,7 +96,7 @@ def get_file_hash(file_name):
 class DocumentPdfEndpoint(Resource):
     def get(self, entity_id):
         entity = db.session.query(Document) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .first()
         if entity is None:
@@ -133,7 +133,7 @@ class DocumentAccessCodeEndpoint(Resource):
     def post(self, entity_id):
         data = request.get_json() 
         entity = db.session.query(Document) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .first()
 
@@ -143,13 +143,13 @@ class DocumentAccessCodeEndpoint(Resource):
             }, 404
 
         code = db.session.query(DocumentAccessCode)\
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(document_id=entity_id) \
                 .first()
 
         if code is None:
             code = DocumentAccessCode(
-                    user_id=current_user.get_id(),
+                    user_id=current_user.id,
                     document_id=entity_id,
                     code=str(uuid.uiud4()),
                     allow_read=data.get('read',False),
@@ -220,7 +220,7 @@ class DocumentAutoFillEndpoint(Resource):
     def post(self, entity_id):
         data = request.get_json()
         entity = db.session.query(Document) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .first()
 

@@ -25,7 +25,7 @@ class NoteList(ListEndpoint):
         if 'annotation_id' in data:
             ann = db.session.query(Annotation) \
                     .filter_by(id=data['annotation_id']) \
-                    .filter_by(user_id=current_user.get_id()) \
+                    .filter_by(user_id=current_user.id) \
                     .first()
             if ann is not None:
                 print('new note id',entity.id)
@@ -34,7 +34,7 @@ class NoteList(ListEndpoint):
         elif 'document_id' in data:
             doc = db.session.query(Document) \
                     .filter_by(id=data['document_id']) \
-                    .filter_by(user_id=current_user.get_id()) \
+                    .filter_by(user_id=current_user.id) \
                     .first()
             if doc is not None:
                 doc.note_id = entity.id
@@ -50,7 +50,7 @@ class NoteEndpoint(EntityEndpoint):
         if 'annotation_id' in data:
             ann = db.session.query(Annotation) \
                     .filter_by(id=data['annotation_id']) \
-                    .filter_by(user_id=current_user.get_id()) \
+                    .filter_by(user_id=current_user.id) \
                     .first()
             if ann is not None:
                 print('new note id',entity.id)
@@ -59,7 +59,7 @@ class NoteEndpoint(EntityEndpoint):
         elif 'document_id' in data:
             doc = db.session.query(Document) \
                     .filter_by(id=data['document_id']) \
-                    .filter_by(user_id=current_user.get_id()) \
+                    .filter_by(user_id=current_user.id) \
                     .first()
             if doc is not None:
                 doc.note_id = entity.id
@@ -70,7 +70,7 @@ class NoteEndpoint(EntityEndpoint):
             # Check for associated annotation
             entity2 = db.session.query(model) \
                     .filter_by(note_id=entity.id) \
-                    .filter_by(user_id=current_user.get_id()) \
+                    .filter_by(user_id=current_user.id) \
                     .first()
             if entity2 is not None:
                 entity2.note_id = None

@@ -17,7 +17,7 @@ api = Api(blueprint)
 
 def to_object(data):
     entity = Annotation(**data)
-    entity.user_id = current_user.get_id()
+    entity.user_id = current_user.id
     entity.position = json.dumps(data['position'])
     return entity
 
@@ -56,7 +56,7 @@ class AnnotationImageEndpoint(Resource):
     def get(self, entity_id):
         # Get annotation
         annotation = db.session.query(Annotation) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=entity_id) \
                 .first()
         if annotation is None:
@@ -70,7 +70,7 @@ class AnnotationImageEndpoint(Resource):
             }), 404
         # Get document
         document = db.session.query(Document) \
-                .filter_by(user_id=current_user.get_id()) \
+                .filter_by(user_id=current_user.id) \
                 .filter_by(id=annotation.doc_id) \
                 .first()
         # Get PDF
