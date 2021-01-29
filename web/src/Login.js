@@ -32,6 +32,13 @@ export default function LoginPage(props) {
   return (<main className='login-page'>
     <h1>Login</h1>
     <div className='login-form-container'>
+      Via a third party app
+      <div className='oauth-links-container'>
+        <a href='/login/github'>
+          <img src='http://localhost:3000/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
+        </a>
+      </div>
+      Or by email
       <div className='error-message'>{error}</div>
       <label>
         Email:

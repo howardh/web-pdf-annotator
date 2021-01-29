@@ -77,7 +77,9 @@ class User(db.Model, UserMixin, ModelMixin):
     verified_email = Column(Boolean)
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
+
     fs_uniquifier = Column(String(255), unique=True, nullable=False)
+    github_id = Column(Integer, unique=True, nullable=True)
 
     roles = db.relationship('Role', secondary=roles_users,
                             backref=db.backref('users', lazy='dynamic'))

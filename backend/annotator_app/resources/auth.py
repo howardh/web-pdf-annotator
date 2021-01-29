@@ -13,7 +13,7 @@ import bcrypt
 import json
 import uuid
 
-from annotator_app.database import User, EmailConfirmationCode
+from annotator_app.database import User, EmailConfirmationCode, user_datastore
 from annotator_app.extensions import db, mail
 
 auth_bp = Blueprint('auth', __name__)
@@ -164,3 +164,35 @@ def confirm(token):
     db.session.commit()
 
     return 'Email confirmed', 200
+
+##################################################
+# OAuth
+##################################################
+
+from flask import url_for, render_template, redirect
+from annotator_app.extensions import oauth
+
+@auth_bp.route('/login/github')
+def login_github():
+    redirect_uri = url_for('auth.authorize_github', _external=True)
+    return oauth.github.authorize_redirect(redirect_uri)
+
+@auth_bp.route('/authorize/github')
+def authorize_github():
+    token = oauth.github.authorize_access_token()
+    resp = oauth.github.get('user', token=token)
+    profile = resp.json()
+    github_id = profile['id']
+
+    # Check if account exists
+    user = db.session.query(User).filter_by(github_id=github_id).first()
+    if user is None: # No user associated with this Github account
+        # Create user
+        user = user_datastore.create_user(email=None,password=None)
+        user.github_id = github_id
+        db.session.flush()
+        db.session.commit()
+    # Log in
+    flask_security.login_user(user)
+
+    return redirect('/')
