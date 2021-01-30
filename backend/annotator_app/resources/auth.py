@@ -42,7 +42,7 @@ def login():
       200:
         schema:
           type: number
-      403:
+      401:
         schema:
           type: object
           properties:
@@ -57,13 +57,13 @@ def login():
         session.permanent = permanent
     user = db.session.query(User).filter_by(email=email).first()
     if user is None:
-        return json.dumps({'error': "Incorrect email/password"}), 403
+        return json.dumps({'error': "Incorrect email/password"}), 401
     if bcrypt.checkpw(data['password'].encode('utf-8'), user.password):
         flask_security.utils.login_user(user, remember=permanent)
         print("successful login")
         return json.dumps({'id': user.id}), 200
     print("failed login")
-    return json.dumps({'error': 'Bad login'}), 403
+    return json.dumps({'error': 'Bad login'}), 401
 
 @auth_bp.route('/current_session', methods=['GET'])
 def get_current_session():
@@ -81,7 +81,8 @@ def get_current_session():
         if current_user.id is not None:
             return json.dumps({
                 'id': current_user.id,
-                'confirmed': current_user.confirmed_at is not None
+                'confirmed': current_user.confirmed_at is not None,
+                'github_id': current_user.github_id
             }), 200
     except:
         pass
@@ -177,12 +178,22 @@ def login_github():
     redirect_uri = url_for('auth.authorize_github', _external=True)
     return oauth.github.authorize_redirect(redirect_uri)
 
+@auth_bp.route('/login/github/link')
+def login_github_link():
+    redirect_uri = url_for('auth.link_github', _external=True)
+    return oauth.github.authorize_redirect(redirect_uri)
+
 @auth_bp.route('/authorize/github')
 def authorize_github():
     token = oauth.github.authorize_access_token()
     resp = oauth.github.get('user', token=token)
     profile = resp.json()
     github_id = profile['id']
+
+    # Check if user is already logged in
+    if current_user.id is not None:
+        # If yes, then log out current user first
+        flask_security.utils.logout_user()
 
     # Check if account exists
     user = db.session.query(User).filter_by(github_id=github_id).first()
@@ -194,5 +205,33 @@ def authorize_github():
         db.session.commit()
     # Log in
     flask_security.login_user(user)
+
+    return redirect('/')
+
+@auth_bp.route('/authorize/github/link')
+def link_github():
+    token = oauth.github.authorize_access_token()
+    resp = oauth.github.get('user', token=token)
+    profile = resp.json()
+    github_id = profile['id']
+
+    # Make sure a user is logged in to link to this Github ID
+    if current_user.id is None:
+        return {
+                'error': 'Not currently logged in'
+        }, 401
+
+    # Check that there is not account made with this Github ID
+    user = db.session.query(User).filter_by(github_id=github_id).first()
+    if user is not None:
+        return {
+                'error': 'An account already exists with this Github ID. Delete the existing account before linking.'
+        }, 403
+
+    # Set Github ID
+    user = db.session.query(User).filter_by(id=current_user.id).first()
+    user.github_id = github_id
+    db.session.flush()
+    db.session.commit()
 
     return redirect('/')

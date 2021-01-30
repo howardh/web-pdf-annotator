@@ -13,6 +13,7 @@ import {updateSession} from './actions/index.js';
 
 import PdfAnnotationPage from './PdfViewer.js';
 import LoginPage from './Login.js';
+import AccountPage from './Account.js';
 import { LogoutPage } from './Login.js';
 import SignupPage from './Signup.js';
 import LandingPage from './Landing.js';
@@ -58,6 +59,10 @@ function App() {
           <Navigation userId={userId} confirmed={confirmed} />
           <LoginPage />
         </Route>
+        <Route path="/account">
+          <Navigation userId={userId} confirmed={confirmed} />
+          <AccountPage />
+        </Route>
         <Route path="/logout">
           <LogoutPage />
         </Route>
@@ -99,7 +104,8 @@ function Navigation(props) {
       <Link to='/notes'>Notes</Link>
       <Link to='/logout'>Logout</Link>
       <span>
-        Currently logged in as {userId}
+        Currently logged in as 
+        <Link to='/account'>{userId}</Link>
       </span>
     </nav>);
   } else {

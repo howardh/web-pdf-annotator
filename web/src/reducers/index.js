@@ -198,6 +198,7 @@ function sessionReducer(state = {}, action) {
         return {
           uid: action.payload.id,
           confirmed: action.payload.confirmed,
+          githubId: action.payload.github_id,
         };
       } else {
         return {
@@ -216,6 +217,7 @@ function sessionReducer(state = {}, action) {
         ...state,
         uid: action.payload.id,
         confirmed: action.payload.confirmed,
+        githubId: action.payload.github_id,
         error: null
       };
     }
@@ -224,6 +226,7 @@ function sessionReducer(state = {}, action) {
         ...state,
         uid: null,
         confirmed: null,
+        githubId: null,
         error: action.payload.error
       };
     }

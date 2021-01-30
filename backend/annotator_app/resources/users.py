@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 from werkzeug.utils import secure_filename
 from flasgger import SwaggerView
 import flask_security
+from flask_security import current_user
 
 import re
 import datetime
@@ -85,14 +86,16 @@ class UserList(Resource):
 class UserPassword(Resource):
     def post(self):
         data = request.get_json()
+        current_password = data.get('password')
+        new_password = data.get('new_password')
 
         user = current_user
-        if not flask_security.verify_password(data['password'].encode('utf-8'),user.password):
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user.password):
             return {
                     'error': 'Incorrect password'
             }, 403
 
-        user.password = flask_security.hash_password(data['new_password'].encode('utf-8'))
+        user.password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt(12))
 
         db.session.flush()
         db.session.commit()
@@ -100,5 +103,41 @@ class UserPassword(Resource):
             'message': "Password updated successfully."
         }, 200
 
+class UserUnlinkAccount(Resource):
+    def post(self,name):
+        data = request.get_json()
+        current_password = data.get('password')
+
+        # Make sure the user has another way to log in
+        user = current_user
+        if user.email is None:
+            return {
+                'error': "Must have a valid email before unlinking."
+            }, 403
+        if user.password is None:
+            return {
+                'error': "Must have a password set before unlinking."
+            }, 403
+
+        # Check password
+        if current_password is None:
+            return { 'error': 'No password supplied.' }, 403
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user.password):
+            return { 'error': 'Incorrect password' }, 403
+
+        # Check OAuth service name
+        if name != 'github':
+            return { 'error': 'Invalid service name: %s' % name }, 403
+
+        # Unlink
+        user.github_id = None
+        db.session.flush()
+        db.session.commit()
+
+        return {
+            'message': "Successfully unlinked from Github account"
+        }, 200
+
 api.add_resource(UserList, '/users')
 api.add_resource(UserPassword, '/users/change_password')
+api.add_resource(UserUnlinkAccount, '/users/unlink/<string:name>')

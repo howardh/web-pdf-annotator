@@ -1,0 +1,23 @@
+.account-page {
+  .link-account-form {
+    ul {
+      padding: 0;
+    }
+    li {
+      vertical-align: middle;
+      list-style-type: none;
+      span {
+        margin-right: 10px;
+      }
+    }
+  }
+  .password-change-form {
+  }
+  label {
+    display: block;
+    margin: 10px;
+    .input {
+      display: block;
+    }
+  }
+}

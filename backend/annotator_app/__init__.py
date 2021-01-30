@@ -8,7 +8,7 @@ from annotator_app.database import user_datastore
 
 app = Flask(__name__,
         instance_relative_config=True,
-        #static_url_path='/ignorethis' # Need to set this so we can handle /<path>.
+        static_url_path='/ignorethis' # Need to set this so we can handle /<path>.
 )
 app.config.from_pyfile('config.py')
 cors.init_app(app, supports_credentials=True)
@@ -43,18 +43,28 @@ app.register_blueprint(ann_bp, url_prefix='/api/data')
 app.register_blueprint(note_bp, url_prefix='/api/data')
 app.register_blueprint(tag_bp, url_prefix='/api/data')
 
-## Below for dev purposes only
-#import os
-#from flask import Response, send_from_directory
-#
-#def root_dir():
-#    return os.path.abspath('../web/build')
-#
-#@app.route('/<path:path>')
-#@app.route('/<string:path>')
-#def send_file(path):
-#    return send_from_directory(root_dir(), path)
-#
-#@app.route('/', defaults={'path': ''})
-#def send_file2(path):
-#    return send_from_directory(root_dir(), 'index.html')
+# Below for dev purposes only
+import os
+from flask import Response, send_from_directory
+from functools import wraps
+
+def debug_only(f):
+    @wraps(f)
+    def wrapped(**kwargs):
+        if not app.debug:
+            abort(404)
+        return f(**kwargs)
+    return wrapped
+
+def root_dir():
+    return os.path.abspath('../web/build')
+
+@debug_only
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+@app.route('/<string:path>')
+def send_file(path):
+    print(os.path.join(root_dir(), path))
+    if not os.path.isfile(os.path.join(root_dir(), path)):
+        path = 'index.html'
+    return send_from_directory(root_dir(), path)
