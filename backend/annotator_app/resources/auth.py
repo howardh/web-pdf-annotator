@@ -78,7 +78,7 @@ def get_current_session():
     """
     try:
         print(current_user)
-        if current_user.id is not None:
+        if not current_user.is_anonymous:
             return json.dumps({
                 'id': current_user.id,
                 'confirmed': current_user.confirmed_at is not None,
@@ -191,7 +191,7 @@ def authorize_github():
     github_id = profile['id']
 
     # Check if user is already logged in
-    if current_user.id is not None:
+    if not current_user.is_anonymous:
         # If yes, then log out current user first
         flask_security.utils.logout_user()
 
@@ -216,7 +216,7 @@ def link_github():
     github_id = profile['id']
 
     # Make sure a user is logged in to link to this Github ID
-    if current_user.id is None:
+    if current_user.is_anonymous:
         return {
                 'error': 'Not currently logged in'
         }, 401
