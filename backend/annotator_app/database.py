@@ -113,7 +113,7 @@ class Document(db.Model, ModelMixin):
     tags = db.relationship('Tag', secondary=lambda: documents_tags)
 
     tag_names = association_proxy('tags', 'name',
-            creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.get_id(),name=name).first()
+            creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.id,name=name).first()
     )
 
     def to_dict(self):
@@ -234,7 +234,7 @@ class Note(db.Model, ModelMixin):
     tags = db.relationship('Tag', secondary=lambda: notes_tags)
 
     tag_names = association_proxy('tags', 'name',
-            creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.get_id(),name=name).first()
+            creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.id,name=name).first()
     )
 
     def to_dict(self):

@@ -26,7 +26,7 @@ oauth.register(
     authorize_url='https://github.com/login/oauth/authorize',
     authorize_params=None,
     api_base_url='https://api.github.com/',
-    client_kwargs={'scope': 'user:email'},
+    client_kwargs={},
 )
 
 from annotator_app.resources.auth import auth_bp
