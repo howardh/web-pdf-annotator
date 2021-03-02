@@ -65,21 +65,34 @@ class DocumentRecursiveEndpoint(Resource):
 def fetch_pdf(document, max_bytes):
     file_name = os.path.join(app.config['UPLOAD_DIRECTORY'],'%d.pdf'%document.id)
     if not os.path.isfile(file_name):
-        response = requests.get(document.url)
-        content_bytes = response.headers.get('content-length', None)
-        if content_bytes is None:
-            return {
-                'error': 'No file found at %s' % document.url,
-                'code': 404
+        # Elsevier (TODO: doi URLs and authentication)
+        elsevier_prefix = 'https://www.sciencedirect.com/science/article/pii/'
+        if document.url.startswith(elsevier_prefix):
+            pii = document.url[len(elsevier_prefix):]
+            url='https://api.elsevier.com/content/article/pii/%s' % pii
+            headers = {
+                "X-ELS-APIKey"  : app.config['ELSEVIER_API_KEY'],
+                "Accept"        : 'application/pdf'
             }
-        if len(content_bytes) > max_bytes:
-            return {
-                'error': 'File too large.',
-                'code': 413
-            }
+            response = requests.get(url,headers=headers)
+            with open(file_name,'wb') as f:
+                f.write(response.content)
+        else: # Download PDF
+            response = requests.get(document.url)
+            content_bytes = response.headers.get('content-length', None)
+            if content_bytes is None:
+                return {
+                    'error': 'No file found at %s' % document.url,
+                    'code': 404
+                }
+            if len(content_bytes) > max_bytes:
+                return {
+                    'error': 'File too large.',
+                    'code': 413
+                }
 
-        with open(file_name,'wb') as f:
-            f.write(response.content)
+            with open(file_name,'wb') as f:
+                f.write(response.content)
     return { 'file_name': file_name }
 
 def get_file_hash(file_name):
