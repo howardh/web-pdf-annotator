@@ -63,7 +63,7 @@ class UserList(Resource):
             }, 400
 
         # Check if already in use
-        user = user_datastore.get_user(data['email'])
+        user = user_datastore.find_user(email=data['email'])
         if user is not None:
             return {
                 'error': "User already exists"
