@@ -37,6 +37,12 @@ body {
       background-color: $primary-colour-dark;
       color: $primary-colour-light;
     }
+    .page-selector {
+      display: inline-block;
+      input {
+        width: 5em;
+      }
+    }
   }
 
   .pdf-container {
