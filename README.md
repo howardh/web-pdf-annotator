@@ -23,6 +23,18 @@ Deployment: Create config file in `backend/instance/config.py`
 |`GITHUB_CLIENT_ID`              |OAuth2 Client ID|
 |`GITHUB_CLIENT_SECRET`          |OAuth2 Client Secret|
 
+# Setup Dev Environment
+
+- Back end
+  - Create a virtualenv and install dependencies from requirements.txt
+  - Create config file as outlined above
+- Front end
+  - `npm install`
+- Database
+  - Install postgres, create user and database
+  - Set the `SQLALCHEMY_DATABASE_URI` config appropriately
+  - Set up the database by running `flask db upgrade`
+
 # DB Migration
 
 ## Making Changes
