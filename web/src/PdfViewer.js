@@ -17,6 +17,26 @@ import {
 
 import './PdfViewer.scss';
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) { // Update state so the next render will show the fallback UI.
+		return { hasError: true };
+  }
+  componentDidCatch(error, errorInfo) { // You can also log the error to an error reporting service
+    console.error(error);
+    console.error(errorInfo);
+  }
+  render() {
+    if (this.state.hasError) { // You can render any custom fallback UI
+      return this.props.render();
+    }
+    return this.props.children; 
+  }
+}
+
 //////////////////////////////////////////////////
 // Annotations
 //////////////////////////////////////////////////
@@ -727,23 +747,14 @@ function PdfViewer(props) {
   } = props;
   const ref = useRef(null);
 
-  // Needs to be rerendered if the page or scale changes
-  const [needsRender,setNeedsRender] = useState(false);
-  useEffect(() => {
-    setNeedsRender(true);
-  }, [page, scale]);
-
   // Render PDF
-  const [doneRendering,setDoneRendering] = useState(true);
+  const taskRef = useRef(null);
   useEffect(() => {
     if (!ref.current || !page) {
       return;
     }
-    if (!doneRendering) {
-      return;
-    }
-    if (!needsRender) {
-      return;
+    if (taskRef.current) {
+      return; // Don't start multiple rendering tasks
     }
     let viewport = page.getViewport({ scale: scale, });
     let canvas = ref.current;
@@ -755,23 +766,26 @@ function PdfViewer(props) {
       canvasContext: context,
       viewport: viewport
     };
-    page.render(renderContext).promise.then(x => {
-      setDoneRendering(true);
+    window.rc = renderContext;
+    let task = page.render(renderContext);
+    taskRef.current = task;
+    task.promise.then(x => {
+      taskRef.current = null;
       onRenderingStatusChange(true);
-    }).catch(error => console.error(error));
-    setNeedsRender(false);
-    setDoneRendering(false);
+    }).catch(error => {
+      taskRef.current = null;
+      console.error(error);
+    });
     onRenderingStatusChange(false);
-    window.page = page;
-  }, [ref.current, needsRender, doneRendering]);
-
-  useEffect(()=>{
-    if (!shouldBeRendered) {
-      page.cleanup();
-    } else {
-      setNeedsRender(true);
-    }
-  },[shouldBeRendered]);
+    // If the user moves away from the page in the middle of rendering, cancel the rendering
+    return () => {
+      if (taskRef.current) {
+        console.log('cancelling page '+page._pageIndex);
+        taskRef.current.cancel();
+        taskRef.current = null;
+      }
+    };
+  }, [page, scale, shouldBeRendered]);
 
   if (!shouldBeRendered) {
     return null;
@@ -788,54 +802,68 @@ function PdfTextLayer(props) {
     page,
     scale,
     onRenderingStatusChange = ()=>null,
-    hidden=false
+    hidden=false,
+    shouldBeRendered,
   } = props;
   const ref = useRef(null);
 
-  // Needs to be rerendered if the page or scale changes
-  const [needsRender,setNeedsRender] = useState(false);
-  useEffect(() => {
-    setNeedsRender(true);
-  }, [page, scale]);
-
   // Render PDF
-  const [doneRendering,setDoneRendering] = useState(true);
+  const getContentTaskRef = useRef(null);
+  const renderTaskRef = useRef(null);
   useEffect(() => {
     if (!ref.current || !page) {
       return;
     }
-    if (!doneRendering) {
-      return;
+    if (getContentTaskRef.current || renderTaskRef.current) {
+      return; // Don't start multiple rendering tasks
     }
-    if (!needsRender) {
+    if (!shouldBeRendered) {
       return;
     }
     let viewport = page.getViewport({ scale: scale, });
 
-    page.getTextContent().then(content => {
+    let task = page.getTextContent();
+    getContentTaskRef.current = task;
+    task.then(content => {
       var renderContext = {
         textContent: content,
         viewport: viewport,
         container: ref.current,
         textDivs: []
       };
-      pdfjsLib.renderTextLayer(renderContext).promise.then(x => {
-        setDoneRendering(true);
-        onRenderingStatusChange(true);
-      }).catch(console.error);
-      setNeedsRender(false);
-      setDoneRendering(false);
+      try {
+        let task = pdfjsLib.renderTextLayer(renderContext);
+        renderTaskRef.current = task;
+        task.promise.then(x => {
+          renderTaskRef.current = null;
+          onRenderingStatusChange(true);
+        }).catch(error => {
+          renderTaskRef.current = null;
+          console.error(error);
+        });
+      } catch(error) {
+        // A TypeError will occur if the above code is still running when this component is unmounted.
+        // The container div will no longer exist, if that happens, but is still used above in a callback.
+        console.error(error);
+      }
       onRenderingStatusChange(false);
     });
-  }, [page, ref.current, needsRender, doneRendering]);
+    // If the user moves away from the page in the middle of rendering, cancel the rendering
+    return () => {
+      if (renderTaskRef.current) {
+        console.log('cancelling render text page '+page._pageIndex);
+        renderTaskRef.current.cancel();
+        renderTaskRef.current = null;
+      }
+    };
+  }, [page, scale, shouldBeRendered]);
 
   let classNames = generateClassNames({
     'text-layer': true,
     hidden
   })
   return (
-    <div className={classNames} ref={ref}>
-    </div>
+    <div className={classNames} ref={ref}></div>
   );
 }
 
@@ -906,32 +934,33 @@ function PdfPageContainer(props) {
     height: viewport.height,
     width: viewport.width,
   };
-
   return (
     <div className='pdf-page-container' ref={ref}>
       <div className='pdf-container' style={style}>
-        <PdfViewer page={page} scale={scale}
-            onRenderingStatusChange={setRenderingStatus}
-            shouldBeRendered={shouldBeRendered} />
-        {
-          annotationScale &&
-          <AnnotationLayer
-              eventHandlers={eventHandlers}
-              activeId={activeId}
-              setCardInView={setCardInView}
-              toolState={toolState}
-              createAnnotation={createAnnotation}
-              updateAnnotation={updateAnnotation}
-              annotations={relevantAnnotations}
-              page={page}
-              pageNum={pageNum}
-              scale={annotationScale}
+        <ErrorBoundary render={()=>{ return <div>something went wrong</div>; }}>
+          <PdfViewer page={page} scale={scale}
+              onRenderingStatusChange={setRenderingStatus}
               shouldBeRendered={shouldBeRendered} />
-        }
-        <PdfTextLayer page={page} scale={scale}
-            onRenderingStatusChange={setRenderingStatus}
-            hidden={toolState.type !== 'text'}
-            shouldBeRendered={shouldBeRendered} />
+          {
+            annotationScale &&
+            <AnnotationLayer
+                eventHandlers={eventHandlers}
+                activeId={activeId}
+                setCardInView={setCardInView}
+                toolState={toolState}
+                createAnnotation={createAnnotation}
+                updateAnnotation={updateAnnotation}
+                annotations={relevantAnnotations}
+                page={page}
+                pageNum={pageNum}
+                scale={annotationScale}
+                shouldBeRendered={shouldBeRendered} />
+          }
+          <PdfTextLayer page={page} scale={scale}
+              onRenderingStatusChange={setRenderingStatus}
+              hidden={toolState.type !== 'text'}
+              shouldBeRendered={shouldBeRendered} />
+        </ErrorBoundary>
       </div>
     </div>
   );
@@ -943,6 +972,17 @@ function usePdfPages(doc) {
   const [progress,setProgress] = useState(null);
   const [error,setError] = useState(null);
   const docId = doc && doc.id;
+
+  const pdfRef = useRef(null);
+  useEffect(()=>{
+    pdfRef.current = pdf;
+  }, [pdf]);
+  const pagesRef = useRef([]);
+  useEffect(()=>{
+    pagesRef.current = pages;
+  }, [pages]);
+
+  const taskRef = useRef(null);
   useEffect(()=>{
     if (docId === null || docId === undefined) {
       return;
@@ -951,7 +991,9 @@ function usePdfPages(doc) {
       url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+docId+'/pdf',
       withCredentials: true
     })
+    taskRef.current = loadingTask;
     loadingTask.promise.then(pdf => {
+      taskRef.current = null;
       setPdf(pdf);
       setPages(new Array(pdf.numPages));
       setProgress({
@@ -960,6 +1002,7 @@ function usePdfPages(doc) {
       });
     }).catch(error => {
       console.error(error);
+      taskRef.current = null;
       if (error.response && error.response.data && error.response.data.message) {
         setError(error.response.data.message);
       } else {
@@ -967,7 +1010,22 @@ function usePdfPages(doc) {
       }
     });
     return ()=>{
-      loadingTask.destroy();
+      if (taskRef.current) {
+        taskRef.current.destroy();
+      } else {
+        for (let page of pagesRef.current) {
+          if (page) {
+            page.cleanup();
+          }
+        }
+        //if (pdfRef.current) {
+        //  console.log('destroying pdf');
+        //  //pdfRef.current.destroy();
+        //  pdfRef.current.cleanup();
+        //} else {
+        //  console.log('no pdf to destroy');
+        //}
+      }
     }
   },[docId]);
   useEffect(()=>{
