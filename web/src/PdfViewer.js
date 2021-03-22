@@ -1308,26 +1308,46 @@ export default function PdfAnnotationPage(props) {
   },[docId]);
 
   // Visible pages
-  const updatePageRafRef = useRef(null); // ID of the requestAnimationFrame request
+  const updatePageRafRef = useRef(null); // ID of the requestAnimationFrame request for updating the current page number based on scroll position
+  function isElementInViewport(el, margin) {
+    // Return true if the element is in the viewport, and false otherwise.
+    // Only checks vertical position.
+    if (!margin) {
+      margin = 0;
+    }
+    const rect = el.getBoundingClientRect();
+    if (rect.top > window.innerHeight) { return false; }
+    if (rect.bottom < 0) { return false; }
+    return true;
+  }
   function updateVisiblePage(e) {
-    const el = e.closest('.pages-container');
-    const margin = 5;
-    const pageHeights = pages.map(
-      page => page.getViewport({scale: pdfScale}).height+margin
-    );
-    let currentPage = 0;
-    let pos = el.scrollTop;
-    for (let ph of pageHeights) {
-      if (pos <= ph) {
+    if (pageRefs.length === 0 || !pageRefs[0].current) {
+      return;
+    }
+    let visibility = Array.apply(false, new Array(pdf.numPages));
+    let firstVisiblePageIndex = -1;
+    let lastVis = false;
+    for (const [i,ref] of pageRefs.entries()) {
+      if (!ref.current) {
         break;
       }
-      currentPage += 1;
-      pos -= ph;
+      let vis = isElementInViewport(ref.current,0);
+      visibility[i] = vis;
+      if (vis && firstVisiblePageIndex === -1) {
+        firstVisiblePageIndex = i;
+      }
+      if (!vis && lastVis) {
+        // If we go from a visible element to a non-visible element, then we know that everything past this point is also not visible. We assume that all elements are listed in order of their position from top to bottom, and there is no overlap on the vertical axis.
+        break;
+      }
+      lastVis = vis;
     }
-    setCurrentPageIndex(currentPage)
+
+    setCurrentPageIndex(Math.max(0,firstVisiblePageIndex)); // `firstVisiblePageIndex` can be -1 if the refs are not tied to any DOM element. Set the page index to 0 if that happens.
     updatePageRafRef.current = null;
   }
   function handleScroll(e) {
+    // Compute the current page number
     // Use requestAnimationFrame to avoid having it queue up a bunch of updates when scrolling a lot. Without it, we'll see the displayed page number go through all the intermediate pages before settling on the current page number.
     cancelAnimationFrame(updatePageRafRef.current);
     updatePageRafRef.current = requestAnimationFrame(
@@ -1361,40 +1381,6 @@ export default function PdfAnnotationPage(props) {
     }
     pageRefs[pageIndex].current.scrollIntoView();
   }
-
-  // TODO: Copied over from `PdfPageContainer`. Update for use here.
-  //function isElementInViewport(el, margin) {
-  //  if (!margin) {
-  //    margin = 0;
-  //  }
-  //  const rect = el.getBoundingClientRect();
-  //  return (
-  //      rect.top >= 0 &&
-  //      rect.left >= 0 &&
-  //      rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
-  //      rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
-  //  );
-  //}
-  //useEffect(()=>{
-  //  return; // Skip
-  //  function updateViewport() {
-  //    if (!ref.current) {
-  //      return;
-  //    }
-  //    const val = isElementInViewport(ref.current,0)
-  //    setIsInViewport(val);
-  //    if (val) {
-  //      console.log('Page '+pageNum+' in view');
-  //    } else {
-  //      console.log('Page '+pageNum+' not in view');
-  //    }
-  //  }
-  //  updateViewport();
-  //  document.addEventListener('scroll',updateViewport);
-  //  return ()=>{
-  //    document.removeEventListener('scroll',updateViewport);
-  //  };
-  //},[]);
 
   // CRUD Functions
   function createAnnotation(ann) {
