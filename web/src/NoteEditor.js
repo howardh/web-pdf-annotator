@@ -73,7 +73,11 @@ export function NoteViewer(props) {
   // Mathjax
   useEffect(()=>{
     // Redo typesetting whenever the annotation changes
-    window.MathJax.typeset();
+    try {
+      window.MathJax.typeset();
+    } catch (error) {
+      console.error(error);
+    }
   }, [note]);
 
   function parseBody(note) {
