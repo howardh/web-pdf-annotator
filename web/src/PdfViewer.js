@@ -747,6 +747,8 @@ function PdfViewer(props) {
   } = props;
   const ref = useRef(null);
 
+  if (page._pageIndex === 0) { console.log(shouldBeRendered); }
+
   // Render PDF
   const taskRef = useRef(null);
   useEffect(() => {
@@ -1370,7 +1372,7 @@ export default function PdfAnnotationPage(props) {
         currentPageIndex-1, currentPageIndex, currentPageIndex+1, currentPageIndex+2
       ]));
     }
-  }, [currentPageIndex]);
+  }, [pages, currentPageIndex]);
   function scrollToPage(pageNum) {
     let pageIndex = pageNum-1;
     if (!pageRefs[pageIndex]) {
