@@ -441,7 +441,7 @@ function Annotation(props) {
           </>
         }
         {
-          isActive && 
+          selected && 
           <AnnotationActions annotation={annotation} viewNote={viewNote}/>
         }
       </div>;
