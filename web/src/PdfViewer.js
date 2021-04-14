@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEffect, useState, useRef, useCallback, useContext } from 'react';
+import { useEffect, useState, useRef, useCallback, useContext, useMemo } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
@@ -887,9 +887,6 @@ const PdfPageContainer = React.forwardRef((props, ref) => {
   } = props;
   const context = useContext(pdfAnnotationPageContext);
   const scale = context.pdfScale.val;
-  const relevantAnnotations = filterDict(
-    annotations, ann => ann && parseInt(ann.page) === pageNum
-  );
 
   // Delay rendering annotations until the pdf is rendered
   const [renderingStatus,setRenderingStatus] = useState(null);
@@ -915,7 +912,7 @@ const PdfPageContainer = React.forwardRef((props, ref) => {
           annotationScale &&
           <AnnotationLayer
               eventHandlers={eventHandlers}
-              annotations={relevantAnnotations}
+              annotations={annotations}
               page={page}
               pageNum={pageNum}
               scale={annotationScale}
@@ -1220,15 +1217,17 @@ export default function PdfAnnotationPage(props) {
       )
     ),[docId])
   );
-  //const annotationByPage = annotations.reduce((acc,ann) => {
-  //  if (!ann) { return acc; }
-  //  const p = parseInt(ann.page);
-  //  if (!acc[p]) {
-  //    acc[p] = {};
-  //  }
-  //  acc[p][ann.id] = ann;
-  //  return acc;
-  //}, {});
+  const annotationsByPage = useMemo(() => { 
+    return Object.values(annotations).reduce((acc,ann) => {
+      if (!ann) { return acc; }
+      const p = parseInt(ann.page);
+      if (!acc[p]) {
+        acc[p] = {};
+      }
+      acc[p][ann.id] = ann;
+      return acc;
+    }, {});
+  }, [annotations]);
   const [activeId, setActiveId] = useState(null);
   const [cardInView, setCardInView] = useState(null);
   const [annotationInView, setAnnotationInView] = useState(null);
@@ -2060,7 +2059,7 @@ export default function PdfAnnotationPage(props) {
           return <PdfPageContainer key={i+1}
               ref={pageRefs[i]}
               eventHandlers={tools[toolState.type].eventHandlers}
-              annotations={annotations}
+              annotations={annotationsByPage[i+1] || {}}
               page={page} pageNum={i+1}
               shouldBeRendered={pagesToRender.has(i)}
               />
