@@ -7,6 +7,32 @@ const NEW_LINE = 0x0A // \n
 
 const NOTE_REGEXP = new RegExp(/^note(\d+): (.+)$/)
 const DOC_REGEXP = new RegExp(/^doc(\d+): (.+)$/)
+const ANN_REGEXP = new RegExp(/^ann(\d+): (.+)$/)
+
+function createOnClickHandler(href) {
+  // See https://ncoughlin.com/posts/react-navigation-without-react-router/
+  return function(e) {
+    e.preventDefault();
+    window.history.pushState({}, "", href);
+    const navEvent = new PopStateEvent('popstate');
+    window.dispatchEvent(navEvent);
+  }
+}
+
+window.hhixl = window.hhixl || {};
+window.hhixl.createOnClickHandler = createOnClickHandler;
+
+function createHTML(state, type, id, text) {
+  let token;
+
+  token = state.push('bracket_link_open','a',1);
+  token.attrPush(['href','/'+type+'/'+id]);
+
+  token = state.push('text', '', 0);
+  token.content = text;
+
+  token = state.push('bracket_link_close','a',-1);
+}
 
 function link(state,silent) {
   let pos = state.pos;
@@ -41,14 +67,7 @@ function link(state,silent) {
     text = match[2];
 
     // Create corresponding HTML
-    let token;
-    token = state.push('bracket_link_open','a',1);
-    token.attrPush(['href','/notes/'+id]);
-
-    token = state.push('text', '', 0);
-    token.content = text;
-
-    token = state.push('bracket_link_close','a',-1);
+    createHTML(state, 'notes', id, text);
 
     // Update state
     state.pos = end+2;
@@ -61,9 +80,24 @@ function link(state,silent) {
     text = match[2];
 
     // Create corresponding HTML
+    createHTML(state, 'annotate', id, text);
+
+    // Update state
+    state.pos = end+2;
+
+    return true;
+  }
+
+  if (match = ANN_REGEXP.exec(content)) {
+    id = match[1];
+    text = match[2];
+
+    // Create corresponding HTML
     let token;
+
     token = state.push('bracket_link_open','a',1);
-    token.attrPush(['href','/annotate/'+id]);
+    token.attrPush(['href','#']);
+    token.attrPush(['onClick',"hhixl.createOnClickHandler('?annotation="+id+"')(event)"]); // TODO: How can I pass a function here instead of referencing a global function?
 
     token = state.push('text', '', 0);
     token.content = text;
