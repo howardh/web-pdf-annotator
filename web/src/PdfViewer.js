@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useContext } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
@@ -37,6 +37,8 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const pdfAnnotationPageContext = React.createContext({});
+
 //////////////////////////////////////////////////
 // Annotations
 //////////////////////////////////////////////////
@@ -44,14 +46,15 @@ class ErrorBoundary extends React.Component {
 function AnnotationLayer(props) {
   const {
     annotations,
-    activeId,
-    setCardInView,
     eventHandlers,
-    toolState,
     page,
     pageNum,
     scale
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const activeId = context.activeId.val;
+  const setCardInView = context.cardInView.set;
+  const toolState = context.toolState.val;
 
   const ref = useRef(null);
 
@@ -741,13 +744,13 @@ function NoteCardsContainer(props) {
 function PdfViewer(props) {
   const {
     page,
-    scale,
     onRenderingStatusChange = ()=>null,
     shouldBeRendered,
   } = props;
-  const ref = useRef(null);
+  const context = useContext(pdfAnnotationPageContext);
+  const scale = context.pdfScale.val;
 
-  if (page._pageIndex === 0) { console.log(shouldBeRendered); }
+  const ref = useRef(null);
 
   // Render PDF
   const taskRef = useRef(null);
@@ -802,11 +805,13 @@ function PdfTextLayer(props) {
   // I just copied this over from PdfViewer. There's probably a lot of unnecessary code here.
   const {
     page,
-    scale,
     onRenderingStatusChange = ()=>null,
     hidden=false,
     shouldBeRendered,
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const scale = context.pdfScale.val;
+
   const ref = useRef(null);
 
   // Render PDF
@@ -822,11 +827,15 @@ function PdfTextLayer(props) {
     if (!shouldBeRendered) {
       return;
     }
-    let viewport = page.getViewport({ scale: scale, });
+
+    ref.current.innerHTML = ''; // Clear existing text
+
+    let viewport = page.getViewport({ scale: scale });
 
     let task = page.getTextContent();
     getContentTaskRef.current = task;
     task.then(content => {
+      getContentTaskRef.current = null;
       var renderContext = {
         textContent: content,
         viewport: viewport,
@@ -871,17 +880,13 @@ function PdfTextLayer(props) {
 
 const PdfPageContainer = React.forwardRef((props, ref) => {
   const {
-    toolState,
     eventHandlers,
-    createAnnotation,
-    updateAnnotation,
     annotations,
     page, pageNum,
-    activeId,
-    setCardInView,
     shouldBeRendered,
-    scale
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const scale = context.pdfScale.val;
   const relevantAnnotations = filterDict(
     annotations, ann => ann && parseInt(ann.page) === pageNum
   );
@@ -903,30 +908,23 @@ const PdfPageContainer = React.forwardRef((props, ref) => {
   return (
     <div className='pdf-page-container' ref={ref}>
       <div className='pdf-container' style={style}>
-        <ErrorBoundary render={()=>{ return <div>something went wrong</div>; }}>
-          <PdfViewer page={page} scale={scale}
-              onRenderingStatusChange={setRenderingStatus}
+        <PdfViewer page={page}
+            onRenderingStatusChange={setRenderingStatus}
+            shouldBeRendered={shouldBeRendered} />
+        {
+          annotationScale &&
+          <AnnotationLayer
+              eventHandlers={eventHandlers}
+              annotations={relevantAnnotations}
+              page={page}
+              pageNum={pageNum}
+              scale={annotationScale}
               shouldBeRendered={shouldBeRendered} />
-          {
-            annotationScale &&
-            <AnnotationLayer
-                eventHandlers={eventHandlers}
-                activeId={activeId}
-                setCardInView={setCardInView}
-                toolState={toolState}
-                createAnnotation={createAnnotation}
-                updateAnnotation={updateAnnotation}
-                annotations={relevantAnnotations}
-                page={page}
-                pageNum={pageNum}
-                scale={annotationScale}
-                shouldBeRendered={shouldBeRendered} />
-          }
-          <PdfTextLayer page={page} scale={scale}
-              onRenderingStatusChange={setRenderingStatus}
-              hidden={toolState.type !== 'text'}
-              shouldBeRendered={shouldBeRendered} />
-        </ErrorBoundary>
+        }
+        <PdfTextLayer page={page}
+            onRenderingStatusChange={setRenderingStatus}
+            hidden={context.toolState.val.type !== 'text'}
+            shouldBeRendered={shouldBeRendered} />
       </div>
     </div>
   );
@@ -1109,13 +1107,16 @@ function DocNotes(props) {
 function SideBar(props) {
   const {
     tabs = [],
-    activeTabIndex,
-    onChangeActiveTabIndex,
-    visible,
-    onChangeVisible
+    //activeTabIndex,
+    //onChangeActiveTabIndex,
+    //visible,
+    //onChangeVisible
   } = props;
-  //const [hidden,setHidden] = useState(true);
-  //const [activeTabIndex,setActiveTabIndex] = useState(0);
+  const context = useContext(pdfAnnotationPageContext);
+  const visible = context.sidebar.visible.val;
+  const onChangeVisible = context.sidebar.visible.set;
+  const activeTabIndex = context.sidebar.activeTabIndex.val;
+  const onChangeActiveTabIndex = context.sidebar.activeTabIndex.set;
 
   function handleKeyDown(e,i) {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -1219,6 +1220,15 @@ export default function PdfAnnotationPage(props) {
       )
     ),[docId])
   );
+  //const annotationByPage = annotations.reduce((acc,ann) => {
+  //  if (!ann) { return acc; }
+  //  const p = parseInt(ann.page);
+  //  if (!acc[p]) {
+  //    acc[p] = {};
+  //  }
+  //  acc[p][ann.id] = ann;
+  //  return acc;
+  //}, {});
   const [activeId, setActiveId] = useState(null);
   const [cardInView, setCardInView] = useState(null);
   const [annotationInView, setAnnotationInView] = useState(null);
@@ -2018,84 +2028,96 @@ export default function PdfAnnotationPage(props) {
       render: () => <DocNotes doc={doc} />
     }
   ];
+
+  // Context
+  const context = {
+    'pdfScale': {val: pdfScale, set: setPdfScale},
+    'activeId': {val: activeId, set: activateAnnotation}, // TODO: Check if this works with `setActiveId` and a useEffect hook for the side-effects
+    'cardInView': {val: cardInView, set: setCardInView},
+    'annotationInView': {val: annotationInView, set: setAnnotationInView},
+    'toolState': {val: toolState, set: setToolState},
+    'sidebar': {
+      'visible': {val: sidebarVisible, set: setSidebarVisible},
+      'activeTabIndex': {val: sidebarActiveTabIndex, set: setSidebarActiveTabIndex}
+    },
+    'annotation': {
+      'create': createAnnotation,
+      'update': updateAnnotation,
+      'delete': deleteAnnotation,
+    },
+  };
   return (<main className='annotation-page'>
-    <div className='pages-container' onScroll={handleScroll} onKeyDown={handleKeyDown}>
-      <div>
+    <pdfAnnotationPageContext.Provider value={context}>
+      <div className='pages-container' onScroll={handleScroll} onKeyDown={handleKeyDown}>
+        <div>
+          {
+            pagesLoadingProgress &&
+            pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages &&
+            <span>Loading {Math.floor(pagesLoadingProgress.loadedPages/pagesLoadingProgress.totalPages*100)}%</span>
+          }
+        </div>
+        {pages.map(function(page,i){
+          return <PdfPageContainer key={i+1}
+              ref={pageRefs[i]}
+              eventHandlers={tools[toolState.type].eventHandlers}
+              annotations={annotations}
+              page={page} pageNum={i+1}
+              shouldBeRendered={pagesToRender.has(i)}
+              />
+        })}
+      </div>
+      <div className='sidebar-container'>
+        <SideBar tabs={tabs}
+          activeTabIndex={sidebarActiveTabIndex}
+          onChangeActiveTabIndex={setSidebarActiveTabIndex}
+        />
+      </div>
+      <div className='controls'>
+        <GroupedInputs>
+          <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
+            Read
+          </Button>
+          <Button onClick={()=>selectTool('text')} className={toolState.type === 'text' ? 'active' : null}>
+            Text
+          </Button>
+          <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
+            Resize
+          </Button>
+          <Button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
+            Point
+          </Button>
+          <Button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
+            Rect
+          </Button>
+          <Button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
+            Highlight
+          </Button>
+        </GroupedInputs>
+        <GroupedInputs>
+          <Button onClick={zoomIn}>
+            <i className='material-icons'>zoom_in</i>
+          </Button>
+          <Button onClick={zoomOut}>
+            <i className='material-icons'>zoom_out</i>
+          </Button>
+        </GroupedInputs>
+        <GroupedInputs>
+          <Button onClick={()=>dispatch(annotationActions['undo']())}>
+            <i className='material-icons'>undo</i>
+          </Button>
+          <Button onClick={()=>dispatch(annotationActions['redo']())}>
+            <i className='material-icons'>redo</i>
+          </Button>
+        </GroupedInputs>
         {
+          pdf &&
           pagesLoadingProgress &&
-          pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages &&
-          <span>Loading {Math.floor(pagesLoadingProgress.loadedPages/pagesLoadingProgress.totalPages*100)}%</span>
+          pagesLoadingProgress.loadedPages === pagesLoadingProgress.totalPages &&
+          <PageSelector pageNumber={currentPageIndex+1}
+            totalPages={pdf.numPages}
+            onPageNumberChange={scrollToPage} />
         }
       </div>
-      {pages.map(function(page,i){
-        return <PdfPageContainer key={i+1}
-            ref={pageRefs[i]}
-            activeId={activeId} setActiveId={activateAnnotation}
-            setCardInView={setCardInView}
-            toolState={toolState}
-            eventHandlers={tools[toolState.type].eventHandlers}
-            createAnnotation={createAnnotation}
-            updateAnnotation={updateAnnotation}
-            annotations={annotations}
-            page={page} pageNum={i+1}
-            shouldBeRendered={pagesToRender.has(i)}
-            scale={pdfScale}
-            />
-      })}
-    </div>
-    <div className='sidebar-container'>
-      <SideBar tabs={tabs}
-        activeTabIndex={sidebarActiveTabIndex}
-        onChangeActiveTabIndex={setSidebarActiveTabIndex}
-        visible={sidebarVisible}
-        onChangeVisible={setSidebarVisible}
-      />
-    </div>
-    <div className='controls'>
-      <GroupedInputs>
-        <Button onClick={()=>selectTool('read')} className={toolState.type === 'read' ? 'active' : null}>
-          Read
-        </Button>
-        <Button onClick={()=>selectTool('text')} className={toolState.type === 'text' ? 'active' : null}>
-          Text
-        </Button>
-        <Button onClick={()=>selectTool('resize')} className={toolState.type === 'resize' ? 'active' : null}>
-          Resize
-        </Button>
-        <Button onClick={()=>selectTool('point')} className={toolState.type === 'point' ? 'active' : null}>
-          Point
-        </Button>
-        <Button onClick={()=>selectTool('rect')} className={toolState.type === 'rect' ? 'active' : null}>
-          Rect
-        </Button>
-        <Button onClick={()=>selectTool('highlight')} className={toolState.type === 'highlight' ? 'active' : null}>
-          Highlight
-        </Button>
-      </GroupedInputs>
-      <GroupedInputs>
-        <Button onClick={zoomIn}>
-          <i className='material-icons'>zoom_in</i>
-        </Button>
-        <Button onClick={zoomOut}>
-          <i className='material-icons'>zoom_out</i>
-        </Button>
-      </GroupedInputs>
-      <GroupedInputs>
-        <Button onClick={()=>dispatch(annotationActions['undo']())}>
-          <i className='material-icons'>undo</i>
-        </Button>
-        <Button onClick={()=>dispatch(annotationActions['redo']())}>
-          <i className='material-icons'>redo</i>
-        </Button>
-      </GroupedInputs>
-      {
-        pdf &&
-        pagesLoadingProgress &&
-        pagesLoadingProgress.loadedPages === pagesLoadingProgress.totalPages &&
-        <PageSelector pageNumber={currentPageIndex+1}
-          totalPages={pdf.numPages}
-          onPageNumberChange={scrollToPage} />
-      }
-    </div>
+    </pdfAnnotationPageContext.Provider>
   </main>);
 }
