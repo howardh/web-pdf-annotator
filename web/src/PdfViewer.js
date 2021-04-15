@@ -512,6 +512,10 @@ function AnnotationActions(props) {
   );
 }
 
+//////////////////////////////////////////////////
+// Note Card
+//////////////////////////////////////////////////
+
 function NoteCard(props) {
   const {
     noteId,
@@ -661,6 +665,7 @@ function NoteCard(props) {
     </div>);
   } else {
     return (<div className={classNames}
+        tabIndex={-1}
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       <NoteViewer note={note} />
       <div className='controls'>

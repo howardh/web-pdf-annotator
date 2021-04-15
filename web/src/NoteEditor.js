@@ -120,17 +120,17 @@ export function NoteViewer(props) {
   let parsedBodyDiv = null;
   switch (note.parser) {
     case 'plaintext': {
-      return (<pre>{note.body}</pre>);
+      return (<pre className='rendered-note'>{note.body}</pre>);
       break;
     } case 'markdown-it': {
       let parsedBody = md.render(note.body);
-      return (<div dangerouslySetInnerHTML={{__html: parsedBody}} />);
+      return (<div className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
     } case 'commonmark': {
       let reader = new commonmark.Parser();
       let writer = new commonmark.HtmlRenderer({safe: true});
       let parsed = reader.parse(note.body); // parsed is a 'Node' tree
       let parsedBody = writer.render(parsed);
-      return (<div dangerouslySetInnerHTML={{__html: parsedBody}} />);
+      return (<div className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
     } default: {
       return null;
     }
