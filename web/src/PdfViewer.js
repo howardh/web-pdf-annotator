@@ -5,7 +5,7 @@ import { useParams, useLocation, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
-import { Button, TextField, Checkbox, GroupedInputs } from './Inputs.js';
+import { Button, TextField, Checkbox, GroupedInputs, Tooltip } from './Inputs.js';
 import TextEditor from './TextEditor';
 import { NoteViewer } from './NoteEditor.js';
 import {
@@ -673,12 +673,15 @@ function NoteCard(props) {
         <GroupedInputs>
           <Button onClick={startEditing}>
             <i className='material-icons'>create</i>
+            <Tooltip>Edit</Tooltip>
           </Button>
           <Button onClick={deleteNote}>
             <i className='material-icons'>delete</i>
+            <Tooltip>Delete Note</Tooltip>
           </Button>
           <Button onClick={refresh}>
             <i className='material-icons'>sync</i>
+            <Tooltip>Refresh</Tooltip>
           </Button>
         </GroupedInputs>
         {
@@ -689,6 +692,7 @@ function NoteCard(props) {
         }
         <Button to={'/notes/'+note?.id}>
           <i className='material-icons'>open_in_new</i>
+          <Tooltip>Open in editor</Tooltip>
         </Button>
       </div>
     </div>);
@@ -2108,17 +2112,21 @@ export default function PdfAnnotationPage(props) {
         <GroupedInputs>
           <Button onClick={zoomIn}>
             <i className='material-icons'>zoom_in</i>
+            <Tooltip>Zoom in</Tooltip>
           </Button>
           <Button onClick={zoomOut}>
             <i className='material-icons'>zoom_out</i>
+            <Tooltip>Zoom out</Tooltip>
           </Button>
         </GroupedInputs>
         <GroupedInputs>
           <Button onClick={()=>dispatch(annotationActions['undo']())}>
             <i className='material-icons'>undo</i>
+            <Tooltip>Undo</Tooltip>
           </Button>
           <Button onClick={()=>dispatch(annotationActions['redo']())}>
             <i className='material-icons'>redo</i>
+            <Tooltip>Redo</Tooltip>
           </Button>
         </GroupedInputs>
         {

@@ -25,6 +25,7 @@ function Button(props) {
     to=null,
     ...rest
   } = props;
+
   if (to) {
     return (<div className={inputClassName}>
       <Link to={to}>
@@ -78,4 +79,16 @@ function GroupedInputs(props) {
   </div>);
 }
 
-export {TextField, Password, Button, Checkbox, GroupedInputs};
+function Tooltip(props) {
+  const {
+    children
+  } = props;
+  return (
+    <div className='tooltip'>
+      {children}
+      <div className='tooltip-arrow'></div>
+    </div>
+  );
+}
+
+export {TextField, Password, Button, Checkbox, GroupedInputs, Tooltip};

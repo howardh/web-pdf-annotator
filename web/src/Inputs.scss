@@ -1,6 +1,7 @@
 @import 'variables';
 
 .input {
+  position: relative;
   box-sizing: border-box;
   display: inline-block;
   vertical-align: middle;
@@ -31,17 +32,45 @@
 .grouped-inputs {
   display: inline-block;
   margin: 3px;
-  :first-child > * {
+  > :first-child > * {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     border-right: none;
   }
-  :last-child > * {
+  > :last-child > * {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }
-  :not(:first-child):not(:last-child) > * {
+  > :not(:first-child):not(:last-child) > * {
     border-radius: 0;
     border-right: none;
+  }
+}
+
+.tooltip {
+  display: none;
+}
+
+:hover > .tooltip {
+  display: block;
+  position: absolute;
+  background-color: black;
+  transform: translate(-50%,8px);
+  top: 100%;
+  left: 50%;
+  color: white;
+  padding: 3px 10px 5px 10px;
+  border-radius: 3px;
+  white-space: nowrap;
+
+  .tooltip-arrow {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    margin: 0;
+    margin-left: -5px;
+    border-color: transparent transparent black transparent;
+    border-width: 5px;
+    border-style: solid;
   }
 }
