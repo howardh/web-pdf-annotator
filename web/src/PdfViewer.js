@@ -958,12 +958,13 @@ function usePdfPages(doc) {
     taskRef.current = loadingTask;
     loadingTask.promise.then(pdf => {
       taskRef.current = null;
-      setPdf(pdf);
       setPages(new Array(pdf.numPages));
       setProgress({
         totalPages: pdf.numPages,
         loadedPages: 0
       });
+      setPdf(pdf);
+      window.pdf = pdf;
     }).catch(error => {
       console.error(error);
       taskRef.current = null;
@@ -995,6 +996,9 @@ function usePdfPages(doc) {
   useEffect(()=>{
     if (!pdf) {
       return;
+    }
+    if (progress.loadedPages === pdf.numPages) {
+      return; // Hack for live-reload. Without this, the pages will be loaded twice each time the page is hot-reloaded.
     }
     for (let i = 1; i <= pdf.numPages; i++) {
       pdf.getPage(i).then(p => {
