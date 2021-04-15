@@ -1,5 +1,6 @@
 import React from 'react';
 import {useRef, forwardRef} from 'react';
+import { Link } from "react-router-dom";
 
 import './Inputs.scss';
 
@@ -21,13 +22,24 @@ function Password(props) {
 function Button(props) {
   const {
     children,
+    to=null,
     ...rest
   } = props;
-  return (<div className={inputClassName}>
-    <button {...rest}>
-      {children}
-    </button>
-  </div>);
+  if (to) {
+    return (<div className={inputClassName}>
+      <Link to={to}>
+        <button {...rest}>
+          {children}
+        </button>
+      </Link>
+    </div>);
+  } else {
+    return (<div className={inputClassName}>
+      <button {...rest}>
+        {children}
+      </button>
+    </div>);
+  }
 }
 
 function Checkbox(props) {

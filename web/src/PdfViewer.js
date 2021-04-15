@@ -579,7 +579,8 @@ function NoteCard(props) {
   // Event Handlers
   function scrollIntoView() {
     history.push('?annotation='+annotationId+'&note='+note.id);
-    setCardInView(note.id);
+    //setCardInView(note.id);
+    // We need to call `setAnnotationInView` because if this is called twice in a row on the same annotation, it won't trigger a scroll because the URL search query does not change.
     setAnnotationInView(annotationId);
   }
   function handleChangeBody(text) {
@@ -686,6 +687,9 @@ function NoteCard(props) {
             Scroll into view
           </Button>
         }
+        <Button to={'/notes/'+note?.id}>
+          <i className='material-icons'>open_in_new</i>
+        </Button>
       </div>
     </div>);
   }
