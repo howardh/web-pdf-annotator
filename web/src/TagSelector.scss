@@ -8,6 +8,7 @@
   .selector {
     text-align: left;
     border: 1px solid black;
+    border-radius: 3px;
     input {
       box-sizing: border-box;
       display: inline-block;
@@ -27,8 +28,9 @@
     top: 100%;
     width: 100%;
     background-color: white;
-    z-index: 1;
+    z-index: $z-dropdown;
     border: 1px solid black;
+    border-top: none;
 
     .tag, button {
       display: inline-block;
@@ -54,10 +56,13 @@
 .tag-editor-container, .tag-filter-container {
   display: inline-block;
   position: relative;
-  .tag-selector {
+  .dropdown {
+    z-index: $z-dropdown;
     position: absolute;
     top: 100%;
     left: 0;
+  }
+  .tag-selector {
     height: 32px;
     width: 300px;
   }

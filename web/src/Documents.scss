@@ -3,50 +3,39 @@
 .documents-page {
   text-align: center;
 
-  table {
-    display: inline-block;
-    margin: 0;
-    thead {
-      background-color: $primary-colour-dark;
-      color: $primary-colour-light;
-      th {
-        padding: 5px 20px;
+  .document-list-container {
+    display: grid;
+    column-gap: 10px;
+    > * {
+      justify-self: center;
+    }
+    .document-filter-container {
+      grid-column: 2 / 2;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: left;
+      padding: 10px;
+      label {
+        display: grid;
+        grid-template-columns: min-content auto;
+        > * {
+          justify-self: start;
+        }
+      }
+      .tag-selector {
+        width: 100%;
+        .dropdown {
+          position: relative;
+        }
       }
     }
-    tbody {
-      text-align: left;
-      tr{
-        &:nth-child(even) {
-          background-color: white;
-        }
-        &:hover {
-          background-color: $primary-colour-light;
-        }
-        td {
-          padding: 5px 10px;
-          &.checkbox {
-            text-align: center;
-          }
-          &.title {
-            span.title {
-              font-weight: bold;
-              &.read {
-                font-weight: unset;
-              }
-            }
-          }
-          &.lastmodified {
-          }
-          &.actions {
-            i.material-icons {
-              color: black;
-              cursor: pointer;
-              &:hover {
-                color: $primary-colour-dark;
-              }
-            }
-          }
-        }
+  }
+  .table-container{
+    width: 100%;
+    table {
+      width: 100%;
+      tr td .title {
+        font-weight: bold;
       }
     }
   }
@@ -58,3 +47,18 @@
   }
 }
 
+@media only screen and (max-width: 1440px) {
+  main.documents-page {
+    .document-list-container {
+      grid-template-columns: 5px 230px 1fr 5px;
+    }
+  }
+}
+
+@media only screen and (min-width: 1440px) {
+  main.documents-page {
+    .document-list-container {
+      grid-template-columns: 1fr 300px calc(1440px - 310px) 1fr;
+    }
+  }
+}

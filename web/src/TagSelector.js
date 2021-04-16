@@ -39,7 +39,7 @@ export function TagSelector(props) {
   return (<div className='tag-selector'>
     <div className='selector'>
       <div className='selected-tags'></div>
-      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)}/>
+      <input type='text' name='search' value={tagSearchValue} onChange={e=>setTagSearchValue(e.target.value)} placeholder='(Enter a tag name to search/create)'/>
     </div>
     <div className='dropdown'>
       {
@@ -155,13 +155,15 @@ export function TagEditor(props) {
         <Tooltip>Edit Tags</Tooltip>
       </Button>
       { visible &&
-        <TagSelector
-          tags={tags}
-          selectedTags={selectedTags}
-          partiallySelectedTags={partiallySelectedTags}
-          onToggleTagId={toggleTag}
-          allowCreation={true}
-        />
+        <div className='dropdown'>
+          <TagSelector
+            tags={tags}
+            selectedTags={selectedTags}
+            partiallySelectedTags={partiallySelectedTags}
+            onToggleTagId={toggleTag}
+            allowCreation={true}
+          />
+        </div>
       }
     </div>
   );

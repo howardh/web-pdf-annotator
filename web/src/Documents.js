@@ -10,7 +10,7 @@ import {
   Checkbox, TextField, Button, GroupedInputs, Tooltip
 } from './Inputs.js';
 import { EntityTable } from './EntityTable.js';
-import { TagEditor, TagFilter } from './TagSelector.js';
+import { TagEditor, TagFilter, TagSelector } from './TagSelector.js';
 import {documentActions,tagActions,autofillDocumentInfo} from './actions/index.js';
 
 import './Documents.scss';
@@ -38,18 +38,7 @@ export default function DocumentsPage(props) {
   },[]);
 
   // Filters
-  const [tagFilters,setTagFilters] = useState(new Set());
-  const filteredDocs = filterDict(
-    documents,
-    doc => { // Must be tagged by all selected filters
-      for (let t of tagFilters) {
-        if (doc.tag_names.indexOf(t) === -1) {
-          return false;
-        }
-      }
-      return true;
-    }
-  );
+  const [filteredDocs, setFilteredDocs] = useState({});
   const sortedDocs = Object.values(filteredDocs).sort(
     (doc1,doc2) => new Date(doc2.last_modified_at) - new Date(doc1.last_modified_at)
   );
@@ -157,26 +146,21 @@ export default function DocumentsPage(props) {
         );
       },
       renderCondition: selectedDocIds => selectedDocIds.size > 0,
-    },{
-      render: () => {
-        return (
-          <TagFilter selectedTags={tagFilters}
-            onChangeSelectedTags={setTagFilters}/>
-        );
-      },
-      renderCondition: () => true,
     },
   ];
   return (<main className='documents-page'>
     <h1>Documents</h1>
     <NewDocumentForm />
-    <EntityTable entities={sortedDocs}
-      selectedIds={selectedDocIds}
-      onChangeSelectedIds={setSelectedDocIds}
-      columns={columns}
-      renderActionsColumn={renderActionsColumn}
-      actions={actions}
-    />
+    <div className='document-list-container'>
+      <DocFilterMenu documents={documents} onChangeFilteredDocs={setFilteredDocs} />
+      <EntityTable entities={sortedDocs}
+        selectedIds={selectedDocIds}
+        onChangeSelectedIds={setSelectedDocIds}
+        columns={columns}
+        renderActionsColumn={renderActionsColumn}
+        actions={actions}
+      />
+    </div>
   </main>);
 }
 
@@ -217,4 +201,51 @@ function NewDocumentForm(props) {
       </label>
     </div>
   );
+}
+
+function DocFilterMenu(props) {
+  const {
+    documents,
+    onChangeFilteredDocs
+  } = props;
+  const dispatch = useDispatch();
+
+  const tags = useSelector(state => state.tags.entities);
+
+  const [tagFilters, setTagFilters] = useState(new Set());
+
+  function toggleTag(tagId) {
+    let temp = new Set(tagFilters);
+    let tagName = tags[tagId].name;
+    if (tagFilters.has(tagName)) {
+      temp.delete(tagName);
+    } else {
+      temp.add(tagName);
+    }
+    setTagFilters(temp);
+  }
+
+  useEffect(() => {
+    dispatch(tagActions['fetchMultiple']());
+  },[]);
+
+  useEffect(() => {
+    onChangeFilteredDocs(filterDict(
+      documents,
+      doc => {
+        for (let t of tagFilters) {
+          if (doc.tag_names.indexOf(t) === -1) {
+            return false;
+          }
+        }
+        return true;
+      }
+    ));
+  }, [documents, tagFilters]);
+
+  return (<div className='document-filter-container'>
+    <h2>Filters</h2>
+    <h3>Tag Filters</h3>
+    <TagSelector tags={tags} selectedTags={tagFilters} onToggleTagId={toggleTag}/>
+  </div>);
 }
