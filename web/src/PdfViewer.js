@@ -16,7 +16,6 @@ import {
 } from './actions/index.js';
 
 import './PdfViewer.scss';
-
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -766,6 +765,13 @@ function PdfViewer(props) {
 
   const ref = useRef(null);
 
+  // Save the scale that was used for the last render. This is needed in case the user zooms more than once in quick succession, and only only the render triggered by the first zoom goes through.
+  const lastRenderedScale = useRef(null);
+  useEffect(() => {
+    // Ensures that we render the new page, because we check if the scale changed between renders
+    lastRenderedScale.current = null;
+  }, [page]);
+
   // Render PDF
   const taskRef = useRef(null);
   useEffect(() => {
@@ -775,6 +781,10 @@ function PdfViewer(props) {
     if (taskRef.current) {
       return; // Don't start multiple rendering tasks
     }
+    if (scale === lastRenderedScale.current) {
+      return;
+    }
+
     let viewport = page.getViewport({ scale: scale, });
     let canvas = ref.current;
     let context = canvas.getContext('2d');
@@ -790,6 +800,7 @@ function PdfViewer(props) {
     taskRef.current = task;
     task.promise.then(x => {
       taskRef.current = null;
+      lastRenderedScale.current = scale;
       onRenderingStatusChange(true);
     }).catch(error => {
       taskRef.current = null;
@@ -804,7 +815,7 @@ function PdfViewer(props) {
         taskRef.current = null;
       }
     };
-  }, [page, scale, shouldBeRendered]);
+  }, [page, scale, shouldBeRendered, lastRenderedScale.current]);
 
   if (!shouldBeRendered) {
     return null;
@@ -828,6 +839,13 @@ function PdfTextLayer(props) {
 
   const ref = useRef(null);
 
+  // Save the scale that was used for the last render. This is needed in case the user zooms more than once in quick succession, and only only the render triggered by the first zoom goes through.
+  const lastRenderedScale = useRef(null);
+  useEffect(() => {
+    // Ensures that we render the new page, because we check if the scale changed between renders
+    lastRenderedScale.current = null;
+  }, [page]);
+
   // Render PDF
   const getContentTaskRef = useRef(null);
   const renderTaskRef = useRef(null);
@@ -839,6 +857,9 @@ function PdfTextLayer(props) {
       return; // Don't start multiple rendering tasks
     }
     if (!shouldBeRendered) {
+      return;
+    }
+    if (scale === lastRenderedScale.current) {
       return;
     }
 
@@ -861,6 +882,7 @@ function PdfTextLayer(props) {
         renderTaskRef.current = task;
         task.promise.then(x => {
           renderTaskRef.current = null;
+          lastRenderedScale.current = scale;
           onRenderingStatusChange(true);
         }).catch(error => {
           renderTaskRef.current = null;
@@ -881,7 +903,7 @@ function PdfTextLayer(props) {
         renderTaskRef.current = null;
       }
     };
-  }, [page, scale, shouldBeRendered]);
+  }, [page, scale, shouldBeRendered, lastRenderedScale.current]);
 
   let classNames = generateClassNames({
     'text-layer': true,
