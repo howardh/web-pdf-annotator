@@ -70,15 +70,18 @@ export function NoteViewer(props) {
     note,
   } = props;
 
+  const ref = useRef(null);
+
   // Mathjax
   useEffect(()=>{
     // Redo typesetting whenever the annotation changes
+    if (!ref.current) { return; }
     try {
-      window.MathJax.typeset();
+      window.MathJax.typeset([ref.current]);
     } catch (error) {
       console.error(error);
     }
-  }, [note]);
+  }, [note, ref.current]);
 
   function parseBody(note) {
     switch (note.parser) {
@@ -120,17 +123,17 @@ export function NoteViewer(props) {
   let parsedBodyDiv = null;
   switch (note.parser) {
     case 'plaintext': {
-      return (<pre className='rendered-note'>{note.body}</pre>);
+      return (<pre ref={ref} className='rendered-note'>{note.body}</pre>);
       break;
     } case 'markdown-it': {
       let parsedBody = md.render(note.body);
-      return (<div className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
+      return (<div ref={ref} className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
     } case 'commonmark': {
       let reader = new commonmark.Parser();
       let writer = new commonmark.HtmlRenderer({safe: true});
       let parsed = reader.parse(note.body); // parsed is a 'Node' tree
       let parsedBody = writer.render(parsed);
-      return (<div className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
+      return (<div ref={ref} className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
     } default: {
       return null;
     }
