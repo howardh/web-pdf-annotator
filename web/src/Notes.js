@@ -191,6 +191,7 @@ function NoteFilterMenu(props) {
 
   const tags = useSelector(state => state.tags.entities);
 
+  const [showStandalone, setShowStandalone] = useState(true);
   const [showAnn, setShowAnn] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
   const [showOrphan, setShowOrphan] = useState(false);
@@ -215,38 +216,46 @@ function NoteFilterMenu(props) {
     onChangeFilteredNotes(filterDict(
       notes,
       note => {
-        if (!showDoc && note.document_id) {
-          return false;
-        }
-        if (!showAnn && note.annotation_id) {
-          return false;
-        }
-        if (!showOrphan && note.orphaned) {
-          return false;
-        }
         for (let t of tagFilters) {
           if (note.tag_names.indexOf(t) === -1) {
             return false;
           }
         }
-        return true;
+        if (showStandalone && !note.document_id && !note.annotation_id && !note.orphaned) {
+          return true;
+        }
+        if (showDoc && note.document_id && !note.annotation_id) {
+          return true;
+        }
+        if (showAnn && note.annotation_id) {
+          return true;
+        }
+        if (showOrphan && note.orphaned) {
+          return true;
+        }
+        return false;
       }
     ));
-  }, [notes, showAnn, showDoc, showOrphan, tagFilters]);
+  }, [notes, showStandalone, showAnn, showDoc, showOrphan, tagFilters]);
 
   return (<div className='note-filter-container'>
     <h2>Filters</h2>
+    <h3>Note Types</h3>
+    <label>
+      <Checkbox checked={showStandalone} onChange={()=>setShowStandalone(!showStandalone)} />
+      <span>Standalone</span>
+    </label>
     <label>
       <Checkbox checked={showAnn} onChange={()=>setShowAnn(!showAnn)} />
-      <span>Show notes associated with an annotation</span>
+      <span>Annotation</span>
     </label>
     <label>
       <Checkbox checked={showDoc} onChange={()=>setShowDoc(!showDoc)} />
-      <span>Show notes associated with a pdf document</span>
+      <span>Document</span>
     </label>
     <label>
       <Checkbox checked={showOrphan} onChange={()=>setShowOrphan(!showOrphan)} />
-      <span>Show orphaned notes</span>
+      <span>Orphaned</span>
     </label>
     <h3>Tag Filters</h3>
     <TagSelector tags={tags} selectedTags={tagFilters} onToggleTagId={toggleTag}/>

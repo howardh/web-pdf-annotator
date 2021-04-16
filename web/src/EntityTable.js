@@ -75,17 +75,14 @@ function Table(props) {
     toggleSelectEntity,
     toggleSelectAll,
     columns = [],
-    renderActions = entity => null
+    renderActions = entity => null,
+    renderEmpty = () => 'Nothing to see here',
   } = props;
 
   const selectedEntities = filterDict(entities,
     entity=>selectedIds.has(entity.id));
   const selectedAllEntities = Object.keys(selectedEntities).length > 0 && 
       Object.keys(selectedEntities).length === Object.keys(entities).length;
-
-  if (entities.length === 0) {
-    return null;
-  }
 
   return (
     <table>
@@ -121,6 +118,14 @@ function Table(props) {
               </td>
             </tr>);
           })
+        }
+        {
+          entities.length === 0 &&
+          <tr>
+            <td colSpan={columns.length+2} className='empty'>
+              {renderEmpty()}
+            </td>
+          </tr>
         }
       </tbody>
     </table>

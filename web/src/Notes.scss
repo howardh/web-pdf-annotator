@@ -4,16 +4,16 @@ main.notes-page {
   text-align: center;
   .notes-list-container {
     display: grid;
-    grid-template-columns: 1fr auto auto 1fr;
     column-gap: 10px;
     > * {
       justify-self: center;
     }
     .note-filter-container {
       grid-column: 2 / 2;
+      width: 100%;
+      box-sizing: border-box;
       text-align: left;
       padding: 10px;
-      border: 1px solid black;
       label {
         display: grid;
         grid-template-columns: min-content auto;
@@ -29,9 +29,29 @@ main.notes-page {
       }
     }
   }
-  table {
-    tr td .title {
-      font-weight: bold;
+  .table-container{
+    width: 100%;
+    table {
+      width: 100%;
+      tr td .title {
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+@media only screen and (max-width: 1440px) {
+  main.notes-page {
+    .notes-list-container {
+      grid-template-columns: 5px 230px 1fr 5px;
+    }
+  }
+}
+
+@media only screen and (min-width: 1440px) {
+  main.notes-page {
+    .notes-list-container {
+      grid-template-columns: 1fr 300px calc(1440px - 310px) 1fr;
     }
   }
 }
