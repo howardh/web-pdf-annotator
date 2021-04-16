@@ -8,7 +8,7 @@ import {
   filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
 } from './Utils.js';
 import {
-  Checkbox, TextField, Button
+  Checkbox, TextField, Button, Tooltip
 } from './Inputs.js';
 import {
   EntityTable
@@ -130,6 +130,7 @@ export default function NotesPage(props) {
         return (
           <Button onClick={createNote}>
             <i className='material-icons'>note_add</i>
+            <Tooltip>New Standalone Note</Tooltip>
           </Button>
         );
       },
@@ -141,6 +142,7 @@ export default function NotesPage(props) {
         return (
           <Button onClick={()=>history.push('/notes/'+id)}>
             <i className='material-icons'>create</i>
+            <Tooltip>Edit Note</Tooltip>
           </Button>
         );
       },
@@ -160,6 +162,7 @@ export default function NotesPage(props) {
         return (
           <Button onClick={deleteSelectedNotes}>
             <i className='material-icons'>delete</i>
+            <Tooltip>Delete Note(s)</Tooltip>
           </Button>
         );
       },

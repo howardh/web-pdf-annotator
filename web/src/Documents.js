@@ -7,7 +7,7 @@ import {
   filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
 } from './Utils.js';
 import {
-  Checkbox, TextField, Button, GroupedInputs
+  Checkbox, TextField, Button, GroupedInputs, Tooltip
 } from './Inputs.js';
 import { EntityTable } from './EntityTable.js';
 import { TagEditor, TagFilter } from './TagSelector.js';
@@ -134,6 +134,7 @@ export default function DocumentsPage(props) {
         return (
           <Button onClick={()=>history.push('/annotate/'+id)}>
             <i className='material-icons'>create</i>
+            <Tooltip>Open Document</Tooltip>
           </Button>
         );
       },
@@ -143,6 +144,7 @@ export default function DocumentsPage(props) {
         return (
           <Button onClick={deleteSelectedDocs}>
             <i className='material-icons'>delete</i>
+            <Tooltip>Delete Document</Tooltip>
           </Button>
         );
       },

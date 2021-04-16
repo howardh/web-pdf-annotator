@@ -53,6 +53,7 @@
 
 :hover > .tooltip {
   display: block;
+  z-index: $z-tooltip;
   position: absolute;
   background-color: black;
   transform: translate(-50%,8px);

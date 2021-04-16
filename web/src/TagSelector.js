@@ -5,7 +5,7 @@ import { Link, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
 
 import {
-  TextField, Button, GroupedInputs
+  TextField, Button, GroupedInputs, Tooltip
 } from './Inputs.js';
 import {
   filterDict,generateClassNames,removeFromList
@@ -152,6 +152,7 @@ export function TagEditor(props) {
     <div className='tag-editor-container' ref={ref}>
       <Button onClick={()=>setVisible(!visible)}>
         <i className='material-icons'>label</i>
+        <Tooltip>Edit Tags</Tooltip>
       </Button>
       { visible &&
         <TagSelector
@@ -211,6 +212,7 @@ export function TagFilter(props) {
     <div className='tag-filter-container' ref={ref}>
       <Button onClick={()=>setVisible(!visible)}>
         <i className='material-icons'>filter_list</i>
+        <Tooltip>Select Tag Filter</Tooltip>
       </Button>
       { visible &&
         <TagSelector
