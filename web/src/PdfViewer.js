@@ -521,8 +521,11 @@ function NoteCard(props) {
     noteId,
     annotationId=null,
     isActive, setActive=()=>null,
-    setCardInView, setAnnotationInView,
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const setCardInView = context.cardInView.set;
+  const setAnnotationInView = context.annotationInView.set;
+
   const localStorageId = 'note'+noteId;
   const dispatch = useDispatch();
   const history = useHistory();
@@ -702,12 +705,13 @@ function NoteCard(props) {
 function NoteCardsContainer(props) {
   const {
     annotations,
-    activeId, setActiveId,
-    cardInView, setCardInView,
-    annotationInView, setAnnotationInView,
-    updateAnnotation,
-    scale
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const activeId = context.activeId.val;
+  const setActiveId = context.activeId.set;
+  const cardInView = context.cardInView.val;
+  const setCardInView = context.cardInView.set;
+  const annotationInView = context.annotationInView.val;
 
   const [scrollYPos, setScrollYPos] = useState(0);
 
@@ -740,10 +744,7 @@ function NoteCardsContainer(props) {
               noteId={ann.note_id}
               annotationId={ann.id}
               isActive={ann.id === activeId}
-              setActive={(f)=>setActiveId(f ? ann.id : null)}
-              updateAnnotation={updateAnnotation}
-              setCardInView={setCardInView}
-              setAnnotationInView={setAnnotationInView} />
+              setActive={(f)=>setActiveId(f ? ann.id : null)} />
         );
       })
     }
@@ -1452,466 +1453,468 @@ export default function PdfAnnotationPage(props) {
     setActiveId(data.ann.id);
     setCardInView(data.ann.note_id);
   }
-  const tools = {
-    read: {
-      initState: function() {
-        return {
-          type: 'read'
-        };
-      },
-      eventHandlers: {
-        pdf: {
-          onClick: function(event,data) {
-            setActiveId(null);
-            popTool();
-          }
+  const tools = useMemo( () => {
+    return {
+      read: {
+        initState: function() {
+          return {
+            type: 'read'
+          };
         },
-        annotation: {
-          onClick: function(event,data) {
-            setActiveId(data.id);
-            setCardInView(annotations[data.id].note_id);
+        eventHandlers: {
+          pdf: {
+            onClick: function(event,data) {
+              setActiveId(null);
+              popTool();
+            }
           },
-          onDoubleClick: handleDoubleClickAnnotation,
-          onClick: handleClickAnnotation,
+          annotation: {
+            onClick: function(event,data) {
+              setActiveId(data.id);
+              setCardInView(annotations[data.id].note_id);
+            },
+            onDoubleClick: handleDoubleClickAnnotation,
+            onClick: handleClickAnnotation,
+          }
         }
-      }
-    },
-    text: {
-      initState: function() {
-        return {
-          type: 'text'
-        };
       },
-      eventHandlers: {
-        pdf: {},
-        annotation: {},
-      }
-    },
-    resize: {
-      initState: function() {
-        return {
-          type: 'resize',
-          // ID of the selected annotation
-          selectedAnnotationId: null,
-          // If the selected annotation is changed (e.g. moved, resized, etc),
-          // then the intermediate annotation is stored here before it's
-          // updated in the store.
-          tempPosition: null,
-          // Type of action being performed from a click and drag.
-          // Possible values: move, resize-n, resize-ne, resize-nw, etc.
-          dragAction: null,
-          dragStartCoord: null,
-          pageBoundaries: null
-        };
+      text: {
+        initState: function() {
+          return {
+            type: 'text'
+          };
+        },
+        eventHandlers: {
+          pdf: {},
+          annotation: {},
+        }
       },
-      eventHandlers: {
-        // Handles events on the PDF document body
-        pdf: {
-          onClick: function() {
-            if (toolState.dragAction) {
-              // This happens if the mouse was dragged out of the screen,
-              // then released, and moved back in. We want to continue the
-              // dragging action.
+      resize: {
+        initState: function() {
+          return {
+            type: 'resize',
+            // ID of the selected annotation
+            selectedAnnotationId: null,
+            // If the selected annotation is changed (e.g. moved, resized, etc),
+            // then the intermediate annotation is stored here before it's
+            // updated in the store.
+            tempPosition: null,
+            // Type of action being performed from a click and drag.
+            // Possible values: move, resize-n, resize-ne, resize-nw, etc.
+            dragAction: null,
+            dragStartCoord: null,
+            pageBoundaries: null
+          };
+        },
+        eventHandlers: {
+          // Handles events on the PDF document body
+          pdf: {
+            onClick: function() {
+              if (toolState.dragAction) {
+                // This happens if the mouse was dragged out of the screen,
+                // then released, and moved back in. We want to continue the
+                // dragging action.
+                return;
+              } else {
+                setToolState({
+                  ...toolState,
+                  selectedAnnotationId: null
+                });
+                popTool();
+              }
+            },
+            onMouseDown: function() {},
+            onMouseMove: function() {},
+            onKeyPress: function() {},
+          },
+          // Handles events on the annotation
+          annotation: {
+            onClick: function(event, data) {
+              if (toolState.dragAction) {
+                // This happens if the mouse was dragged out of the screen,
+                // then released, and moved back in. We want to continue the
+                // dragging action.
+                return;
+              } else {
+                setActiveId(data.ann.id);
+                setCardInView(data.ann.note_id);
+                setToolState({
+                  ...toolState,
+                  selectedAnnotationId: data.ann.id,
+                  tempPosition: null,
+                });
+              }
+            },
+            onMouseDown: function(event, data) {
+              if (toolState.dragAction) {
+                // This happens if the mouse was dragged out of the screen,
+                // then released, and moved back in. We want to continue the
+                // dragging action.
+                return;
+              } else {
+                // Start moving annotation if appropriate
+                const classNames = event.target.className.split(' ');
+                // Only move if the user selected it first
+                if (classNames.indexOf('selected') !== -1) {
+                  const selId = toolState.selectedAnnotationId;
+                  setToolState({
+                    ...toolState,
+                    dragAction: 'move',
+                    tempPosition: annotations[selId].position
+                  });
+                }
+              }
+            },
+            onKeyPress: function(event,data) {
+              if (event.key === 'Delete') {
+                const selId = toolState.selectedAnnotationId;
+                if (selId && selId !== data.id) {
+                  console.error('Mismatch between selected ID and focused DOM element. Not deleting anything until the conflict is resolved.');
+                } else {
+                  deleteAnnotation(data.id);
+                  setToolState({
+                    ...toolState,
+                    selectedAnnotationId: null,
+                    tempPosition: null
+                  });
+                }
+              }
+            },
+          },
+          // Handles events on the annotation's control points
+          controlPoint: {
+            onMouseDown: function(event, data) {
+              if (toolState.dragAction) {
+                // This happens if the mouse was dragged out of the screen,
+                // then released, and moved back in. We want to continue the
+                // dragging action.
+                return;
+              } else {
+                // Start resizing if appropriate
+                const classNames = event.target.className.split(' ');
+                const directions = ['nw','n','ne','w','e','sw','s','se'];
+                for (let d of directions) {
+                  if (classNames.indexOf(d) !== -1) {
+                    setToolState({
+                      ...toolState,
+                      dragAction: 'resize-'+d,
+                      dragStartCoord: data.coords
+                    });
+                    break;
+                  }
+                }
+              }
+            },
+          },
+          // Handle mouse movement and mouse up over anything
+          onMouseMove: function(event,data) {
+            const { coords, startMouseCoord } = data;
+            if (toolState.selectedAnnotationId === null) {
               return;
-            } else {
+            }
+            if (!toolState.dragAction) {
+              return;
+            }
+            const deltaX = coords[0]-startMouseCoord[0];
+            const deltaY = coords[1]-startMouseCoord[1];
+            const selId = toolState.selectedAnnotationId;
+            const pageIndex = annotations[selId].page-1
+            const vp = pages[pageIndex].getViewport({scale:1});
+            if (toolState.dragAction === 'move') {
+              const selType = annotations[selId].type;
+              const pos = annotations[selId].position;
+              switch (selType) {
+                case 'point':
+                  // Update temp annotation
+                  setToolState({
+                    ...toolState,
+                    tempPosition: {
+                      coords: [
+                        clip(pos.coords[0]+deltaX,0,vp.width),
+                        clip(pos.coords[1]+deltaY,0,vp.height)
+                      ]
+                    }
+                  });
+                  break;
+                case 'rect':
+                  const w = pos.box[1]-pos.box[3];
+                  const h = pos.box[2]-pos.box[0];
+                  setToolState({
+                    ...toolState,
+                    tempPosition: {
+                      box: [
+                        clip(pos.box[0]+deltaY,0,vp.height-h),
+                        clip(pos.box[1]+deltaX,w,vp.width),
+                        clip(pos.box[2]+deltaY,h,vp.height),
+                        clip(pos.box[3]+deltaX,0,vp.width-w)
+                      ]
+                    }
+                  });
+                  break;
+                default:
+                  break;
+              }
+            } else if (toolState.dragAction.startsWith('resize-')) {
+              let action = toolState.dragAction.substr('resize-'.length);
+              let resizableDirs = {
+                left: action.indexOf('w') !== -1,
+                right: action.indexOf('e') !== -1,
+                top: action.indexOf('n') !== -1,
+                bottom: action.indexOf('s') !== -1,
+              };
+              let box = [...annotations[selId].position.box];
+              if (resizableDirs.left) {
+                box[3] += deltaX;
+              }
+              if (resizableDirs.right) {
+                box[1] += deltaX;
+              }
+              if (resizableDirs.top) {
+                box[0] += deltaY;
+              }
+              if (resizableDirs.bottom) {
+                box[2] += deltaY;
+              }
               setToolState({
                 ...toolState,
-                selectedAnnotationId: null
+                tempPosition: {
+                  box: box
+                }
+              });
+            }
+          },
+          onMouseUp: function(event,data) {
+            const selId = toolState.selectedAnnotationId;
+            if (selId !== null && annotations[selId] && toolState.tempPosition) {
+              updateAnnotation({
+                ...annotations[selId],
+                position: toolState.tempPosition
+              });
+              setToolState({
+                ...toolState,
+                dragAction: null,
+                tempPosition: null
+              });
+            }
+            setToolState({
+              ...toolState,
+              dragAction: null
+            });
+          },
+        },
+      },
+      point: {
+        initState: function() {
+          return {
+            type: 'point',
+          };
+        },
+        eventHandlers: {
+          pdf: {
+            onClick: function(event,data) {
+              createAnnotation({
+                type: 'point',
+                position: {
+                  coords: data.coords,
+                },
+                page: data.page
               });
               popTool();
             }
           },
-          onMouseDown: function() {},
-          onMouseMove: function() {},
-          onKeyPress: function() {},
+          annotation: {
+            onDoubleClick: handleDoubleClickAnnotation,
+            onClick: handleClickAnnotation,
+          },
+          controlPoint: {
+          },
+        }
+      },
+      rect: {
+        initState: function() {
+          return {
+            type: 'rect',
+            // Store temporarily created annotation as the user is creating
+            // it by dragging the mouse.
+            tempAnnotation: null,
+            dragStartCoord: null
+          };
         },
-        // Handles events on the annotation
-        annotation: {
-          onClick: function(event, data) {
-            if (toolState.dragAction) {
-              // This happens if the mouse was dragged out of the screen,
-              // then released, and moved back in. We want to continue the
-              // dragging action.
-              return;
-            } else {
-              setActiveId(data.ann.id);
-              setCardInView(data.ann.note_id);
+        eventHandlers: {
+          pdf: {
+            onClick: function() {
+              if (toolState.tempAnnotation) {
+                // Continue creating the annotation
+                return
+              } else {
+                popTool();
+              }
+            },
+            onMouseDown: function(event,data) {
+              if (toolState.tempAnnotation) {
+                // Continue creating the annotation
+                return
+              } else {
+                setToolState({
+                  ...toolState,
+                  dragStartCoord: data.coords
+                });
+              }
+            },
+          },
+          annotation: {
+            onDoubleClick: handleDoubleClickAnnotation,
+            onClick: handleClickAnnotation,
+            onMouseDown: function(event,data) {
+              if (toolState.tempAnnotation) {
+                // Continue creating the annotation
+                return
+              } else {
+                setToolState({
+                  ...toolState,
+                  dragStartCoord: data.coords
+                });
+              }
+            },
+          },
+          controlPoint: {
+          },
+          onMouseMove: function(event,data) {
+            const {coords} = data;
+            const startMouseCoord = toolState.dragStartCoord;
+            const left   = Math.min(coords[0],startMouseCoord[0]);
+            const right  = Math.max(coords[0],startMouseCoord[0]);
+            const top    = Math.min(coords[1],startMouseCoord[1]);
+            const bottom = Math.max(coords[1],startMouseCoord[1]);
+            setToolState({
+              ...toolState,
+              tempAnnotation: {
+                id: 'temp',
+                type: 'rect',
+                position: {
+                  box: [top,right,bottom,left]
+                }
+              }
+            });
+          },
+          onMouseUp: function(event,data) {
+            const {coords} = data;
+            const startMouseCoord = toolState.dragStartCoord;
+            if (!startMouseCoord || !coords) {
+              return; // Starting coords is none if mousedown happened elsewhere
+            }
+            const left   = Math.min(coords[0],startMouseCoord[0]);
+            const right  = Math.max(coords[0],startMouseCoord[0]);
+            const top    = Math.min(coords[1],startMouseCoord[1]);
+            const bottom = Math.max(coords[1],startMouseCoord[1]);
+            // Don't create a size 0 rectangle
+            if (left !== right && top !== bottom) {
+              createAnnotation({
+                type: 'rect',
+                position: {
+                  box: [top,right,bottom,left],
+                },
+                page: data.page
+              });
+            }
+            setToolState({
+              ...toolState,
+              tempAnnotation: null,
+              dragStartCoord: null
+            })
+          },
+        }
+      },
+      highlight: {
+        initState: function() {
+          return {
+            type: 'highlight',
+            points: null, // Sequence of mouse move coordinates
+            keepStraight: false, // Straight line from the initial click to current mouse position
+          };
+        },
+        eventHandlers: {
+          pdf: {
+            onClick: function() {
+              if (toolState.points) {
+                // Continue creating the annotation
+                return
+              } else {
+                popTool();
+              }
+            },
+            onMouseDown: function(event,data) {
+              if (toolState.points) {
+                // Continue creating the annotation
+                return
+              } else {
+                setToolState({
+                  ...toolState,
+                  points: [data.coords]
+                });
+              }
+            },
+          },
+          annotation: {
+            onDoubleClick: handleDoubleClickAnnotation,
+            onClick: handleClickAnnotation,
+          },
+          controlPoint: {},
+          onMouseMove: function(event,data) {
+            const {coords} = data;
+            if (toolState.points) {
               setToolState({
                 ...toolState,
-                selectedAnnotationId: data.ann.id,
-                tempPosition: null,
+                points: [...toolState.points, coords],
+                keepStraight: event.ctrlKey
               });
             }
           },
-          onMouseDown: function(event, data) {
-            if (toolState.dragAction) {
-              // This happens if the mouse was dragged out of the screen,
-              // then released, and moved back in. We want to continue the
-              // dragging action.
-              return;
-            } else {
-              // Start moving annotation if appropriate
-              const classNames = event.target.className.split(' ');
-              // Only move if the user selected it first
-              if (classNames.indexOf('selected') !== -1) {
-                const selId = toolState.selectedAnnotationId;
-                setToolState({
-                  ...toolState,
-                  dragAction: 'move',
-                  tempPosition: annotations[selId].position
-                });
+          onMouseUp: function(event,data) {
+            if (toolState.points) {
+              // Check if there's enough points.
+              let minX = toolState.points[0][0];
+              let minY = toolState.points[0][1];
+              let maxX = toolState.points[0][0];
+              let maxY = toolState.points[0][1];
+              for (let p of toolState.points) {
+                if (p[0] < minX) { minX = p[0]; }
+                if (p[0] > maxX) { maxX = p[0]; }
+                if (p[1] < minY) { minY = p[1]; }
+                if (p[1] > maxY) { maxY = p[1]; }
               }
-            }
-          },
-          onKeyPress: function(event,data) {
-            if (event.key === 'Delete') {
-              const selId = toolState.selectedAnnotationId;
-              if (selId && selId !== data.id) {
-                console.error('Mismatch between selected ID and focused DOM element. Not deleting anything until the conflict is resolved.');
+              if (maxX-minX < 5 && maxY-minY < 5) {
+                // Too small. User probably didn't intend to create a marking.
+                // Ignore
               } else {
-                deleteAnnotation(data.id);
-                setToolState({
-                  ...toolState,
-                  selectedAnnotationId: null,
-                  tempPosition: null
-                });
-              }
-            }
-          },
-        },
-        // Handles events on the annotation's control points
-        controlPoint: {
-          onMouseDown: function(event, data) {
-            if (toolState.dragAction) {
-              // This happens if the mouse was dragged out of the screen,
-              // then released, and moved back in. We want to continue the
-              // dragging action.
-              return;
-            } else {
-              // Start resizing if appropriate
-              const classNames = event.target.className.split(' ');
-              const directions = ['nw','n','ne','w','e','sw','s','se'];
-              for (let d of directions) {
-                if (classNames.indexOf(d) !== -1) {
-                  setToolState({
-                    ...toolState,
-                    dragAction: 'resize-'+d,
-                    dragStartCoord: data.coords
+                if (toolState.keepStraight) {
+                  createAnnotation({
+                    type: 'highlight',
+                    position: {
+                      points: [toolState.points[0],toolState.points[toolState.points.length-1]]
+                    },
+                    page: data.page
                   });
-                  break;
+                } else {
+                  createAnnotation({
+                    type: 'highlight',
+                    position: {
+                      points: toolState.points
+                    },
+                    page: data.page
+                  });
                 }
               }
             }
-          },
-        },
-        // Handle mouse movement and mouse up over anything
-        onMouseMove: function(event,data) {
-          const { coords, startMouseCoord } = data;
-          if (toolState.selectedAnnotationId === null) {
-            return;
-          }
-          if (!toolState.dragAction) {
-            return;
-          }
-          const deltaX = coords[0]-startMouseCoord[0];
-          const deltaY = coords[1]-startMouseCoord[1];
-          const selId = toolState.selectedAnnotationId;
-          const pageIndex = annotations[selId].page-1
-          const vp = pages[pageIndex].getViewport({scale:1});
-          if (toolState.dragAction === 'move') {
-            const selType = annotations[selId].type;
-            const pos = annotations[selId].position;
-            switch (selType) {
-              case 'point':
-                // Update temp annotation
-                setToolState({
-                  ...toolState,
-                  tempPosition: {
-                    coords: [
-                      clip(pos.coords[0]+deltaX,0,vp.width),
-                      clip(pos.coords[1]+deltaY,0,vp.height)
-                    ]
-                  }
-                });
-                break;
-              case 'rect':
-                const w = pos.box[1]-pos.box[3];
-                const h = pos.box[2]-pos.box[0];
-                setToolState({
-                  ...toolState,
-                  tempPosition: {
-                    box: [
-                      clip(pos.box[0]+deltaY,0,vp.height-h),
-                      clip(pos.box[1]+deltaX,w,vp.width),
-                      clip(pos.box[2]+deltaY,h,vp.height),
-                      clip(pos.box[3]+deltaX,0,vp.width-w)
-                    ]
-                  }
-                });
-                break;
-              default:
-                break;
-            }
-          } else if (toolState.dragAction.startsWith('resize-')) {
-            let action = toolState.dragAction.substr('resize-'.length);
-            let resizableDirs = {
-              left: action.indexOf('w') !== -1,
-              right: action.indexOf('e') !== -1,
-              top: action.indexOf('n') !== -1,
-              bottom: action.indexOf('s') !== -1,
-            };
-            let box = [...annotations[selId].position.box];
-            if (resizableDirs.left) {
-              box[3] += deltaX;
-            }
-            if (resizableDirs.right) {
-              box[1] += deltaX;
-            }
-            if (resizableDirs.top) {
-              box[0] += deltaY;
-            }
-            if (resizableDirs.bottom) {
-              box[2] += deltaY;
-            }
             setToolState({
               ...toolState,
-              tempPosition: {
-                box: box
-              }
-            });
-          }
-        },
-        onMouseUp: function(event,data) {
-          const selId = toolState.selectedAnnotationId;
-          if (selId !== null && annotations[selId] && toolState.tempPosition) {
-            updateAnnotation({
-              ...annotations[selId],
-              position: toolState.tempPosition
-            });
-            setToolState({
-              ...toolState,
-              dragAction: null,
-              tempPosition: null
-            });
-          }
-          setToolState({
-            ...toolState,
-            dragAction: null
-          });
-        },
+              points: null,
+            })
+          },
+        }
       },
-    },
-    point: {
-      initState: function() {
-        return {
-          type: 'point',
-        };
-      },
-      eventHandlers: {
-        pdf: {
-          onClick: function(event,data) {
-            createAnnotation({
-              type: 'point',
-              position: {
-                coords: data.coords,
-              },
-              page: data.page
-            });
-            popTool();
-          }
-        },
-        annotation: {
-          onDoubleClick: handleDoubleClickAnnotation,
-          onClick: handleClickAnnotation,
-        },
-        controlPoint: {
-        },
-      }
-    },
-    rect: {
-      initState: function() {
-        return {
-          type: 'rect',
-          // Store temporarily created annotation as the user is creating
-          // it by dragging the mouse.
-          tempAnnotation: null,
-          dragStartCoord: null
-        };
-      },
-      eventHandlers: {
-        pdf: {
-          onClick: function() {
-            if (toolState.tempAnnotation) {
-              // Continue creating the annotation
-              return
-            } else {
-              popTool();
-            }
-          },
-          onMouseDown: function(event,data) {
-            if (toolState.tempAnnotation) {
-              // Continue creating the annotation
-              return
-            } else {
-              setToolState({
-                ...toolState,
-                dragStartCoord: data.coords
-              });
-            }
-          },
-        },
-        annotation: {
-          onDoubleClick: handleDoubleClickAnnotation,
-          onClick: handleClickAnnotation,
-          onMouseDown: function(event,data) {
-            if (toolState.tempAnnotation) {
-              // Continue creating the annotation
-              return
-            } else {
-              setToolState({
-                ...toolState,
-                dragStartCoord: data.coords
-              });
-            }
-          },
-        },
-        controlPoint: {
-        },
-        onMouseMove: function(event,data) {
-          const {coords} = data;
-          const startMouseCoord = toolState.dragStartCoord;
-          const left   = Math.min(coords[0],startMouseCoord[0]);
-          const right  = Math.max(coords[0],startMouseCoord[0]);
-          const top    = Math.min(coords[1],startMouseCoord[1]);
-          const bottom = Math.max(coords[1],startMouseCoord[1]);
-          setToolState({
-            ...toolState,
-            tempAnnotation: {
-              id: 'temp',
-              type: 'rect',
-              position: {
-                box: [top,right,bottom,left]
-              }
-            }
-          });
-        },
-        onMouseUp: function(event,data) {
-          const {coords} = data;
-          const startMouseCoord = toolState.dragStartCoord;
-          if (!startMouseCoord || !coords) {
-            return; // Starting coords is none if mousedown happened elsewhere
-          }
-          const left   = Math.min(coords[0],startMouseCoord[0]);
-          const right  = Math.max(coords[0],startMouseCoord[0]);
-          const top    = Math.min(coords[1],startMouseCoord[1]);
-          const bottom = Math.max(coords[1],startMouseCoord[1]);
-          // Don't create a size 0 rectangle
-          if (left !== right && top !== bottom) {
-            createAnnotation({
-              type: 'rect',
-              position: {
-                box: [top,right,bottom,left],
-              },
-              page: data.page
-            });
-          }
-          setToolState({
-            ...toolState,
-            tempAnnotation: null,
-            dragStartCoord: null
-          })
-        },
-      }
-    },
-    highlight: {
-      initState: function() {
-        return {
-          type: 'highlight',
-          points: null, // Sequence of mouse move coordinates
-          keepStraight: false, // Straight line from the initial click to current mouse position
-        };
-      },
-      eventHandlers: {
-        pdf: {
-          onClick: function() {
-            if (toolState.points) {
-              // Continue creating the annotation
-              return
-            } else {
-              popTool();
-            }
-          },
-          onMouseDown: function(event,data) {
-            if (toolState.points) {
-              // Continue creating the annotation
-              return
-            } else {
-              setToolState({
-                ...toolState,
-                points: [data.coords]
-              });
-            }
-          },
-        },
-        annotation: {
-          onDoubleClick: handleDoubleClickAnnotation,
-          onClick: handleClickAnnotation,
-        },
-        controlPoint: {},
-        onMouseMove: function(event,data) {
-          const {coords} = data;
-          if (toolState.points) {
-            setToolState({
-              ...toolState,
-              points: [...toolState.points, coords],
-              keepStraight: event.ctrlKey
-            });
-          }
-        },
-        onMouseUp: function(event,data) {
-          if (toolState.points) {
-            // Check if there's enough points.
-            let minX = toolState.points[0][0];
-            let minY = toolState.points[0][1];
-            let maxX = toolState.points[0][0];
-            let maxY = toolState.points[0][1];
-            for (let p of toolState.points) {
-              if (p[0] < minX) { minX = p[0]; }
-              if (p[0] > maxX) { maxX = p[0]; }
-              if (p[1] < minY) { minY = p[1]; }
-              if (p[1] > maxY) { maxY = p[1]; }
-            }
-            if (maxX-minX < 5 && maxY-minY < 5) {
-              // Too small. User probably didn't intend to create a marking.
-              // Ignore
-            } else {
-              if (toolState.keepStraight) {
-                createAnnotation({
-                  type: 'highlight',
-                  position: {
-                    points: [toolState.points[0],toolState.points[toolState.points.length-1]]
-                  },
-                  page: data.page
-                });
-              } else {
-                createAnnotation({
-                  type: 'highlight',
-                  position: {
-                    points: toolState.points
-                  },
-                  page: data.page
-                });
-              }
-            }
-          }
-          setToolState({
-            ...toolState,
-            points: null,
-          })
-        },
-      }
-    },
-  };
+    }
+  }, [toolState]);
 
   // Initialize State
   useEffect(() => {
@@ -2010,6 +2013,41 @@ export default function PdfAnnotationPage(props) {
     el.scrollTo(el.scrollLeft,scrollTo);
   }
 
+  const tabs = [
+    {
+      title: 'Details',
+      render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
+    },{
+      title: 'Annotation Notes',
+      render: () => 
+        <NoteCardsContainer
+            annotations={annotations} />
+    },{
+      title: 'Notes',
+      render: () => <DocNotes doc={doc} />
+    }
+  ];
+
+  // Context
+  const context = useMemo( () => { 
+    return {
+      'pdfScale': {val: pdfScale, set: setPdfScale},
+      'activeId': {val: activeId, set: activateAnnotation}, // TODO: Check if this works with `setActiveId` and a useEffect hook for the side-effects
+      'cardInView': {val: cardInView, set: setCardInView},
+      'annotationInView': {val: annotationInView, set: setAnnotationInView},
+      'toolState': {val: toolState, set: setToolState},
+      'sidebar': {
+        'visible': {val: sidebarVisible, set: setSidebarVisible},
+        'activeTabIndex': {val: sidebarActiveTabIndex, set: setSidebarActiveTabIndex}
+      },
+      'annotation': {
+        'create': createAnnotation,
+        'update': updateAnnotation,
+        'delete': deleteAnnotation,
+      },
+    }
+  }, [doc, pdfScale, activeId, cardInView, annotationInView, toolState, sidebarVisible, sidebarActiveTabIndex]);
+
   // Can't render until everything is initialized
   if (toolState === null) {
     return null;
@@ -2024,44 +2062,6 @@ export default function PdfAnnotationPage(props) {
     </main>);
   }
 
-  const tabs = [
-    {
-      title: 'Details',
-      render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
-    },{
-      title: 'Annotation Notes',
-      render: () => 
-        <NoteCardsContainer
-            annotations={annotations}
-            activeId={activeId} setActiveId={activateAnnotation}
-            cardInView={cardInView} setCardInView={setCardInView}
-            annotationInView={annotationInView}
-            setAnnotationInView={setAnnotationInView}
-            updateAnnotation={updateAnnotation}
-            scale={pdfScale} />
-    },{
-      title: 'Notes',
-      render: () => <DocNotes doc={doc} />
-    }
-  ];
-
-  // Context
-  const context = {
-    'pdfScale': {val: pdfScale, set: setPdfScale},
-    'activeId': {val: activeId, set: activateAnnotation}, // TODO: Check if this works with `setActiveId` and a useEffect hook for the side-effects
-    'cardInView': {val: cardInView, set: setCardInView},
-    'annotationInView': {val: annotationInView, set: setAnnotationInView},
-    'toolState': {val: toolState, set: setToolState},
-    'sidebar': {
-      'visible': {val: sidebarVisible, set: setSidebarVisible},
-      'activeTabIndex': {val: sidebarActiveTabIndex, set: setSidebarActiveTabIndex}
-    },
-    'annotation': {
-      'create': createAnnotation,
-      'update': updateAnnotation,
-      'delete': deleteAnnotation,
-    },
-  };
   return (<main className='annotation-page'>
     <pdfAnnotationPageContext.Provider value={context}>
       <div className='pages-container' onScroll={handleScroll} onKeyDown={handleKeyDown}>
