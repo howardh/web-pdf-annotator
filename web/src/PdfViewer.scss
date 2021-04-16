@@ -83,6 +83,10 @@ body {
       white-space: pre;
       cursor: text;
       transform-origin: 0% 0%;
+      &::selection {
+        color: blue;
+        background: blue;
+      }
     }
     &.hidden {
       display: none;
