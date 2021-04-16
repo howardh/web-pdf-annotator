@@ -1300,6 +1300,7 @@ export default function PdfAnnotationPage(props) {
     }
   }, [location.search]);
 
+  const scrollWhenFoundTimeoutRef = useRef(null);
   useEffect(() => { // Scroll annotation into view
     function scrollWhenFound() {
       if (!annotationInView) {
@@ -1307,8 +1308,19 @@ export default function PdfAnnotationPage(props) {
       }
       let annotationElemId = 'annotation'+annotationInView;
       let elem = document.getElementById(annotationElemId);
-      if (!elem) { // Try again later
-        window.setTimeout(scrollWhenFound, 100);
+      if (!elem) { // If we can't find the element
+        // Find the page it's on and scroll to that page first
+        // This ensures that the relevant annotations are rendered.
+        let ann = annotations[annotationInView];
+        window.ann = ann;
+        if (ann) {
+          let pageNum = ann.page;
+          let pageIndex = parseInt(pageNum)-1;
+          pageRefs[pageIndex]?.current?.scrollIntoView();
+        }
+        // Try again later
+        let timeoutId = window.setTimeout(scrollWhenFound, 100);
+        scrollWhenFoundTimeoutRef.current = timeoutId;
         return;
       }
       // Scroll into view, then center the element
@@ -1319,9 +1331,11 @@ export default function PdfAnnotationPage(props) {
         top: window.scrollY-vpHeight/2+elemHeight/2
       });
       setAnnotationInView(null);
+      scrollWhenFoundTimeoutRef.current = null;
     }
+    window.clearTimeout(scrollWhenFoundTimeoutRef.current);
     scrollWhenFound();
-  }, [annotationInView]);
+  }, [annotationInView, annotations, pageRefs]);
   useEffect(() => { // Scroll card into view
     function scrollWhenFound() {
       if (!cardInView) {
