@@ -770,7 +770,7 @@ function PdfViewer(props) {
   useEffect(() => {
     // Ensures that we render the new page, because we check if the scale changed between renders
     lastRenderedScale.current = null;
-  }, [page]);
+  }, [page, ref.current]);
 
   // Render PDF
   const taskRef = useRef(null);
