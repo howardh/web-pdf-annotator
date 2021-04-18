@@ -42,9 +42,9 @@ class ModelMixin(object):
             prop = attr.property
             prop_type = type(prop.columns[0].type)
             if prop_type is Date:
-                val = datetime.datetime.strptime(v, "%Y-%m-%d").date()
+                val = datetime.datetime.fromisoformat(v).date()
             elif prop_type is DateTime:
-                val = datetime.datetime.strptime(v, "%Y-%m-%dT%H:%M:%S")
+                val = datetime.datetime.fromisoformat(v)
             else:
                 val = v
             self.__setattr__(k,val)
