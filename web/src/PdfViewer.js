@@ -1306,6 +1306,9 @@ export default function PdfAnnotationPage(props) {
       if (!annotationInView) {
         return;
       }
+      if (!pagesLoadingProgress || pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages) { // Wait until everything is loaded before scrolling. Otherwise, the loading animation disappears and the user has no idea what's going on while waiting for the page to render.
+        return;
+      }
       let annotationElemId = 'annotation'+annotationInView;
       let elem = document.getElementById(annotationElemId);
       if (!elem) { // If we can't find the element
@@ -1335,7 +1338,7 @@ export default function PdfAnnotationPage(props) {
     }
     window.clearTimeout(scrollWhenFoundTimeoutRef.current);
     scrollWhenFound();
-  }, [annotationInView, annotations, pageRefs]);
+  }, [annotationInView, annotations, pageRefs, pagesLoadingProgress]);
   useEffect(() => { // Scroll card into view
     function scrollWhenFound() {
       if (!cardInView) {
