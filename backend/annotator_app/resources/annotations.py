@@ -49,7 +49,7 @@ class AnnotationEndpoint(EntityEndpoint):
         if doc is None:
             print('Error: Unable to find document associated with annotation %d' % entity.id)
 
-        doc.last_modified_at = datetime.datetime.now()
+        doc.last_modified_at = datetime.datetime.utcnow()
         return [entity]
 
 class AnnotationImageEndpoint(Resource):

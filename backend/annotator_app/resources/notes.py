@@ -20,8 +20,8 @@ class NoteList(ListEndpoint):
         model = Note
         filterable_params = ['id', 'user_id']
     def after_create(self,entity,data):
-        entity.created_at = datetime.datetime.now()
-        entity.last_modified_at = datetime.datetime.now()
+        entity.created_at = datetime.datetime.utcnow()
+        entity.last_modified_at = datetime.datetime.utcnow()
         if 'annotation_id' in data:
             ann = db.session.query(Annotation) \
                     .filter_by(id=data['annotation_id']) \
@@ -46,7 +46,7 @@ class NoteEndpoint(EntityEndpoint):
         model = Note
         filterable_params = ['id', 'user_id']
     def after_update(self,entity,data):
-        entity.last_modified_at = datetime.datetime.now()
+        entity.last_modified_at = datetime.datetime.utcnow()
         if 'annotation_id' in data:
             ann = db.session.query(Annotation) \
                     .filter_by(id=data['annotation_id']) \
