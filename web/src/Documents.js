@@ -2,6 +2,7 @@ import React from 'react';
 import {useEffect, useState, useRef} from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { Link, useHistory } from "react-router-dom";
+import { createSelector } from 'reselect';
 
 import {
   filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
@@ -15,8 +16,10 @@ import {documentActions,tagActions,autofillDocumentInfo} from './actions/index.j
 
 import './Documents.scss';
 
-function useDocuments(uid) {
-}
+const docSelector = createSelector(
+  [state => state.documents.entities],
+  (docs) => filterDict(docs, e => e && !e.deleted_at)
+);
 
 export default function DocumentsPage(props) {
   const dispatch = useDispatch();
@@ -26,10 +29,7 @@ export default function DocumentsPage(props) {
   } = props;
 
   // All documents, including those owned by someone else
-  const documents = filterDict(
-    useSelector(state => state.documents.entities),
-    e => e && !e.deleted_at
-  );
+  const documents = useSelector( docSelector );
 
   // Load documents and tags
   useEffect(() => {
