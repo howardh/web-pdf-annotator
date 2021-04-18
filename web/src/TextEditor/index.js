@@ -25,12 +25,14 @@ export default function TextEditor(props) {
     text,
     onChangeText,
     onKeyDown=()=>null,
-    onSave=()=>null
+    onSave=()=>null,
+    debounce=500, // Milliseconds
   } = props;
 
   const monaco = useMonaco();
   const editorRef = useRef(null);
 
+  // Initialize Monaco editor
   useEffect(()=>{
     if (!monaco) {
       return;
@@ -71,6 +73,7 @@ export default function TextEditor(props) {
     });
   },[monaco]);
 
+  // Custom keybindings
   useEffect(()=>{
     if (!editorRef.current || !monaco) {
       return;
@@ -81,13 +84,24 @@ export default function TextEditor(props) {
     ); // FIXME: Is there a way to remove this if ever `onSave` changes? This could cause a memory leak otherwise.
   },[editorRef.current, monaco, onSave]);
 
+  // Debounce
+  const timeoutRef = useRef(null);
+  function handleChange(val) {
+    if (debounce > 0) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = window.setTimeout(() => onChangeText(val), debounce);
+    } else {
+      onChangeText(val);
+    }
+  }
+
   return (<div className='text-editor'>
     <Editor
       height="100%"
       width="100%"
       defaultLanguage="my-markdown"
       defaultValue={text}
-      onChange={onChangeText}
+      onChange={handleChange}
       onMount={(editor,m) => { editorRef.current=editor; }}
     />
   </div>);
