@@ -57,7 +57,7 @@ def date_to_str(d):
 def datetime_to_str(d):
     if d is None:
         return None
-    return d.strftime('%Y-%m-%dT%H:%M:%S')
+    return d.replace(tzinfo=datetime.timezone.utc).isoformat()
 
 roles_users = db.Table('roles_users',
         db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
