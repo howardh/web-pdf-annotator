@@ -88,25 +88,6 @@ export function NoteViewer(props) {
     }
   }, [note, ref.current]);
 
-  // Parse Markdown
-  function parseBody(note) {
-    switch (note.parser) {
-      case 'plaintext': {
-        return note.body;
-      } case 'commonmark': {
-        let reader = new commonmark.Parser();
-        let writer = new commonmark.HtmlRenderer({safe: true});
-        let parsed = reader.parse(note.body); // parsed is a 'Node' tree
-        let parsedBody = writer.render(parsed);
-        return parsedBody;
-      } case 'markdown-it': {
-        let parsedBody = md.render(note.body);
-        return parsedBody;
-      } default:
-        return 'Error: Invalid Parser ('+(note.parser)+')';
-    }
-  }
-
   // Force rerenders
   const [refreshing,setRefreshing] = useState(false);
   function refresh() {
@@ -151,7 +132,8 @@ export function NoteViewer(props) {
       return (<pre ref={ref} className='rendered-note'>{note.body}</pre>);
       break;
     } case 'markdown-it': {
-      let parsedBody = md.render(note.body);
+      let env = {}; // Pass data to the custom parsers with this
+      let parsedBody = md.render(note.body, env);
       return (<div ref={ref} className='rendered-note' dangerouslySetInnerHTML={{__html: parsedBody}} />);
     } case 'commonmark': {
       let reader = new commonmark.Parser();
