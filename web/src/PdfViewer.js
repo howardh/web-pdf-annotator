@@ -316,7 +316,6 @@ function AnnotationLayer(props) {
         <Annotation annotation={annotation}
           key={annotation.id}
           isActive={false}
-          viewNote={()=>setCardInView(annotation.note_id)}
           scale={scale}
           toolState={toolState} 
           onClick={e=>handleClick(e,annotation)}
@@ -454,9 +453,12 @@ function Annotation(props) {
 
 function AnnotationActions(props) {
   const {
-    annotation,
-    viewNote
+    annotation
   } = props;
+  const context = useContext(pdfAnnotationPageContext);
+  const setCardInView = context.cardInView.set;
+  const setSidebarVisible = context.sidebar.visible.set;
+  const setSidebarTab = context.sidebar.activeTabIndex.set;
 
   const dispatch = useDispatch();
   const imageUrlRef= useRef(null);
@@ -473,6 +475,13 @@ function AnnotationActions(props) {
       parser: 'markdown-it',
       annotation_id: annotation.id
     }));
+    setSidebarVisible(true);
+    setSidebarTab(1); // XXX: Fix hard-coded tab index.
+  }
+  function viewNote() {
+    setCardInView(annotation.note_id);
+    setSidebarVisible(true);
+    setSidebarTab(1); // XXX: Fix hard-coded tab index.
   }
   function copyPhotoUrlToClipboard() {
     if (!imageUrlRef.current) {
@@ -488,13 +497,16 @@ function AnnotationActions(props) {
         annotation.note_id ?
           <Button onClick={viewNote}>
             <i className='material-icons'>description</i>
+            <Tooltip>View Note</Tooltip>
           </Button>
         : <Button onClick={createNote}>
             <i className='material-icons'>note_add</i>
+            <Tooltip>Create Note</Tooltip>
           </Button>
       }
       <Button onClick={deleteAnnotation}>
         <i className='material-icons'>delete</i>
+        <Tooltip>Delete Note</Tooltip>
       </Button>
       {
         annotation.type === 'rect' &&
@@ -504,6 +516,7 @@ function AnnotationActions(props) {
             ref={imageUrlRef} />
           <Button onClick={copyPhotoUrlToClipboard}>
             <i className='material-icons'>photo</i>
+            <Tooltip>Copy Image URL</Tooltip>
           </Button>
         </GroupedInputs>
       }
@@ -1144,10 +1157,6 @@ function DocNotes(props) {
 function SideBar(props) {
   const {
     tabs = [],
-    //activeTabIndex,
-    //onChangeActiveTabIndex,
-    //visible,
-    //onChangeVisible
   } = props;
   const context = useContext(pdfAnnotationPageContext);
   const visible = context.sidebar.visible.val;
