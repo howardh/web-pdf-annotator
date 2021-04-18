@@ -24,6 +24,7 @@ export default function TextEditor(props) {
   const {
     text,
     onChangeText,
+    onScroll,
     onKeyDown=()=>null,
     onSave=()=>null,
     debounce=500, // Milliseconds
@@ -82,6 +83,19 @@ export default function TextEditor(props) {
       monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
       onSave
     ); // FIXME: Is there a way to remove this if ever `onSave` changes? This could cause a memory leak otherwise.
+    editorRef.current.onDidScrollChange((e) => {
+      if (!e.scrollTopChanged) {
+        return;
+      }
+      if (!onScroll) {
+        return;
+      }
+      const visibleRanges = editorRef.current.getVisibleRanges();
+      let data = {
+        visibleRanges
+      };
+      onScroll(data);
+    })
   },[editorRef.current, monaco, onSave]);
 
   // Debounce

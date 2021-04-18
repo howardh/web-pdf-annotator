@@ -27,6 +27,7 @@ export default function NoteEditorPage(props) {
   } = props;
 
   const note = useSelector(state => state.notes.entities[noteId]);
+  const [editorScrollPos, setEditorScrollPos] = useState(null);
 
   // Load Note
   useEffect(() => {
@@ -43,6 +44,9 @@ export default function NoteEditorPage(props) {
       body: text
     }));
   }
+  function handleScroll({visibleRanges}) {
+    setEditorScrollPos(visibleRanges[0].startLineNumber);
+  }
 
   // Render
   if (!userId) {
@@ -57,10 +61,10 @@ export default function NoteEditorPage(props) {
   }
   return (<main className='note-editor-page'>
     <div className='editor-container'>
-      <TextEditor text={note.body} onChangeText={updateBody}/>
+      <TextEditor text={note.body} onChangeText={updateBody} onScroll={handleScroll}/>
     </div>
     <div className='preview-container'>
-      <NoteViewer note={note} />
+      <NoteViewer note={note} editorScrollPos={editorScrollPos} />
     </div>
   </main>);
 }
@@ -68,6 +72,7 @@ export default function NoteEditorPage(props) {
 export function NoteViewer(props) {
   const {
     note,
+    editorScrollPos // Line number
   } = props;
 
   const ref = useRef(null);
@@ -83,6 +88,7 @@ export function NoteViewer(props) {
     }
   }, [note, ref.current]);
 
+  // Parse Markdown
   function parseBody(note) {
     switch (note.parser) {
       case 'plaintext': {
@@ -101,6 +107,7 @@ export function NoteViewer(props) {
     }
   }
 
+  // Force rerenders
   const [refreshing,setRefreshing] = useState(false);
   function refresh() {
     // Momentarily hide the div to force a rerender
@@ -112,6 +119,24 @@ export function NoteViewer(props) {
     }
     setRefreshing(false);
   },[refreshing]);
+
+  // Scrolling sync with editor
+  useEffect(() => {
+    // Look for closest line number in rendered markdown and scroll to it
+    const elems = ref.current.getElementsByTagName('p'); // Only <p> tags have the `data-line` attribute currently.
+    if (elems.length === 0) {
+      return;
+    }
+    let lastElem = elems[0];
+    for (let elem of elems) {
+      let lineNum = parseInt(elem.getAttribute('data-line'));
+      if (lineNum > editorScrollPos) {
+        lastElem.scrollIntoView({behaviour: 'smooth'});
+        break;
+      }
+      lastElem = elem;
+    }
+  }, [editorScrollPos]);
 
   if (!note) {
     return <div></div>;
