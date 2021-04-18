@@ -189,10 +189,9 @@ body {
     transition: 0.2s ease;
     font-size: 10pt;
 
-    &:focus, &:focus-within {
-      .rendered-note {
-        overflow-x: auto;
-      }
+    .rendered-note {
+      overflow-x: auto;
+      scrollbar-width: none;
     }
 
     &.active {
