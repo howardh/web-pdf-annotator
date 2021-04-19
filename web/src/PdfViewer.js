@@ -638,12 +638,19 @@ function NoteCard(props) {
     active: isActive
   });
   if (isEditing && updatedNote) {
+    const options = {
+      minimap: {
+        enabled: false
+      },
+      lineNumbers: false,
+    };
     return (<div className={classNames}
         onClick={()=>setActive(true)} id={'card'+note.id}>
       <TextEditor
           onChangeText={handleChangeBody}
           text={updatedNote.body}
           onSave={saveChanges}
+          options={options}
           debounce={0}/>
       <div className='controls'>
         <GroupedInputs>

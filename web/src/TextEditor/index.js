@@ -20,6 +20,11 @@ function fetchAutocompleteSuggestions(prefix,suffix){
   });
 }
 
+const DEFAULT_MONACO_OPTIONS = {
+  wordWrap: 'on',
+  wrappingIndent: 'same',
+};
+
 export default function TextEditor(props) {
   const {
     text,
@@ -27,6 +32,7 @@ export default function TextEditor(props) {
     onScroll,
     onKeyDown=()=>null,
     onSave=()=>null,
+    options={}, // Monaco IEditorOptions
     debounce=500, // Milliseconds
   } = props;
 
@@ -115,6 +121,7 @@ export default function TextEditor(props) {
       width="100%"
       defaultLanguage="my-markdown"
       defaultValue={text}
+      options={{...DEFAULT_MONACO_OPTIONS, ...options}}
       onChange={handleChange}
       onMount={(editor,m) => { editorRef.current=editor; }}
     />
