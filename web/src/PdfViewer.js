@@ -643,7 +643,8 @@ function NoteCard(props) {
       <TextEditor
           onChangeText={handleChangeBody}
           text={updatedNote.body}
-          onSave={saveChanges}/>
+          onSave={saveChanges}
+          debounce={0}/>
       <div className='controls'>
         <GroupedInputs>
           <Button onClick={saveChanges}>
