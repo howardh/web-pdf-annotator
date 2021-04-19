@@ -13,5 +13,9 @@
     padding: 20px;
     background-color: white;
     overflow: scroll;
+    .rendered-note img {
+      max-width: 100%;
+      border: 1px solid #f0f0f0;
+    }
   }
 }
