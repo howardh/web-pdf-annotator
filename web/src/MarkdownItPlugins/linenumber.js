@@ -4,7 +4,7 @@ function injectLineNumbers(tokens, idx, options, env, slf) {
   if (tokens[idx].map && tokens[idx].level === 0) {
     let line = tokens[idx].map[0];
     tokens[idx].attrJoin("class", "line");
-    tokens[idx].attrSet("data-line", String(line));
+    tokens[idx].attrSet("data-line", String(line+1));
   }
   return slf.renderToken(tokens, idx, options, env, slf);
 }

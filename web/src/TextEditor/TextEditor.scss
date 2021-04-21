@@ -8,4 +8,10 @@
   height: 100vh;
   text-align: left;
   outline: none;
+
+  .selected-lines {
+    background: $primary-colour-dark;
+    width: 5px !important;
+    margin-left: 3px;
+  }
 }

@@ -29,6 +29,8 @@ export default function TextEditor(props) {
   const {
     text,
     onChangeText,
+    selectedLines,
+    scrollToSelectedLines = true,
     onScroll,
     onKeyDown=()=>null,
     onSave=()=>null,
@@ -80,16 +82,36 @@ export default function TextEditor(props) {
     });
   },[monaco]);
 
-  // Custom keybindings
+  // Highlight selected lines and scroll to it
+  const oldDecorationRef = useRef([]);
+  const ignoreNextScrollRef = useRef(0);
+  useEffect(() => {
+    if (!selectedLines) { return; }
+    if (!editorRef.current) { return; }
+    let startLine = parseInt(selectedLines[0][0]);
+    let endLine = parseInt(selectedLines[1][1]);
+    oldDecorationRef.current = editorRef.current.deltaDecorations(oldDecorationRef.current, [
+      { range: new monaco.Range(startLine,1,endLine,1), options: { isWholeLine: true, linesDecorationsClassName: 'selected-lines' } }
+    ]);
+
+    if (scrollToSelectedLines) {
+      ignoreNextScrollRef.current = 2;
+      editorRef.current.revealRange(new monaco.Range(startLine,1,endLine,1));
+    }
+  }, [selectedLines]);
+
+  // Custom keybindings and event handlers
   useEffect(()=>{
     if (!editorRef.current || !monaco) {
       return;
     }
-    editorRef.current.addCommand(
-      monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-      onSave
-    ); // FIXME: Is there a way to remove this if ever `onSave` changes? This could cause a memory leak otherwise.
-    editorRef.current.onDidScrollChange((e) => {
+    const dispSave = editorRef.current.addAction({
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+      run: onSave,
+      id: 'save_text',
+      label: 'Save Text',
+    });
+    const dispScroll= editorRef.current.onDidScrollChange((e) => {
       if (!e.scrollTopChanged) {
         return;
       }
@@ -97,12 +119,17 @@ export default function TextEditor(props) {
         return;
       }
       const visibleRanges = editorRef.current.getVisibleRanges();
+      console.log(['scrolling to', visibleRanges,e]);
       let data = {
         visibleRanges
       };
       onScroll(data);
-    })
-  },[editorRef.current, monaco, onSave]);
+    });
+    return () => {
+      dispSave.dispose();
+      dispScroll.dispose();
+    };
+  },[editorRef.current, onSave]);
 
   // Debounce
   const timeoutRef = useRef(null);
