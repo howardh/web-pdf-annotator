@@ -15,7 +15,7 @@ import {
   documentActions,annotationActions,noteActions
 } from './actions/index.js';
 
-import './PdfViewer.scss';
+import './AnnotatePage.scss';
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);

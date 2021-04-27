@@ -11,7 +11,8 @@ import {
 
 import {updateSession} from './actions/index.js';
 
-import PdfAnnotationPage from './PdfViewer.js';
+import PdfAnnotationPage from './AnnotatePage.js';
+import PdfViewerPage from './PdfViewer.js';
 import LoginPage from './Login.js';
 import AccountPage from './Account.js';
 import { LogoutPage } from './Login.js';
@@ -71,6 +72,7 @@ function App() {
           <DocumentsPage userId={userId} />
         </Route>
         <Route path="/annotate/:docId" component={PdfAnnotationPage} />
+        <Route path="/pdf/:docId" component={PdfViewerPage} />
         <Route path="/tags">
           <Navigation userId={userId} confirmed={confirmed} />
           <TagsPage userId={userId} />
