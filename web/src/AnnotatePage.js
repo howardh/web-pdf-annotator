@@ -9,11 +9,12 @@ import { Button, TextField, Checkbox, GroupedInputs, Tooltip } from './Inputs.js
 import TextEditor from './TextEditor';
 import { NoteViewer } from './NoteEditor.js';
 import {
-  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString
+  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString,useSemiState
 } from './Utils.js';
 import {
   documentActions,annotationActions,noteActions
 } from './actions/index.js';
+import { PdfViewer, usePdfViewerState } from './PdfViewer.js';
 
 import './AnnotatePage.scss';
 class ErrorBoundary extends React.Component {
@@ -48,12 +49,11 @@ function AnnotationLayer(props) {
     eventHandlers,
     page,
     pageNum,
-    scale
+    scale,
+    activeId,
+    cardInView,
+    toolState, setToolState
   } = props;
-  const context = useContext(pdfAnnotationPageContext);
-  const activeId = context.activeId.val;
-  const setCardInView = context.cardInView.set;
-  const toolState = context.toolState.val;
 
   const ref = useRef(null);
 
@@ -117,10 +117,14 @@ function AnnotationLayer(props) {
         setFocusedId(annId);
         let callback = eventHandlers.annotation.onClick;
         if (callback) {
-          callback(event, {
-            ...data,
-            ann: annotations[annId],
-            id: annId
+          callback({
+            event, 
+            data: {
+              ...data,
+              ann: annotations[annId],
+              id: annId
+            },
+            toolState, setToolState
           });
         }
         return;
@@ -129,7 +133,7 @@ function AnnotationLayer(props) {
       // If annotations haven't been clicked...
       let callback = eventHandlers.pdf.onClick;
       if (callback) {
-        callback(event, data);
+        callback({event, data, toolState, setToolState});
       }
     } else if (classNames.indexOf('annotation') !== -1) {
       if (ann.id === 'temp') {
@@ -137,7 +141,7 @@ function AnnotationLayer(props) {
       }
       let callback = eventHandlers.annotation.onClick;
       if (callback) {
-        callback(event, data);
+        callback({event, data, toolState, setToolState});
       }
     } else if (classNames.indexOf('control') !== -1) {
       // Nothing to do
@@ -159,7 +163,11 @@ function AnnotationLayer(props) {
       if (annId) {
         let callback = eventHandlers.annotation.onDoubleClick;
         if (callback) {
-          callback(event, {...data, ann: annotations[annId]});
+          callback({
+            event,
+            data: {...data, ann: annotations[annId]},
+            toolState, setToolState
+          });
         }
         return;
       }
@@ -170,7 +178,7 @@ function AnnotationLayer(props) {
       callback = eventHandlers.controlPoint.onDoubleClick;
     }
     if (callback) {
-      callback(event, data);
+      callback({event, data, toolState, setToolState});
     }
   }
   function handleMouseDown(event) {
@@ -191,7 +199,7 @@ function AnnotationLayer(props) {
       callback = eventHandlers.controlPoint.onMouseDown;
     }
     if (callback) {
-      callback(event, data);
+      callback({event, data, toolState, setToolState});
     }
   }
   function handleMouseUp(event) {
@@ -205,7 +213,7 @@ function AnnotationLayer(props) {
     if (mouseMoved) {
       let callback = eventHandlers.onMouseUp;
       if (callback) {
-        callback(event, data);
+        callback({event, data, toolState, setToolState});
       }
     }
     setStartMouseCoord(null);
@@ -224,7 +232,7 @@ function AnnotationLayer(props) {
     };
     let callback = eventHandlers.onMouseMove;
     if (callback) {
-      callback(event, data);
+      callback({event, data, toolState, setToolState});
     }
   }
   function handleKeyDown(event, ann) {
@@ -252,7 +260,7 @@ function AnnotationLayer(props) {
     }
 
     if (callback) {
-      callback(event, data);
+      callback({event, data, toolState, setToolState});
     }
   }
 
@@ -305,7 +313,7 @@ function AnnotationLayer(props) {
     }
   },[page, ref.current, annotations, toolState, scale]);
 
-  return <div className='annotation-layer'>
+  return <div className='custom-annotation-layer'>
     <canvas ref={ref} onDoubleClick={handleDoubleClick}
         onKeyDown={handleKeyDown} tabIndex={-1}
         onClick={handleClick} onMouseDown={handleMouseDown}
@@ -330,7 +338,7 @@ function AnnotationLayer(props) {
       activeId && annotations[activeId] &&
       <Annotation annotation={annotations[activeId]}
         isActive={true}
-        viewNote={()=>setCardInView(annotations[activeId].note_id)}
+        viewNote={()=>cardInView.setValue(annotations[activeId].note_id)}
         scale={scale}
         toolState={toolState} 
         onClick={e=>handleClick(e,annotations[activeId])}
@@ -456,7 +464,7 @@ function AnnotationActions(props) {
     annotation
   } = props;
   const context = useContext(pdfAnnotationPageContext);
-  const setCardInView = context.cardInView.set;
+  const cardInView = context.cardInView;
   const setSidebarVisible = context.sidebar.visible.set;
   const setSidebarTab = context.sidebar.activeTabIndex.set;
 
@@ -479,7 +487,7 @@ function AnnotationActions(props) {
     setSidebarTab(1); // XXX: Fix hard-coded tab index.
   }
   function viewNote() {
-    setCardInView(annotation.note_id);
+    cardInView.setValue(annotation.note_id);
     setSidebarVisible(true);
     setSidebarTab(1); // XXX: Fix hard-coded tab index.
   }
@@ -534,9 +542,6 @@ function NoteCard(props) {
     annotationId=null,
     isActive, setActive=()=>null,
   } = props;
-  const context = useContext(pdfAnnotationPageContext);
-  const setCardInView = context.cardInView.set;
-  const setAnnotationInView = context.annotationInView.set;
 
   const localStorageId = 'note'+noteId;
   const dispatch = useDispatch();
@@ -593,10 +598,10 @@ function NoteCard(props) {
   }
   // Event Handlers
   function scrollIntoView() {
-    history.push('?annotation='+annotationId+'&note='+note.id);
-    //setCardInView(note.id);
-    // We need to call `setAnnotationInView` because if this is called twice in a row on the same annotation, it won't trigger a scroll because the URL search query does not change.
-    setAnnotationInView(annotationId);
+    // We need to update the state because if this is called twice in a row on the same annotation, it won't trigger a scroll because the URL search query does not change.
+    history.push('?annotation='+annotationId+'&note='+note.id, 
+      { id: (history.location.state?.id || 0)+1 }
+    );
   }
   function handleChangeBody(text) {
     setUpdatedNote({
@@ -729,29 +734,26 @@ function NoteCardsContainer(props) {
   const context = useContext(pdfAnnotationPageContext);
   const activeId = context.activeId.val;
   const setActiveId = context.activeId.set;
-  const cardInView = context.cardInView.val;
-  const setCardInView = context.cardInView.set;
-  const annotationInView = context.annotationInView.val;
-
-  const [scrollYPos, setScrollYPos] = useState(0);
+  const cardInView = context.cardInView;
+  const annotationInView = context.annotationInView;
 
   useEffect(()=>{
-    let id = cardInView;
-    if (!id) {
+    if (!cardInView.changed) {
       return;
     }
     // If scrolling to an annotation, wait until it's in view
-    if (annotationInView) {
+    if (annotationInView.changed) {
       return;
     }
     // Get DOM element and scroll to it
+    let id = cardInView.value;
     let card = document.getElementById('card'+id);
     if (!card) {
       return;
     }
-    setScrollYPos(window.scrollY-card.offsetTop+30);
-    setCardInView(null);
-  },[cardInView, annotationInView]);
+    card.scrollIntoView();
+    cardInView.done();
+  },[cardInView.changed, annotationInView.changed]);
 
   return (<div className='note-cards-container' >
     {
@@ -769,317 +771,6 @@ function NoteCardsContainer(props) {
       })
     }
   </div>)
-}
-
-//////////////////////////////////////////////////
-// PDF Rendering
-//////////////////////////////////////////////////
-
-function PdfViewer(props) {
-  const {
-    page,
-    onRenderingStatusChange = ()=>null,
-    shouldBeRendered,
-  } = props;
-  const context = useContext(pdfAnnotationPageContext);
-  const scale = context.pdfScale.val;
-
-  const ref = useRef(null);
-
-  // Save the scale that was used for the last render. This is needed in case the user zooms more than once in quick succession, and only only the render triggered by the first zoom goes through.
-  const lastRenderedScale = useRef(null);
-  useEffect(() => {
-    // Ensures that we render the new page, because we check if the scale changed between renders
-    lastRenderedScale.current = null;
-  }, [page, ref.current]);
-
-  // Render PDF
-  const taskRef = useRef(null);
-  useEffect(() => {
-    if (!ref.current || !page) {
-      return;
-    }
-    if (taskRef.current) {
-      return; // Don't start multiple rendering tasks
-    }
-    if (scale === lastRenderedScale.current) {
-      return;
-    }
-
-    let viewport = page.getViewport({ scale: scale, });
-    let canvas = ref.current;
-    let context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-
-    var renderContext = {
-      canvasContext: context,
-      viewport: viewport
-    };
-    window.rc = renderContext;
-    let task = page.render(renderContext);
-    taskRef.current = task;
-    task.promise.then(x => {
-      taskRef.current = null;
-      lastRenderedScale.current = scale;
-      onRenderingStatusChange(true);
-    }).catch(error => {
-      taskRef.current = null;
-      console.error(error);
-    });
-    onRenderingStatusChange(false);
-    // If the user moves away from the page in the middle of rendering, cancel the rendering
-    return () => {
-      if (taskRef.current) {
-        console.log('cancelling page '+page._pageIndex);
-        taskRef.current.cancel();
-        taskRef.current = null;
-      }
-    };
-  }, [page, scale, shouldBeRendered, lastRenderedScale.current]);
-
-  if (!shouldBeRendered) {
-    return null;
-  } else {
-    return (
-      <canvas ref={ref}></canvas>
-    );
-  }
-}
-
-function PdfTextLayer(props) {
-  // I just copied this over from PdfViewer. There's probably a lot of unnecessary code here.
-  const {
-    page,
-    onRenderingStatusChange = ()=>null,
-    hidden=false,
-    shouldBeRendered,
-  } = props;
-  const context = useContext(pdfAnnotationPageContext);
-  const scale = context.pdfScale.val;
-
-  const ref = useRef(null);
-
-  // Save the scale that was used for the last render. This is needed in case the user zooms more than once in quick succession, and only only the render triggered by the first zoom goes through.
-  const lastRenderedScale = useRef(null);
-  useEffect(() => {
-    // Ensures that we render the new page, because we check if the scale changed between renders
-    lastRenderedScale.current = null;
-  }, [page]);
-
-  // Render PDF
-  const getContentTaskRef = useRef(null);
-  const renderTaskRef = useRef(null);
-  useEffect(() => {
-    if (!ref.current || !page) {
-      return;
-    }
-    if (getContentTaskRef.current || renderTaskRef.current) {
-      return; // Don't start multiple rendering tasks
-    }
-    if (!shouldBeRendered) {
-      return;
-    }
-    if (scale === lastRenderedScale.current) {
-      return;
-    }
-
-    ref.current.innerHTML = ''; // Clear existing text
-
-    let viewport = page.getViewport({ scale: scale });
-
-    let task = page.getTextContent();
-    getContentTaskRef.current = task;
-    task.then(content => {
-      getContentTaskRef.current = null;
-      var renderContext = {
-        textContent: content,
-        viewport: viewport,
-        container: ref.current,
-        textDivs: []
-      };
-      try {
-        let task = pdfjsLib.renderTextLayer(renderContext);
-        renderTaskRef.current = task;
-        task.promise.then(x => {
-          renderTaskRef.current = null;
-          lastRenderedScale.current = scale;
-          onRenderingStatusChange(true);
-        }).catch(error => {
-          renderTaskRef.current = null;
-          console.error(error);
-        });
-      } catch(error) {
-        // A TypeError will occur if the above code is still running when this component is unmounted.
-        // The container div will no longer exist, if that happens, but is still used above in a callback.
-        console.error(error);
-      }
-      onRenderingStatusChange(false);
-    });
-    // If the user moves away from the page in the middle of rendering, cancel the rendering
-    return () => {
-      if (renderTaskRef.current) {
-        console.log('cancelling render text page '+page._pageIndex);
-        renderTaskRef.current.cancel();
-        renderTaskRef.current = null;
-      }
-    };
-  }, [page, scale, shouldBeRendered, lastRenderedScale.current]);
-
-  let classNames = generateClassNames({
-    'text-layer': true,
-    hidden
-  })
-  return (
-    <div className={classNames} ref={ref}></div>
-  );
-}
-
-const PdfPageContainer = React.forwardRef((props, ref) => {
-  const {
-    eventHandlers,
-    annotations,
-    page, pageNum,
-    shouldBeRendered,
-  } = props;
-  const context = useContext(pdfAnnotationPageContext);
-  const scale = context.pdfScale.val;
-
-  // Delay rendering annotations until the pdf is rendered
-  const [renderingStatus,setRenderingStatus] = useState(null);
-  const [annotationScale,setAnnotationScale] = useState(null);
-  useEffect(()=>{
-    if (renderingStatus === true) {
-      setAnnotationScale(scale);
-    }
-  },[scale,renderingStatus]);
-
-  let viewport = page.getViewport({ scale: scale, });
-  let style = {
-    height: viewport.height,
-    width: viewport.width,
-  };
-  return (
-    <div className='pdf-page-container' ref={ref}>
-      <div className='pdf-container' style={style}>
-        <PdfViewer page={page}
-            onRenderingStatusChange={setRenderingStatus}
-            shouldBeRendered={shouldBeRendered} />
-        {
-          annotationScale &&
-          <AnnotationLayer
-              eventHandlers={eventHandlers}
-              annotations={annotations}
-              page={page}
-              pageNum={pageNum}
-              scale={annotationScale}
-              shouldBeRendered={shouldBeRendered} />
-        }
-        <PdfTextLayer page={page}
-            onRenderingStatusChange={setRenderingStatus}
-            hidden={context.toolState.val.type !== 'text'}
-            shouldBeRendered={shouldBeRendered} />
-      </div>
-    </div>
-  );
-});
-
-function usePdfPages(doc) {
-  const [pdf,setPdf] = useState(null);
-  const [pages,setPages] = useState([]);
-  const [progress,setProgress] = useState(null);
-  const [error,setError] = useState(null);
-  const docId = doc && doc.id;
-
-  const pdfRef = useRef(null);
-  useEffect(()=>{
-    pdfRef.current = pdf;
-  }, [pdf]);
-  const pagesRef = useRef([]);
-  useEffect(()=>{
-    pagesRef.current = pages;
-  }, [pages]);
-
-  const taskRef = useRef(null);
-  useEffect(()=>{
-    if (docId === null || docId === undefined) {
-      return;
-    }
-    let loadingTask = pdfjsLib.getDocument({
-      url: process.env.REACT_APP_SERVER_ADDRESS+"/data/documents/"+docId+'/pdf',
-      withCredentials: true
-    })
-    loadingTask.onProgress = ({loaded, total}) => {
-      console.log('loaded '+(loaded/total*100)+'%')
-    };
-    taskRef.current = loadingTask;
-    loadingTask.promise.then(pdf => {
-      taskRef.current = null;
-      setPages(new Array(pdf.numPages));
-      setProgress({
-        totalPages: pdf.numPages,
-        loadedPages: 0
-      });
-      setPdf(pdf);
-      window.pdf = pdf;
-    }).catch(error => {
-      console.error(error);
-      taskRef.current = null;
-      if (error.response && error.response.data && error.response.data.message) {
-        setError(error.response.data.message);
-      } else {
-        setError(error.message || "Error Loading PDF");
-      }
-    });
-    return ()=>{
-      if (taskRef.current) {
-        taskRef.current.destroy();
-      } else {
-        for (let page of pagesRef.current) {
-          if (page) {
-            page.cleanup();
-          }
-        }
-        //if (pdfRef.current) {
-        //  console.log('destroying pdf');
-        //  //pdfRef.current.destroy();
-        //  pdfRef.current.cleanup();
-        //} else {
-        //  console.log('no pdf to destroy');
-        //}
-      }
-    }
-  },[docId]);
-  useEffect(()=>{
-    if (!pdf) {
-      return;
-    }
-    if (progress.loadedPages === pdf.numPages) {
-      return; // Hack for live-reload. Without this, the pages will be loaded twice each time the page is hot-reloaded.
-    }
-    for (let i = 1; i <= pdf.numPages; i++) {
-      pdf.getPage(i).then(p => {
-        setPages(pages => {
-          let output = pages.slice();
-          output[i-1] = p;
-          return output;
-        });
-        setProgress(progress => {
-          console.log('Loaded pages '+Math.floor(progress.loadedPages/pdf.numPages*100)+'%');
-          return {
-            ...progress,
-            loadedPages: progress.loadedPages + 1
-          };
-        });
-      });
-    }
-  },[pdf]);
-  return {
-    pdf,
-    pages,
-    progress,
-    error
-  }
 }
 
 //////////////////////////////////////////////////
@@ -1257,14 +948,8 @@ export default function PdfAnnotationPage(props) {
   const location = useLocation();
   const doc = useSelector(state => state.documents.entities[docId]);
 
-  const {
-    pdf,
-    pages,
-    progress:pagesLoadingProgress,
-    error:pagesLoadingError
-  } = usePdfPages(doc);
+  const pdfViewerState = usePdfViewerState(doc);
 
-  const [pdfScale,setPdfScale] = useState(2);
   const annotations = useSelector(
     useCallback(createSelector(
       state => state.annotations.entities,
@@ -1286,22 +971,14 @@ export default function PdfAnnotationPage(props) {
     }, {});
   }, [annotations]);
   const [activeId, setActiveId] = useState(null);
-  const [cardInView, setCardInView] = useState(null);
-  const [annotationInView, setAnnotationInView] = useState(null);
-  const [pagesToRender, setPagesToRender] = useState(new Set([0]));
+  const cardInView = useSemiState(null,false);
+  const annotationInView = useSemiState(null,false);
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
   const [sidebarActiveTabIndex, setSidebarActiveTabIndex] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [currentPageIndex, setCurrentPageIndex] = useState(0); // page # computed from scroll position
 
-  const [pageRefs, setPageRefs] = useState([]); // Refs used to programmatically scroll to a given page number
-  useEffect(() => {
-    if (!pdf) {
-      return;
-    }
-    setPageRefs(Array.apply(null, new Array(pdf.numPages)).map(()=>React.createRef()));
-  }, [pdf]);
+  const pdfViewer = useRef(null);
 
   // If linked to a specific annotation, scroll it into view
   useEffect(() => {
@@ -1309,70 +986,43 @@ export default function PdfAnnotationPage(props) {
     if (params['annotation']) {
       let id = parseInt(params['annotation']);
       setActiveId(id);
-      setAnnotationInView(id);
+      annotationInView.setValue(id);
     }
     if (params['note']) {
       let id = parseInt(params['note']);
-      setCardInView(id);
+      cardInView.setValue(id);
     }
-  }, [location.search]);
+  }, [location.search, location.state]);
 
-  const scrollWhenFoundTimeoutRef = useRef(null);
   useEffect(() => { // Scroll annotation into view
-    function scrollWhenFound() {
-      if (!annotationInView) {
-        return;
-      }
-      if (!pagesLoadingProgress || pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages) { // Wait until everything is loaded before scrolling. Otherwise, the loading animation disappears and the user has no idea what's going on while waiting for the page to render.
-        return;
-      }
-      let annotationElemId = 'annotation'+annotationInView;
-      let elem = document.getElementById(annotationElemId);
-      if (!elem) { // If we can't find the element
-        // Find the page it's on and scroll to that page first
-        // This ensures that the relevant annotations are rendered.
-        let ann = annotations[annotationInView];
-        window.ann = ann;
-        if (ann) {
-          let pageNum = ann.page;
-          let pageIndex = parseInt(pageNum)-1;
-          pageRefs[pageIndex]?.current?.scrollIntoView();
-        }
-        // Try again later
-        let timeoutId = window.setTimeout(scrollWhenFound, 100);
-        scrollWhenFoundTimeoutRef.current = timeoutId;
-        return;
-      }
-      // Scroll into view, then center the element
-      let vpHeight = window.innerHeight;
-      let elemHeight = elem.offsetHeight;
-      elem.scrollIntoView();
-      window.scrollTo({
-        top: window.scrollY-vpHeight/2+elemHeight/2
-      });
-      setAnnotationInView(null);
-      scrollWhenFoundTimeoutRef.current = null;
+    if (!annotationInView.changed) {
+      return;
     }
-    window.clearTimeout(scrollWhenFoundTimeoutRef.current);
-    scrollWhenFound();
-  }, [annotationInView, annotations, pageRefs, pagesLoadingProgress]);
+    let ann = annotations[annotationInView.value];
+    if (ann) {
+      let pageNum = ann.page;
+      let pageIndex = parseInt(pageNum)-1;
+      pdfViewerState.scrollToPage(pageIndex);
+      annotationInView.done();
+    }
+  }, [annotationInView.changed, annotations]);
   useEffect(() => { // Scroll card into view
     function scrollWhenFound() {
-      if (!cardInView) {
+      if (!cardInView.changed) {
         return;
       }
-      let cardElemId = 'card'+cardInView;
+      let cardElemId = 'card'+cardInView.value;
       let elem = document.getElementById(cardElemId);
       if (!elem) { // Try again later
         window.setTimeout(scrollWhenFound, 100);
         return;
       }
       elem.scrollIntoView();
-      setCardInView(null);
+      cardInView.done();
     }
     setSidebarActiveTabIndex(1); // FIXME: need some mapping from tab index to tab title, or something else more human-readible
     scrollWhenFound();
-  }, [cardInView]);
+  }, [cardInView.changed]);
 
   // Document title
   useEffect(() => {
@@ -1393,78 +1043,8 @@ export default function PdfAnnotationPage(props) {
   },[docId]);
 
   // Visible pages
-  const updatePageRafRef = useRef(null); // ID of the requestAnimationFrame request for updating the current page number based on scroll position
-  function isElementInViewport(el, margin) {
-    // Return true if the element is in the viewport, and false otherwise.
-    // Only checks vertical position.
-    if (!margin) {
-      margin = 0;
-    }
-    const rect = el.getBoundingClientRect();
-    if (rect.top > window.innerHeight) { return false; }
-    if (rect.bottom < 0) { return false; }
-    return true;
-  }
-  function updateVisiblePage(e) {
-    if (pageRefs.length === 0 || !pageRefs[0].current) {
-      return;
-    }
-    let visibility = Array.apply(false, new Array(pdf.numPages));
-    let firstVisiblePageIndex = -1;
-    let lastVis = false;
-    for (const [i,ref] of pageRefs.entries()) {
-      if (!ref.current) {
-        break;
-      }
-      let vis = isElementInViewport(ref.current,0);
-      visibility[i] = vis;
-      if (vis && firstVisiblePageIndex === -1) {
-        firstVisiblePageIndex = i;
-      }
-      if (!vis && lastVis) {
-        // If we go from a visible element to a non-visible element, then we know that everything past this point is also not visible. We assume that all elements are listed in order of their position from top to bottom, and there is no overlap on the vertical axis.
-        break;
-      }
-      lastVis = vis;
-    }
-
-    setCurrentPageIndex(Math.max(0,firstVisiblePageIndex)); // `firstVisiblePageIndex` can be -1 if the refs are not tied to any DOM element. Set the page index to 0 if that happens.
-    updatePageRafRef.current = null;
-  }
-  function handleScroll(e) {
-    // Compute the current page number
-    // Use requestAnimationFrame to avoid having it queue up a bunch of updates when scrolling a lot. Without it, we'll see the displayed page number go through all the intermediate pages before settling on the current page number.
-    cancelAnimationFrame(updatePageRafRef.current);
-    updatePageRafRef.current = requestAnimationFrame(
-      () => updateVisiblePage(e.target)
-    );
-  }
-  useEffect(() => { // Render the appropriate pages
-    if (pages.length <= 20) {
-      setPagesToRender(new Set(Array.from(pages.keys())));
-      return;
-    }
-    if (currentPageIndex === 0) {
-      setPagesToRender(new Set([0,1,2]));
-    } else if (currentPageIndex === pages.length-1) {
-      setPagesToRender(new Set([
-        pages.length-1,pages.length-2,pages.length-3
-      ]));
-    } else {
-      setPagesToRender(new Set([
-        currentPageIndex-1, currentPageIndex, currentPageIndex+1, currentPageIndex+2
-      ]));
-    }
-  }, [pages, currentPageIndex]);
   function scrollToPage(pageNum) {
-    let pageIndex = pageNum-1;
-    if (!pageRefs[pageIndex]) {
-      return;
-    }
-    if (!pageRefs[pageIndex].current) {
-      return;
-    }
-    pageRefs[pageIndex].current.scrollIntoView();
+    pdfViewerState.scrollToPage(pageNum-1);
   }
 
   // CRUD Functions
@@ -1481,8 +1061,7 @@ export default function PdfAnnotationPage(props) {
     dispatch(annotationActions['saveCheckpoint']());
     dispatch(annotationActions['update'](ann));
   }
-  function deleteAnnotation(id) {
-    dispatch(annotationActions['saveCheckpoint']());
+  function deleteAnnotation(id) { dispatch(annotationActions['saveCheckpoint']());
     dispatch(annotationActions['deleteSingle'](id));
   }
   function updateDoc(id, doc) {
@@ -1491,7 +1070,7 @@ export default function PdfAnnotationPage(props) {
   }
 
   // Tools
-  function handleDoubleClickAnnotation(event,data) {
+  function handleDoubleClickAnnotation({event,data}) {
     switch (data.ann.type) {
       case 'highlight':
       case 'rect':
@@ -1505,9 +1084,9 @@ export default function PdfAnnotationPage(props) {
         break;
     }
   }
-  function handleClickAnnotation(event,data) {
+  function handleClickAnnotation({event,data}) {
     setActiveId(data.ann.id);
-    setCardInView(data.ann.note_id);
+    cardInView.setValue(data.ann.note_id);
   }
   const tools = useMemo( () => {
     return {
@@ -1519,15 +1098,15 @@ export default function PdfAnnotationPage(props) {
         },
         eventHandlers: {
           pdf: {
-            onClick: function(event,data) {
+            onClick: function({event,data}) {
               setActiveId(null);
               popTool();
             }
           },
           annotation: {
-            onClick: function(event,data) {
+            onClick: function({event,data}) {
               setActiveId(data.id);
-              setCardInView(annotations[data.id].note_id);
+              cardInView.setValue(annotations[data.id].note_id);
             },
             onDoubleClick: handleDoubleClickAnnotation,
             onClick: handleClickAnnotation,
@@ -1565,7 +1144,7 @@ export default function PdfAnnotationPage(props) {
         eventHandlers: {
           // Handles events on the PDF document body
           pdf: {
-            onClick: function() {
+            onClick: function({toolState, setToolState}) {
               if (toolState.dragAction) {
                 // This happens if the mouse was dragged out of the screen,
                 // then released, and moved back in. We want to continue the
@@ -1585,7 +1164,7 @@ export default function PdfAnnotationPage(props) {
           },
           // Handles events on the annotation
           annotation: {
-            onClick: function(event, data) {
+            onClick: function({event, data, toolState, setToolState}) {
               if (toolState.dragAction) {
                 // This happens if the mouse was dragged out of the screen,
                 // then released, and moved back in. We want to continue the
@@ -1593,7 +1172,7 @@ export default function PdfAnnotationPage(props) {
                 return;
               } else {
                 setActiveId(data.ann.id);
-                setCardInView(data.ann.note_id);
+                cardInView.setValue(data.ann.note_id);
                 setToolState({
                   ...toolState,
                   selectedAnnotationId: data.ann.id,
@@ -1601,7 +1180,7 @@ export default function PdfAnnotationPage(props) {
                 });
               }
             },
-            onMouseDown: function(event, data) {
+            onMouseDown: function({event, data, toolState, setToolState}) {
               if (toolState.dragAction) {
                 // This happens if the mouse was dragged out of the screen,
                 // then released, and moved back in. We want to continue the
@@ -1621,7 +1200,7 @@ export default function PdfAnnotationPage(props) {
                 }
               }
             },
-            onKeyPress: function(event,data) {
+            onKeyPress: function({event, data, toolState, setToolState}) {
               if (event.key === 'Delete') {
                 const selId = toolState.selectedAnnotationId;
                 if (selId && selId !== data.id) {
@@ -1639,7 +1218,7 @@ export default function PdfAnnotationPage(props) {
           },
           // Handles events on the annotation's control points
           controlPoint: {
-            onMouseDown: function(event, data) {
+            onMouseDown: function({event, data, toolState, setToolState}) {
               if (toolState.dragAction) {
                 // This happens if the mouse was dragged out of the screen,
                 // then released, and moved back in. We want to continue the
@@ -1663,7 +1242,7 @@ export default function PdfAnnotationPage(props) {
             },
           },
           // Handle mouse movement and mouse up over anything
-          onMouseMove: function(event,data) {
+          onMouseMove: function({event, data, toolState, setToolState}) {
             const { coords, startMouseCoord } = data;
             if (toolState.selectedAnnotationId === null) {
               return;
@@ -1675,7 +1254,7 @@ export default function PdfAnnotationPage(props) {
             const deltaY = coords[1]-startMouseCoord[1];
             const selId = toolState.selectedAnnotationId;
             const pageIndex = annotations[selId].page-1
-            const vp = pages[pageIndex].getViewport({scale:1});
+            const vp = pdfViewerState.pages[pageIndex].getViewport({scale:1});
             if (toolState.dragAction === 'move') {
               const selType = annotations[selId].type;
               const pos = annotations[selId].position;
@@ -1739,7 +1318,7 @@ export default function PdfAnnotationPage(props) {
               });
             }
           },
-          onMouseUp: function(event,data) {
+          onMouseUp: function({event, data, toolState, setToolState}) {
             const selId = toolState.selectedAnnotationId;
             if (selId !== null && annotations[selId] && toolState.tempPosition) {
               updateAnnotation({
@@ -1767,7 +1346,7 @@ export default function PdfAnnotationPage(props) {
         },
         eventHandlers: {
           pdf: {
-            onClick: function(event,data) {
+            onClick: function({event, data}) {
               createAnnotation({
                 type: 'point',
                 position: {
@@ -1798,7 +1377,7 @@ export default function PdfAnnotationPage(props) {
         },
         eventHandlers: {
           pdf: {
-            onClick: function() {
+            onClick: function({toolState}) {
               if (toolState.tempAnnotation) {
                 // Continue creating the annotation
                 return
@@ -1806,11 +1385,12 @@ export default function PdfAnnotationPage(props) {
                 popTool();
               }
             },
-            onMouseDown: function(event,data) {
+            onMouseDown: function({event, data, toolState, setToolState}) {
               if (toolState.tempAnnotation) {
                 // Continue creating the annotation
                 return
               } else {
+                console.log('mousedown');
                 setToolState({
                   ...toolState,
                   dragStartCoord: data.coords
@@ -1821,7 +1401,7 @@ export default function PdfAnnotationPage(props) {
           annotation: {
             onDoubleClick: handleDoubleClickAnnotation,
             onClick: handleClickAnnotation,
-            onMouseDown: function(event,data) {
+            onMouseDown: function({event, data, toolState, setToolState}) {
               if (toolState.tempAnnotation) {
                 // Continue creating the annotation
                 return
@@ -1835,7 +1415,7 @@ export default function PdfAnnotationPage(props) {
           },
           controlPoint: {
           },
-          onMouseMove: function(event,data) {
+          onMouseMove: function({event, data, toolState, setToolState}) {
             const {coords} = data;
             const startMouseCoord = toolState.dragStartCoord;
             const left   = Math.min(coords[0],startMouseCoord[0]);
@@ -1853,7 +1433,7 @@ export default function PdfAnnotationPage(props) {
               }
             });
           },
-          onMouseUp: function(event,data) {
+          onMouseUp: function({event, data, toolState, setToolState}) {
             const {coords} = data;
             const startMouseCoord = toolState.dragStartCoord;
             if (!startMouseCoord || !coords) {
@@ -1891,7 +1471,7 @@ export default function PdfAnnotationPage(props) {
         },
         eventHandlers: {
           pdf: {
-            onClick: function() {
+            onClick: function({toolState, setToolState}) {
               if (toolState.points) {
                 // Continue creating the annotation
                 return
@@ -1899,7 +1479,7 @@ export default function PdfAnnotationPage(props) {
                 popTool();
               }
             },
-            onMouseDown: function(event,data) {
+            onMouseDown: function({event, data, toolState, setToolState}) {
               if (toolState.points) {
                 // Continue creating the annotation
                 return
@@ -1916,7 +1496,7 @@ export default function PdfAnnotationPage(props) {
             onClick: handleClickAnnotation,
           },
           controlPoint: {},
-          onMouseMove: function(event,data) {
+          onMouseMove: function({event, data, toolState, setToolState}) {
             const {coords} = data;
             if (toolState.points) {
               setToolState({
@@ -1926,7 +1506,7 @@ export default function PdfAnnotationPage(props) {
               });
             }
           },
-          onMouseUp: function(event,data) {
+          onMouseUp: function({event, data, toolState, setToolState}) {
             if (toolState.points) {
               // Check if there's enough points.
               let minX = toolState.points[0][0];
@@ -1970,7 +1550,7 @@ export default function PdfAnnotationPage(props) {
         }
       },
     }
-  }, [toolState]);
+  }, [annotations]);
 
   // Initialize State
   useEffect(() => {
@@ -1981,7 +1561,7 @@ export default function PdfAnnotationPage(props) {
   function activateAnnotation(annId) {
     setActiveId(annId);
     if (annId) { // Check if we're activating or deactivating
-      setCardInView(annotations[annId].note_id);
+      cardInView.setValue(annotations[annId].note_id);
       setToolState({
         ...tools.resize.initState(),
         selectedAnnotationId: annId,
@@ -1990,10 +1570,10 @@ export default function PdfAnnotationPage(props) {
     }
   }
   function zoomIn() {
-    setPdfScale(Math.min(pdfScale+0.2,3));
+    pdfViewerState.setScale(Math.min(pdfViewerState.scale+0.2,3));
   }
   function zoomOut() {
-    setPdfScale(Math.max(pdfScale-0.2,1));
+    pdfViewerState.setScale(Math.max(pdfViewerState.scale-0.2,1));
   }
   function pushTool(newState) {
     setToolStateStack([...toolStateStack, toolState]);
@@ -2035,41 +1615,13 @@ export default function PdfAnnotationPage(props) {
     }
   }
   function scrollToNextPage(e) {
-    const el = e.target.closest('.pages-container');
-    const margin = 5;
-    const pageHeights = pages.map(
-      page => page.getViewport({scale: pdfScale}).height+margin
-    );
-    let scrollTo = 0;
-    let pos = el.scrollTop+1;
-    for (let ph of pageHeights) {
-      scrollTo += ph;
-      if (pos < ph) {
-        break;
-      }
-      pos -= ph;
-    }
-    el.scrollTo(el.scrollLeft,scrollTo);
+    // TODO
   }
   function scrollToPrevPage(e) {
-    const el = e.target.closest('.pages-container');
-    const margin = 5;
-    const pageHeights = pages.map(
-      page => page.getViewport({scale: pdfScale}).height+margin
-    );
-    let scrollTo = 0;
-    let pos = el.scrollTop;
-    for (let ph of pageHeights) {
-      if (pos <= ph) {
-        break;
-      }
-      scrollTo += ph;
-      pos -= ph;
-    }
-    el.scrollTo(el.scrollLeft,scrollTo);
+    // TODO
   }
 
-  const tabs = [
+  const tabs = useMemo(() => [
     {
       title: 'Details',
       render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
@@ -2082,16 +1634,14 @@ export default function PdfAnnotationPage(props) {
       title: 'Notes',
       render: () => <DocNotes doc={doc} />
     }
-  ];
+  ], [doc, annotations]);
 
   // Context
   const context = useMemo( () => { 
     return {
-      'pdfScale': {val: pdfScale, set: setPdfScale},
       'activeId': {val: activeId, set: activateAnnotation}, // TODO: Check if this works with `setActiveId` and a useEffect hook for the side-effects
-      'cardInView': {val: cardInView, set: setCardInView},
-      'annotationInView': {val: annotationInView, set: setAnnotationInView},
-      'toolState': {val: toolState, set: setToolState},
+      'cardInView': cardInView,
+      'annotationInView': annotationInView,
       'sidebar': {
         'visible': {val: sidebarVisible, set: setSidebarVisible},
         'activeTabIndex': {val: sidebarActiveTabIndex, set: setSidebarActiveTabIndex}
@@ -2102,42 +1652,29 @@ export default function PdfAnnotationPage(props) {
         'delete': deleteAnnotation,
       },
     }
-  }, [doc, pdfScale, activeId, cardInView, annotationInView, toolState, sidebarVisible, sidebarActiveTabIndex]);
+  }, [doc, activeId, cardInView.changed, annotationInView.changed, toolState, sidebarVisible, sidebarActiveTabIndex]);
+
+  const renderCustomLayers = useCallback(({page, scale}) => {
+    return <AnnotationLayer
+      annotations={annotationsByPage[page._pageIndex+1] || {}}
+      eventHandlers={tools[toolState.type].eventHandlers}
+      page={page}
+      pageNum={page._pageIndex+1}
+      scale={scale}
+      activeId={activeId}
+      cardInView={cardInView}
+      toolState={toolState}
+      setToolState={setToolState}
+    />;
+  }, [annotationsByPage, toolState]);
 
   // Can't render until everything is initialized
   if (toolState === null) {
     return null;
   }
-  if (pdf && pages.length !== pdf.numPages) {
-    return null;
-  }
-  if (pagesLoadingError) {
-    window.error = pagesLoadingError;
-    return (<main className='annotation-page'>
-      {pagesLoadingError}
-    </main>);
-  }
-
   return (<main className='annotation-page'>
     <pdfAnnotationPageContext.Provider value={context}>
-      <div className='pages-container' onScroll={handleScroll} onKeyDown={handleKeyDown}>
-        <div>
-          {
-            pagesLoadingProgress &&
-            pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages &&
-            <span>Loading {Math.floor(pagesLoadingProgress.loadedPages/pagesLoadingProgress.totalPages*100)}%</span>
-          }
-        </div>
-        {pages.map(function(page,i){
-          return <PdfPageContainer key={i+1}
-              ref={pageRefs[i]}
-              eventHandlers={tools[toolState.type].eventHandlers}
-              annotations={annotationsByPage[i+1] || {}}
-              page={page} pageNum={i+1}
-              shouldBeRendered={pagesToRender.has(i)}
-              />
-        })}
-      </div>
+      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers}/>
       <div className='sidebar-container'>
         <SideBar tabs={tabs}
           activeTabIndex={sidebarActiveTabIndex}
@@ -2186,11 +1723,8 @@ export default function PdfAnnotationPage(props) {
           </Button>
         </GroupedInputs>
         {
-          pdf &&
-          pagesLoadingProgress &&
-          pagesLoadingProgress.loadedPages === pagesLoadingProgress.totalPages &&
-          <PageSelector pageNumber={currentPageIndex+1}
-            totalPages={pdf.numPages}
+          <PageSelector pageNumber={pdfViewerState.visiblePageRange[0]+1}
+            totalPages={pdfViewerState.pdf?.numPages}
             onPageNumberChange={scrollToPage} />
         }
       </div>

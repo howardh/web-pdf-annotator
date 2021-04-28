@@ -1,3 +1,5 @@
+import React from 'react';
+
 // React Utils
 export function generateClassNames(cn) {
   return Object.entries(cn).filter(
@@ -5,6 +7,19 @@ export function generateClassNames(cn) {
   ).map(
     ([k,v]) => k
   ).join(' ');
+}
+export function useSemiState(initial, initialChanged=true) {
+  // "Semi-controllable" state
+  // Use case: When you want to effect change when this value changes, but still want the true state to evolve independently of `value`.
+  // Usage: Listen to changes to the `changed` variable, and if it's set to true, then update the true state according to `value`. Once the update is complete, call `done()` to reset the `changed` variable.
+  const [value, setValue] = React.useState(initial);
+  const [changed, setChanged] = React.useState(initialChanged);
+  return React.useMemo(() => ({
+    done: () => setChanged(false),
+    setValue: v => { setValue(v); setChanged(true); },
+    value,
+    changed,
+  }), [value, changed]);
 }
 // Forms
 export function formChangeHandler(state,setState) {

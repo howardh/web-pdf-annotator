@@ -16,12 +16,6 @@ body {
     position: relative;
     box-shadow: -3px 5px 5px rgba(0,0,0,0.2);
   }
-  .pages-container {
-    grid-column: 1;
-    grid-row: 2;
-    overflow: scroll;
-    background-color: rgb(240,240,240);
-  }
   > .controls {
     grid-column: 1;
     grid-row: 1;
@@ -45,20 +39,12 @@ body {
     }
   }
 
-  .pdf-container {
-    position: relative;
-    display: inline-block;
-    margin: 0 32px 0 20px;
-    background-color: white;
+  .pdf-viewer {
+    height: 100%;
+    background-color: rgb(240,240,240);
   }
 
-  .pdf-page-container {
-    position: relative;
-    text-align: center;
-    margin-bottom: 5px;
-  }
-
-  .annotation-layer {
+  .custom-annotation-layer {
     position: absolute;
     top: 0;
     left: 0;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEffect, useState, useRef, useCallback, useContext, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback, useContext, useMemo, useImperativeHandle } from 'react';
 import {useDispatch,useSelector} from 'react-redux';
 import { useParams, useLocation, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
@@ -9,7 +9,7 @@ import { Button, TextField, Checkbox, GroupedInputs, Tooltip } from './Inputs.js
 import TextEditor from './TextEditor';
 import { NoteViewer } from './NoteEditor.js';
 import {
-  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString
+  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString,useSemiState
 } from './Utils.js';
 import {
   documentActions,annotationActions,noteActions
@@ -43,7 +43,7 @@ function usePdfPages(doc) {
       withCredentials: true
     })
     loadingTask.onProgress = ({loaded, total}) => {
-      console.log('loaded '+(loaded/total*100)+'%')
+      //console.log('loaded '+(loaded/total*100)+'%')
     };
     taskRef.current = loadingTask;
     loadingTask.promise.then(pdf => {
@@ -73,13 +73,6 @@ function usePdfPages(doc) {
             page.cleanup();
           }
         }
-        //if (pdfRef.current) {
-        //  console.log('destroying pdf');
-        //  //pdfRef.current.destroy();
-        //  pdfRef.current.cleanup();
-        //} else {
-        //  console.log('no pdf to destroy');
-        //}
       }
     }
   },[docId]);
@@ -98,7 +91,6 @@ function usePdfPages(doc) {
           return output;
         });
         setProgress(progress => {
-          console.log('Loaded pages '+Math.floor(progress.loadedPages/pdf.numPages*100)+'%');
           return {
             ...progress,
             loadedPages: progress.loadedPages + 1
@@ -115,18 +107,10 @@ function usePdfPages(doc) {
   }
 }
 
-function useSemiState(initial, initialChanged=true) {
-  // "Semi-controllable" state
-  // Use case: When you want to effect change when this value changes, but still want the true state to evolve independently of `value`.
-  // Usage: Listen to changes to the `changed` variable, and if it's set to true, then update the true state according to `value`. Once the update is complete, call `done()` to reset the `changed` variable.
-  const [value, setValue] = useState(initial);
-  const [changed, setChanged] = useState(initialChanged);
-  return useMemo(() => ({
-    done: () => setChanged(false),
-    setValue: v => { setValue(v); setChanged(true); },
-    value,
-    changed,
-  }), [value, changed]);
+function LoadingLayer(props) {
+  return (<div className='loading-layer'>
+    <span>Loading...</span>
+  </div>);
 }
 
 function MainLayer(props) {
@@ -294,7 +278,7 @@ function AnnotationLayer(props) {
   // Follow ref link
   function goToDest(dest) {
     if (!dest) {
-      console.log('invalid dest');
+      console.error('invalid dest');
       return;
     }
     pdf.getDestination(dest).then(
@@ -303,7 +287,6 @@ function AnnotationLayer(props) {
           let x = explicitDest[2]*scale;
           let y = (viewport.height-explicitDest[3])*scale;
           scrollState.setValue({page: pageIndex, x, y})
-          console.log(['go to', pageIndex, x, y]);
         });
       }
     );
@@ -350,36 +333,50 @@ function PdfPageContainer(props) {
     height: viewport.height,
     width: viewport.width,
   };
+
   return (
     <div className='pdf-page-container' style={style}>
-      <MainLayer page={page}
-          pdf={pdf}
-          scale={scale}
-          shouldBeRendered={shouldBeRendered} />
-      <TextLayer page={page}
-          pdf={pdf}
-          scale={scale}
-          shouldBeRendered={shouldBeRendered} />
-      <AnnotationLayer page={page}
-          pdf={pdf}
-          scale={scale}
-          shouldBeRendered={shouldBeRendered}
-          scrollState={scrollState} />
       {
-        customLayers &&
-        customLayers({page})
+        shouldBeRendered ? (
+          <>
+            <MainLayer page={page}
+                pdf={pdf}
+                scale={scale}
+                shouldBeRendered={shouldBeRendered} />
+            <TextLayer page={page}
+                pdf={pdf}
+                scale={scale}
+                shouldBeRendered={shouldBeRendered} />
+            <AnnotationLayer page={page}
+                pdf={pdf}
+                scale={scale}
+                shouldBeRendered={shouldBeRendered}
+                scrollState={scrollState} />
+            {
+              customLayers &&
+              customLayers({page, scale})
+            }
+          </>
+        ) : (
+          <LoadingLayer page={page}
+              pdf={pdf}
+              scale={scale}
+              shouldBeRendered={shouldBeRendered} />
+        )
       }
     </div>
   );
 };
 
-function PdfViewer(props, forwardedRef) {
-  const {
-    doc,
-    scale,
-    customLayers=null,
-  } = props;
+function createScrollEvent(val) {
+  return {
+    firstVisiblePageIndex: 0,
+    lastVisiblePageIndex: 0,
+    ...val
+  };
+}
 
+export function usePdfViewerState(doc) {
   const {
     pdf,
     pages,
@@ -387,10 +384,30 @@ function PdfViewer(props, forwardedRef) {
     error:pagesLoadingError
   } = usePdfPages(doc);
 
+  const [scale, setScale] = useState(1);
+  const [visiblePageRange, setVisiblePageRange] = useState([0,0]);
+  const scrollState = useSemiState(null,false);
+
+  return {
+    pdf, pages, pagesLoadingProgress, pagesLoadingError,
+    scrollState,
+    scale, setScale,
+    visiblePageRange, setVisiblePageRange,
+    scrollTo: (pos) => scrollState.setValue(pos),
+    scrollToPage: (pageIndex) => scrollState.setValue({page: pageIndex}),
+  };
+}
+
+function PdfViewer(props, forwardRef) {
+  const {
+    state,
+    customLayers=null,
+  } = props;
+
   const ref = useRef(null);
 
   // Scroll request
-  const scrollState = useSemiState(null,false);
+  const scrollState = state.scrollState;
   useEffect(() => {
     if (!scrollState.changed) {
       return;
@@ -399,7 +416,7 @@ function PdfViewer(props, forwardedRef) {
     if (page) {
       let children = ref.current.children;
       if (page >= children.length) {
-        console.log('Page out no range.');
+        console.log('Page out of range.');
         return;
       }
       children[page].scrollIntoView();
@@ -410,7 +427,7 @@ function PdfViewer(props, forwardedRef) {
       ref.current.scrollTo(x,y);
     }
     scrollState.done();
-  }, [scrollState.changed]);
+  }, [scrollState.changed, state.pagesLoadingProgress]);
 
   // Zoom
   const scrollPos = useRef(null);
@@ -419,10 +436,9 @@ function PdfViewer(props, forwardedRef) {
       return;
     }
     ref.current.scrollTo(0,ref.current.scrollTopMax * scrollPos.current);
-  }, [scale]);
+  }, [state.scale]);
 
   // Pages in view
-  const [visiblePageRange, setVisiblePageRange] = useState([0,0]);
   function elementInViewport(el) {
     // Return 0 if the element is in the viewport, -1 if the element is before the viewport, and 1 if it comes after the viewport.
     const rect = el.getBoundingClientRect();
@@ -461,8 +477,7 @@ function PdfViewer(props, forwardedRef) {
           }
         }
         // Pages to render
-        setVisiblePageRange([first,last]);
-        console.log(['page range', first, last]);
+        state.setVisiblePageRange([first,last]);
         break;
       } else {
         i += relPos;
@@ -476,18 +491,18 @@ function PdfViewer(props, forwardedRef) {
   return (
     <div className='pdf-viewer' ref={ref} onScroll={handleScroll} tabIndex={-1}>
       {
-        pagesLoadingProgress &&
-        pagesLoadingProgress.loadedPages !== pagesLoadingProgress.totalPages &&
-        <div><span>Loading {Math.floor(pagesLoadingProgress.loadedPages/pagesLoadingProgress.totalPages*100)}%</span></div>
+        state.pagesLoadingProgress &&
+        state.pagesLoadingProgress.loadedPages !== state.pagesLoadingProgress.totalPages &&
+        <div><span>Loading {Math.floor(state.pagesLoadingProgress.loadedPages/state.pagesLoadingProgress.totalPages*100)}%</span></div>
       }
-      {pages.map(function(page,i){
-        return <PdfPageContainer key={i+1}
-            scale={scale}
-            pdf={pdf}
+      {state.pages.map(function(page,i){
+        return <PdfPageContainer key={page._pageIndex}
+            scale={state.scale}
+            pdf={state.pdf}
             page={page}
-            shouldBeRendered={i >= visiblePageRange[0] && i <= visiblePageRange[1]}
+            shouldBeRendered={i >= state.visiblePageRange[0] && i <= state.visiblePageRange[1]}
             customLayers={customLayers}
-            scrollState={scrollState}
+            scrollState={state.scrollState}
             />
       })}
     </div>
@@ -500,22 +515,21 @@ function FullPdfViewer(props) {
     doc,
   } = props;
 
-  const [scale,setScale] = useState(1);
+  const pdfViewerState = usePdfViewerState(doc);
 
   function handleKeyDown(e) {
-    console.log(e.key);
     if (e.key === '+') {
-      setScale(s => s+0.2);
+      pdfViewerState.setScale(s => Math.min(s+0.2,3));
     }
     if (e.key === '-') {
-      setScale(s => s-0.2);
+      pdfViewerState.setScale(s => Math.max(s-0.2,0.4));
     }
   }
 
   return (<div className='full-pdf-viewer'
       tabIndex={-1}
       onKeyDown={handleKeyDown}>
-    <PdfViewer doc={doc} scale={scale} />
+    <PdfViewer state={pdfViewerState} />
   </div>);
 }
 
@@ -538,3 +552,7 @@ export default function PdfViewerPage(props) {
     <FullPdfViewer doc={doc} />
   );
 }
+
+export {
+  PdfViewer
+};
