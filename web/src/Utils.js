@@ -62,6 +62,11 @@ export const parseQueryString = function(query) {
       return acc;
     }, {});
 }
+export function toQueryString(query) {
+  return '?'+Object.entries(query).map(
+    ([k,v]) => `${k}=${v}`
+  ).join('&');
+}
 export function filterDict(dict,filterCondition) {
   return Object.entries(dict).filter(function([k,v]) {
     return filterCondition(v);

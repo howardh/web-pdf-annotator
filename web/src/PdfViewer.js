@@ -370,23 +370,30 @@ export function usePdfViewerState(doc) {
   const [scale, setScale] = useState(1);
   const [visiblePageRange, setVisiblePageRange] = useState([0,0]);
   const scrollState = useSemiState(null,false);
+  const scrollDest = useSemiState(null,false);
 
-  const scrollToDest = useCallback((dest) => {
-    if (!dest) {
-      console.error('invalid dest');
+  useEffect(() => { // Translate scrollDest to scrollState
+    if (!scrollDest.value || !scrollDest.changed) {
       return;
     }
-    pdf.getDestination(dest).then(
+    if (!pagesLoadingProgress) {
+      return;
+    }
+    if (pagesLoadingProgress.totalPages !== pagesLoadingProgress.loadedPages) {
+      return;
+    }
+    pdf.getDestination(scrollDest.value).then(
       explicitDest => {
         pdf.getPageIndex(explicitDest[0]).then(pageIndex => {
           let viewport = pages[pageIndex].getViewport({ scale: 1, });
           let x = explicitDest[2]*scale;
           let y = (viewport.height-explicitDest[3])*scale;
           scrollState.setValue({page: pageIndex, x, y})
+          scrollDest.done();
         });
       }
     );
-  },[pdf,pages]);
+  },[pdf,pages,pagesLoadingProgress,scrollDest.changed]);
 
   return {
     pdf, pages, pagesLoadingProgress, pagesLoadingError,
@@ -395,7 +402,7 @@ export function usePdfViewerState(doc) {
     visiblePageRange, setVisiblePageRange,
     scrollTo: (pos) => scrollState.setValue(pos),
     scrollToPage: (pageIndex) => scrollState.setValue({page: pageIndex}),
-    scrollToDest,
+    scrollToDest: (dest) => scrollDest.setValue(dest),
   };
 }
 

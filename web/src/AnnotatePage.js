@@ -9,7 +9,7 @@ import { Button, TextField, Checkbox, GroupedInputs, Tooltip } from './Inputs.js
 import TextEditor from './TextEditor';
 import { NoteViewer } from './NoteEditor.js';
 import {
-  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString,useSemiState
+  clip,filterDict,generateClassNames,formChangeHandler,parseQueryString,toQueryString,useSemiState
 } from './Utils.js';
 import {
   documentActions,annotationActions,noteActions
@@ -17,34 +17,64 @@ import {
 import { PdfViewer, usePdfViewerState } from './PdfViewer.js';
 
 import './AnnotatePage.scss';
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError(error) { // Update state so the next render will show the fallback UI.
-		return { hasError: true };
-  }
-  componentDidCatch(error, errorInfo) { // You can also log the error to an error reporting service
-    console.error(error);
-    console.error(errorInfo);
-  }
-  render() {
-    if (this.state.hasError) { // You can render any custom fallback UI
-      return this.props.render();
-    }
-    return this.props.children; 
-  }
-}
 
 const pdfAnnotationPageContext = React.createContext({});
+
+//////////////////////////////////////////////////
+// Query String State
+//////////////////////////////////////////////////
+
+const qState = (function(){
+  const VALID_VARS = ['tab', 'note', 'annotation', 'page', 'dest'];
+
+  function validateKeys(keys) {
+    for (let k of keys) {
+      if (VALID_VARS.includes(k)) {
+        continue;
+      }
+      console.error(`Invalid query string keys (${k}).`);
+      return false;
+    }
+    return true;
+  }
+
+  function set(history, vals, maintain=[]) {
+    if (!validateKeys(Object.keys(vals))) {
+      return;
+    }
+    const q = parseQueryString(history.location.search);
+    let q2 = {};
+    for (let k of maintain) {
+      if (q[k]) {
+        q2[k] = q[k];
+      }
+    }
+    history.push(toQueryString({...q2, ...vals}), 
+      { id: (history.location.state?.id || 0)+1 }
+    );
+  }
+
+  function get(history, key=null) {
+    const q = parseQueryString(history.location.search);
+    if (!key) {
+      return q;
+    }
+    if (!validateKeys([key])) {
+      return null;
+    }
+    return q[key];
+  }
+
+  return {
+    set, get
+  };
+})();
 
 //////////////////////////////////////////////////
 // Annotations
 //////////////////////////////////////////////////
 
-function AnnotationLayer(props) {
-  const {
+function AnnotationLayer(props) { const {
     annotations,
     eventHandlers,
     page,
@@ -539,7 +569,6 @@ function AnnotationActions(props) {
 function Outline(props) {
   const {
     outline,
-    scrollToDest,
   } = props;
 
   if (!outline) {
@@ -547,7 +576,7 @@ function Outline(props) {
   }
   return (
     <div className='outline'>
-      <OutlineList outline={outline} scrollToDest={scrollToDest} />
+      <OutlineList outline={outline} />
     </div>
   );
 }
@@ -555,8 +584,13 @@ function Outline(props) {
 function OutlineList(props) {
   const {
     outline,
-    scrollToDest,
   } = props;
+
+  const history = useHistory();
+
+  function scrollToDest(dest) {
+    qState.set(history, {dest});
+  }
 
   if (!outline) {
     return null;
@@ -569,7 +603,7 @@ function OutlineList(props) {
             <span className='outline__link' onClick={() => scrollToDest(item.dest)}>{item.title}</span>
             {
               item.items &&
-              <OutlineList outline={item.items} scrollToDest={scrollToDest}/>
+              <OutlineList outline={item.items} />
             }
           </li>
         )
@@ -645,9 +679,10 @@ function NoteCard(props) {
   // Event Handlers
   function scrollIntoView() {
     // We need to update the state because if this is called twice in a row on the same annotation, it won't trigger a scroll because the URL search query does not change.
-    history.push('?annotation='+annotationId+'&note='+note.id, 
-      { id: (history.location.state?.id || 0)+1 }
-    );
+    qState.set(history, {
+      annotation: annotationId,
+      note: note.id
+    });
   }
   function handleChangeBody(text) {
     setUpdatedNote({
@@ -906,12 +941,15 @@ function SideBar(props) {
   const context = useContext(pdfAnnotationPageContext);
   const visible = context.sidebar.visible.val;
   const onChangeVisible = context.sidebar.visible.set;
-  const activeTabIndex = context.sidebar.activeTabIndex.val;
-  const onChangeActiveTabIndex = context.sidebar.activeTabIndex.set;
+  const activeTabId = context.sidebar.activeTabId.val;
 
-  function handleKeyDown(e,i) {
+  const history = useHistory();
+  const setActiveTabId = id => qState.set(history, {tab: id});
+
+  function handleKeyDown(e) {
     if (e.key === 'Enter' || e.key === ' ') {
-      onChangeActiveTabIndex(i);
+      let tabId = e.target.getAttribute('data-tab-id');
+      setActiveTabId(tabId);
       e.preventDefault();
     }
   }
@@ -920,6 +958,7 @@ function SideBar(props) {
     'sidebar': true,
     'hidden': !visible
   })
+  const activeTabIndex = tabs.map(t => t.id).indexOf(activeTabId);
   const activeTab = tabs[activeTabIndex];
   return (<div className={classNames}>
     <div className='controls' onClick={()=>onChangeVisible(!visible)}>
@@ -934,13 +973,14 @@ function SideBar(props) {
         tabs.map((tab,i) => {
           let classNames = generateClassNames({
             'tab': true,
-            'active': activeTabIndex === i
+            'active': activeTabId === tab.id
           });
           return (<div key={tab.title}
+              data-tab-id={tab.id}
               className={classNames}
               tabIndex={0}
               onKeyDown={e=>handleKeyDown(e,i)}
-              onClick={()=>onChangeActiveTabIndex(i)}>
+              onClick={()=>setActiveTabId(tab.id)}>
             {tab.title}
           </div>);
         })
@@ -1031,7 +1071,7 @@ export default function PdfAnnotationPage(props) {
   const annotationInView = useSemiState(null,false);
   const [toolState, setToolState] = useState(null);
   const [toolStateStack, setToolStateStack] = useState([]);
-  const [sidebarActiveTabIndex, setSidebarActiveTabIndex] = useState(0);
+  const [sidebarActiveTabId, setSidebarActiveTabId] = useState(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
   // If linked to a specific annotation, scroll it into view
@@ -1046,7 +1086,20 @@ export default function PdfAnnotationPage(props) {
       let id = parseInt(params['note']);
       cardInView.setValue(id);
     }
-  }, [location.search, location.state]);
+    if (params['tab']) {
+      let id = params['tab'];
+      setSidebarActiveTabId(id);
+      setSidebarVisible(true);
+    }
+    if (params['page']) {
+      let page = params['page'];
+      pdfViewerState.scrollToPage(page);
+    }
+    if (params['dest']) {
+      let dest = params['dest'];
+      pdfViewerState.scrollToDest(dest);
+    }
+  }, [location.state]);
 
   useEffect(() => { // Scroll annotation into view
     if (!annotationInView.changed) {
@@ -1074,7 +1127,7 @@ export default function PdfAnnotationPage(props) {
       elem.scrollIntoView();
       cardInView.done();
     }
-    setSidebarActiveTabIndex(1); // FIXME: need some mapping from tab index to tab title, or something else more human-readible
+    setSidebarActiveTabId('annotation_notes');
     scrollWhenFound();
   }, [cardInView.changed]);
 
@@ -1677,17 +1730,21 @@ export default function PdfAnnotationPage(props) {
 
   const tabs = useMemo(() => [
     {
+      id: 'details',
       title: 'Details',
       render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
     },{
+      id: 'outline',
       title: 'Outline',
       render: () => <Outline outline={outline} scrollToDest={pdfViewerState.scrollToDest} />
     },{
+      id: 'annotation_notes',
       title: 'Annotation Notes',
       render: () => 
         <NoteCardsContainer
             annotations={annotations} />
     },{
+      id: 'notes',
       title: 'Notes',
       render: () => <DocNotes doc={doc} />
     }
@@ -1701,15 +1758,12 @@ export default function PdfAnnotationPage(props) {
       'annotationInView': annotationInView,
       'sidebar': {
         'visible': {val: sidebarVisible, set: setSidebarVisible},
-        'activeTabIndex': {val: sidebarActiveTabIndex, set: setSidebarActiveTabIndex}
-      },
-      'annotation': {
-        'create': createAnnotation,
-        'update': updateAnnotation,
-        'delete': deleteAnnotation,
+        'activeTabId': {
+          val: sidebarActiveTabId, 
+        }
       },
     }
-  }, [doc, activeId, cardInView.changed, annotationInView.changed, toolState, sidebarVisible, sidebarActiveTabIndex]);
+  }, [doc, activeId, cardInView.changed, annotationInView.changed, toolState, sidebarVisible, sidebarActiveTabId]);
 
   const renderCustomLayers = useCallback(({page, scale}) => {
     return <AnnotationLayer
@@ -1733,10 +1787,7 @@ export default function PdfAnnotationPage(props) {
     <pdfAnnotationPageContext.Provider value={context}>
       <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers}/>
       <div className='sidebar-container'>
-        <SideBar tabs={tabs}
-          activeTabIndex={sidebarActiveTabIndex}
-          onChangeActiveTabIndex={setSidebarActiveTabIndex}
-        />
+        <SideBar tabs={tabs} />
       </div>
       <div className='controls'>
         <GroupedInputs>
