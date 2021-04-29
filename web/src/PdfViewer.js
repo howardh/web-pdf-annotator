@@ -173,7 +173,7 @@ function MainLayer(props) {
   }
 }
 
-function TextLayer(props) {
+function TextLayer2(props) {
   const {
     page,
     scale,
@@ -243,6 +243,239 @@ function TextLayer(props) {
   })
   return (
     <div className={classNames} ref={ref}></div>
+  );
+}
+
+const nonWhitespaceRegexp = /\S/;
+function isAllWhitespace(str) {
+  return !nonWhitespaceRegexp.test(str);
+}
+
+const DEFAULT_FONT_SIZE = 30;
+const DEFAULT_FONT_ASCENT = 0.8;
+const ascentCache = new Map();
+function getAscent(fontFamily, ctx) {
+  const cachedAscent = ascentCache.get(fontFamily);
+  if (cachedAscent) {
+    return cachedAscent;
+  }
+
+  ctx.save();
+  ctx.font = `${DEFAULT_FONT_SIZE}px ${fontFamily}`;
+  const metrics = ctx.measureText("");
+
+  // Both properties aren't available by default in Firefox.
+  let ascent = metrics.fontBoundingBoxAscent;
+  let descent = Math.abs(metrics.fontBoundingBoxDescent);
+  if (ascent) {
+    ctx.restore();
+    const ratio = ascent / (ascent + descent);
+    ascentCache.set(fontFamily, ratio);
+    return ratio;
+  }
+
+  // Try basic heuristic to guess ascent/descent.
+  // Draw a g with baseline at 0,0 and then get the line
+  // number where a pixel has non-null red component (starting
+  // from bottom).
+  ctx.strokeStyle = "red";
+  ctx.clearRect(0, 0, DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE);
+  ctx.strokeText("g", 0, 0);
+  let pixels = ctx.getImageData(0, 0, DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE)
+    .data;
+  descent = 0;
+  for (let i = pixels.length - 1 - 3; i >= 0; i -= 4) {
+    if (pixels[i] > 0) {
+      descent = Math.ceil(i / 4 / DEFAULT_FONT_SIZE);
+      break;
+    }
+  }
+
+  // Draw an A with baseline at 0,DEFAULT_FONT_SIZE and then get the line
+  // number where a pixel has non-null red component (starting
+  // from top).
+  ctx.clearRect(0, 0, DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE);
+  ctx.strokeText("A", 0, DEFAULT_FONT_SIZE);
+  pixels = ctx.getImageData(0, 0, DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE).data;
+  ascent = 0;
+  for (let i = 0, ii = pixels.length; i < ii; i += 4) {
+    if (pixels[i] > 0) {
+      ascent = DEFAULT_FONT_SIZE - Math.floor(i / 4 / DEFAULT_FONT_SIZE);
+      break;
+    }
+  }
+
+  ctx.restore();
+
+  if (ascent) {
+    const ratio = ascent / (ascent + descent);
+    ascentCache.set(fontFamily, ratio);
+    return ratio;
+  }
+
+  ascentCache.set(fontFamily, DEFAULT_FONT_ASCENT);
+  return DEFAULT_FONT_ASCENT;
+}
+
+function TextLayer(props) {
+  const {
+    page,
+    scale,
+    shouldBeRendered,
+  } = props;
+
+  const ref = useRef(null);
+
+  // Content
+  const [textContent, setTextContent] = useState(null);
+  const [textRenderParams, setTextRenderParams] = useState(null);
+  let viewport = page.getViewport({ scale: scale });
+
+  // Render PDF
+  const getContentTaskRef = useRef(null);
+  useEffect(() => {
+    if (!page) {
+      return;
+    }
+    if (getContentTaskRef.current) {
+      return;
+    }
+
+    let task = page.getTextContent();
+    getContentTaskRef.current = task;
+    task.then(content => {
+      setTextContent(content);
+      getContentTaskRef.current = null;
+    });
+  }, [page]);
+
+  // Compute rendering parameters
+  useEffect(() => {
+    let ctx = ref.current?.getContext("2d", { alpha: false });
+    if (!textContent || !ctx) {
+      return;
+    }
+    setTextRenderParams(
+      textContent.items.map((geom,i) => {
+        // See https://github.com/mozilla/pdf.js/blob/0acd801b1e66c52f6c9a5bae2486f4865277d5aa/src/display/text_layer.js#L130
+        // See https://gist.github.com/hubgit/600ec0c224481e910d2a0f883a7b98e3
+        const textDivProperties = {
+          angle: 0,
+          canvasWidth: 0,
+          isWhitespace: false,
+          originalTransform: null,
+          paddingBottom: 0,
+          paddingLeft: 0,
+          paddingRight: 0,
+          paddingTop: 0,
+          scale: 1,
+        };
+        const divStyle = {};
+
+        if (isAllWhitespace(geom.str)) {
+          return null;
+        }
+
+        let tx = pdfjsLib.Util.transform(
+          viewport.transform, geom.transform
+        );
+        let angle = Math.atan2(tx[1], tx[0]);
+        const style = textContent.styles[geom.fontName];
+        if (style.vertical) {
+          angle += Math.PI / 2;
+        }
+        const fontHeight = Math.hypot(tx[2], tx[3]);
+        const fontAscent = fontHeight * getAscent(style.fontFamily, ctx);
+        //const fontAscent = fontHeight;
+
+        let left, top;
+        //if (angle === 0) {
+        //  //left = tx[4];
+        //  //top = tx[5] - fontAscent;
+        //  tx[4] = tx[4];
+        //  tx[5] = tx[5] - fontAscent;
+        //} else {
+        //  //left = tx[4] + fontAscent * Math.sin(angle);
+        //  //top = tx[5] - fontAscent * Math.cos(angle);
+        //  tx[4] = tx[4] + fontAscent * Math.sin(angle);
+        //  tx[5] = tx[5] - fontAscent * Math.cos(angle);
+        //}
+        // Setting the style properties individually, rather than all at once,
+        // should be OK since the `textDiv` isn't appended to the document yet.
+        divStyle.left = 0;
+        divStyle.top = 0;
+        //divStyle.left = `${left}px`;
+        //divStyle.top = `${top}px`;
+        divStyle.fontSize = `${tx[0]}px`;
+        divStyle.fontFamily = style.fontFamily;
+
+        let tx2 = [...tx];
+        let scaleX = 1;
+        let scaleY = 1;
+        let descent = 0;
+        scaleX /= tx[0];
+        scaleY /= tx[0];
+        if (geom.width > 0) {
+          ctx.font = tx[0] + 'px ' + style.fontFamily;
+          let measurement = ctx.measureText(geom.str);
+          let width = measurement.width;
+          //let height = measurement.actualBoundingBoxAscent+measurement.actualBoundingBoxDescent;
+          let height = measurement.actualBoundingBoxAscent;
+          descent = measurement.actualBoundingBoxDescent;
+          console.log([i,height,descent,ctx.font]);
+          if (width > 0) {
+            scaleX  *= geom.width/width;
+          }
+          if (height > 0) {
+            //scaleY  *= (geom.height-descent)/height;
+            scaleY  *= geom.height/height;
+          }
+          //if (angle === 0) {
+          //  tx[5] = tx[5] + descent;
+          //} else {
+          //  tx[5] = tx[5] + descent * Math.cos(angle);
+          //}
+        }
+        //divStyle.transform = `scaleX(${scaleX})`;
+        //tx = pdfjsLib.Util.transform(
+        //  tx, [1,0,0,1,0,descent]
+        //);
+        tx = pdfjsLib.Util.transform(
+          tx, [scaleX*scale,0,0,scaleY*scale,0,0]
+        );
+        divStyle.transform = `matrix(${tx.join(',')})`;
+
+        if (page._pageIndex === 0 && i === 0) {
+          window.t = {
+            tx, geom, textContent, ctx,
+            font: style.fontFamily,
+            measureText: ctx.measureText(geom.str),
+          };
+        }
+
+        return {
+          str: geom.str,
+          style: divStyle
+        };
+      })
+    );
+  }, [textContent, scale]);
+
+  let classNames = generateClassNames({
+    'text-layer': true,
+  })
+  return (
+    <div className={classNames}>
+      <canvas ref={ref} />
+      {
+        textRenderParams &&
+        textRenderParams.map(({str,style},i) => {
+          return <span style={style} role='presentation' key={i}>
+            {str}
+          </span>;
+        })
+      }
+    </div>
   );
 }
 
@@ -403,6 +636,8 @@ function PdfViewer(props, forwardRef) {
     state,
     customLayers=null,
   } = props;
+
+  window.state = state;
 
   const ref = useRef(null);
 
