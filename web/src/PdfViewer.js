@@ -108,7 +108,7 @@ function usePdfPages(doc) {
 }
 
 function LoadingLayer(props) {
-  return (<div className='loading-layer'>
+  return (<div className='pdf-viewer__loading-layer'>
     <span>Loading...</span>
   </div>);
 }
@@ -168,7 +168,7 @@ function MainLayer(props) {
     return null;
   } else {
     return (
-      <canvas ref={ref}></canvas>
+      <canvas className='pdf-viewer__main-layer' ref={ref}></canvas>
     );
   }
 }
@@ -239,7 +239,7 @@ function TextLayer(props) {
   }, [page, scale, shouldBeRendered, lastRenderedScale]);
 
   let classNames = generateClassNames({
-    'text-layer': true,
+    'pdf-viewer__text-layer': true,
   })
   return (
     <div className={classNames} ref={ref}></div>
@@ -293,7 +293,7 @@ function AnnotationLayer(props) {
   }
 
   let classNames = generateClassNames({
-    'annotation-layer': true,
+    'pdf-viewer__annotation-layer': true,
   })
   return (
     <div className={classNames} ref={ref}>
@@ -311,7 +311,7 @@ function AnnotationLayer(props) {
             transform: `matrix(${scale},0,0,${scale},0,0)`,
             transformOrigin: `-${left}px -${top}px 0`,
           };
-          return (<div style={style} onClick={()=>goToDest(ann.dest)}></div>);
+          return (<div className='pdf-viewer__annotation' style={style} onClick={()=>goToDest(ann.dest)}></div>);
         })
       }
     </div>
@@ -335,7 +335,7 @@ function PdfPageContainer(props) {
   };
 
   return (
-    <div className='pdf-page-container' style={style}>
+    <div className='pdf-viewer__page-container' style={style}>
       {
         shouldBeRendered ? (
           <>
