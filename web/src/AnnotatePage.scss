@@ -290,4 +290,20 @@ body {
       max-height: calc(100vh - 250px);
     }
   }
+
+  .outline {
+    padding: 10px;
+    background: white;
+    border-radius: 3px;
+
+    &__list {
+    }
+
+    &__link {
+      &:hover {
+        cursor: pointer;
+        color: $primary-colour-dark;
+      }
+    }
+  }
 }

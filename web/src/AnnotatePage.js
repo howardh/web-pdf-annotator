@@ -533,6 +533,52 @@ function AnnotationActions(props) {
 }
 
 //////////////////////////////////////////////////
+// Outline
+//////////////////////////////////////////////////
+
+function Outline(props) {
+  const {
+    outline,
+    scrollToDest,
+  } = props;
+
+  if (!outline) {
+    return null;
+  }
+  return (
+    <div className='outline'>
+      <OutlineList outline={outline} scrollToDest={scrollToDest} />
+    </div>
+  );
+}
+
+function OutlineList(props) {
+  const {
+    outline,
+    scrollToDest,
+  } = props;
+
+  if (!outline) {
+    return null;
+  }
+  return (
+    <ul className='outline__list'>
+      {
+        outline.map(item => 
+          <li>
+            <span className='outline__link' onClick={() => scrollToDest(item.dest)}>{item.title}</span>
+            {
+              item.items &&
+              <OutlineList outline={item.items} scrollToDest={scrollToDest}/>
+            }
+          </li>
+        )
+      }
+    </ul>
+  );
+}
+
+//////////////////////////////////////////////////
 // Note Card
 //////////////////////////////////////////////////
 
@@ -949,6 +995,16 @@ export default function PdfAnnotationPage(props) {
   const doc = useSelector(state => state.documents.entities[docId]);
 
   const pdfViewerState = usePdfViewerState(doc);
+  const [outline, setOutline] = useState(null);
+  useEffect(() => {
+    pdfViewerState.pdf?.getOutline().then(
+      o => {
+        setOutline(o);
+        window.outline = o;
+        window.scrollToDest = pdfViewerState.scrollToDest;
+      }
+    );
+  }, [pdfViewerState.pdf]);
 
   const annotations = useSelector(
     useCallback(createSelector(
@@ -977,8 +1033,6 @@ export default function PdfAnnotationPage(props) {
   const [toolStateStack, setToolStateStack] = useState([]);
   const [sidebarActiveTabIndex, setSidebarActiveTabIndex] = useState(0);
   const [sidebarVisible, setSidebarVisible] = useState(false);
-
-  const pdfViewer = useRef(null);
 
   // If linked to a specific annotation, scroll it into view
   useEffect(() => {
@@ -1626,6 +1680,9 @@ export default function PdfAnnotationPage(props) {
       title: 'Details',
       render: () => <DocInfoForm doc={doc} updateDoc={updateDoc} />
     },{
+      title: 'Outline',
+      render: () => <Outline outline={outline} scrollToDest={pdfViewerState.scrollToDest} />
+    },{
       title: 'Annotation Notes',
       render: () => 
         <NoteCardsContainer
@@ -1634,7 +1691,7 @@ export default function PdfAnnotationPage(props) {
       title: 'Notes',
       render: () => <DocNotes doc={doc} />
     }
-  ], [doc, annotations]);
+  ], [doc, annotations, pdfViewerState.scrollToDest, outline]);
 
   // Context
   const context = useMemo( () => { 

@@ -253,7 +253,7 @@ function AnnotationLayer(props) {
     scale,
     hidden=false,
     shouldBeRendered,
-    scrollState,
+    scrollToDest,
   } = props;
 
   const ref = useRef(null);
@@ -275,23 +275,6 @@ function AnnotationLayer(props) {
     });
   }, [page]);
 
-  // Follow ref link
-  function goToDest(dest) {
-    if (!dest) {
-      console.error('invalid dest');
-      return;
-    }
-    pdf.getDestination(dest).then(
-      explicitDest => {
-        pdf.getPageIndex(explicitDest[0]).then(pageIndex => {
-          let x = explicitDest[2]*scale;
-          let y = (viewport.height-explicitDest[3])*scale;
-          scrollState.setValue({page: pageIndex, x, y})
-        });
-      }
-    );
-  }
-
   let classNames = generateClassNames({
     'pdf-viewer__annotation-layer': true,
   })
@@ -311,7 +294,7 @@ function AnnotationLayer(props) {
             transform: `matrix(${scale},0,0,${scale},0,0)`,
             transformOrigin: `-${left}px -${top}px 0`,
           };
-          return (<div className='pdf-viewer__annotation' style={style} onClick={()=>goToDest(ann.dest)}></div>);
+          return (<div className='pdf-viewer__annotation' style={style} onClick={()=>scrollToDest(ann.dest)}></div>);
         })
       }
     </div>
@@ -325,7 +308,7 @@ function PdfPageContainer(props) {
     shouldBeRendered,
     customLayers,
     scale,
-    scrollState,
+    scrollToDest,
   } = props;
 
   let viewport = page.getViewport({ scale: scale, });
@@ -351,7 +334,7 @@ function PdfPageContainer(props) {
                 pdf={pdf}
                 scale={scale}
                 shouldBeRendered={shouldBeRendered}
-                scrollState={scrollState} />
+                scrollToDest={scrollToDest} />
             {
               customLayers &&
               customLayers({page, scale})
@@ -388,6 +371,23 @@ export function usePdfViewerState(doc) {
   const [visiblePageRange, setVisiblePageRange] = useState([0,0]);
   const scrollState = useSemiState(null,false);
 
+  const scrollToDest = useCallback((dest) => {
+    if (!dest) {
+      console.error('invalid dest');
+      return;
+    }
+    pdf.getDestination(dest).then(
+      explicitDest => {
+        pdf.getPageIndex(explicitDest[0]).then(pageIndex => {
+          let viewport = pages[pageIndex].getViewport({ scale: 1, });
+          let x = explicitDest[2]*scale;
+          let y = (viewport.height-explicitDest[3])*scale;
+          scrollState.setValue({page: pageIndex, x, y})
+        });
+      }
+    );
+  },[pdf,pages]);
+
   return {
     pdf, pages, pagesLoadingProgress, pagesLoadingError,
     scrollState,
@@ -395,6 +395,7 @@ export function usePdfViewerState(doc) {
     visiblePageRange, setVisiblePageRange,
     scrollTo: (pos) => scrollState.setValue(pos),
     scrollToPage: (pageIndex) => scrollState.setValue({page: pageIndex}),
+    scrollToDest,
   };
 }
 
@@ -502,7 +503,7 @@ function PdfViewer(props, forwardRef) {
             page={page}
             shouldBeRendered={i >= state.visiblePageRange[0] && i <= state.visiblePageRange[1]}
             customLayers={customLayers}
-            scrollState={state.scrollState}
+            scrollToDest={state.scrollToDest}
             />
       })}
     </div>
