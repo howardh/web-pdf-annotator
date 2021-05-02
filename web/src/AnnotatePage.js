@@ -503,8 +503,8 @@ function AnnotationActions(props) {
   const context = useContext(pdfAnnotationPageContext);
   const cardInView = context.cardInView;
   const setSidebarVisible = context.sidebar.visible.set;
-  const setSidebarTab = context.sidebar.activeTabIndex.set;
 
+  const history = useHistory();
   const dispatch = useDispatch();
   const imageUrlRef= useRef(null);
   const imageUrl = process.env.REACT_APP_SERVER_ADDRESS+"/data/annotations/"+annotation.id+'/img';
@@ -521,12 +521,12 @@ function AnnotationActions(props) {
       annotation_id: annotation.id
     }));
     setSidebarVisible(true);
-    setSidebarTab(1); // XXX: Fix hard-coded tab index.
+    qState.set(history, {tab: 'annotation_notes'});
   }
   function viewNote() {
     cardInView.setValue(annotation.note_id);
     setSidebarVisible(true);
-    setSidebarTab(1); // XXX: Fix hard-coded tab index.
+    qState.set(history, {tab: 'annotation_notes'});
   }
   function copyPhotoUrlToClipboard() {
     if (!imageUrlRef.current) {
