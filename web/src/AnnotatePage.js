@@ -25,7 +25,7 @@ const pdfAnnotationPageContext = React.createContext({});
 //////////////////////////////////////////////////
 
 const qState = (function(){
-  const VALID_VARS = ['tab', 'note', 'annotation', 'page', 'dest'];
+  const VALID_VARS = ['tab', 'note', 'annotation', 'page', 'y', 'x', 'dest'];
 
   function validateKeys(keys) {
     for (let k of keys) {
@@ -54,6 +54,13 @@ const qState = (function(){
     );
   }
 
+  function replace(history, vals) {
+    history.replace(
+      toQueryString(vals), 
+      history.location.state?.id
+    );
+  }
+
   function get(history, key=null) {
     const q = parseQueryString(history.location.search);
     if (!key) {
@@ -66,7 +73,7 @@ const qState = (function(){
   }
 
   return {
-    set, get
+    set, get, replace
   };
 })();
 
@@ -588,10 +595,6 @@ function OutlineList(props) {
 
   const history = useHistory();
 
-  function scrollToDest(dest) {
-    qState.set(history, {dest});
-  }
-
   if (!outline) {
     return null;
   }
@@ -600,7 +603,7 @@ function OutlineList(props) {
       {
         outline.map(item => 
           <li>
-            <span className='outline__link' onClick={() => scrollToDest(item.dest)}>{item.title}</span>
+            <span className='outline__link' key={item.dest} onClick={() => qState.set(history, {dest: item.dest})}>{item.title}</span>
             {
               item.items &&
               <OutlineList outline={item.items} />
@@ -944,7 +947,7 @@ function SideBar(props) {
   const activeTabId = context.sidebar.activeTabId.val;
 
   const history = useHistory();
-  const setActiveTabId = id => qState.set(history, {tab: id});
+  const setActiveTabId = id => qState.replace(history, {...qState.get(history), tab: id});
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -1034,17 +1037,12 @@ export default function PdfAnnotationPage(props) {
   const location = useLocation();
   const doc = useSelector(state => state.documents.entities[docId]);
 
-  const pdfViewerState = usePdfViewerState(doc);
-  const [outline, setOutline] = useState(null);
-  useEffect(() => {
-    pdfViewerState.pdf?.getOutline().then(
-      o => {
-        setOutline(o);
-        window.outline = o;
-        window.scrollToDest = pdfViewerState.scrollToDest;
-      }
-    );
-  }, [pdfViewerState.pdf]);
+  const pdfViewerState = usePdfViewerState(
+    doc,
+    {
+      onScroll: handlePdfScroll,
+    }
+  );
 
   const annotations = useSelector(
     useCallback(createSelector(
@@ -1074,8 +1072,45 @@ export default function PdfAnnotationPage(props) {
   const [sidebarActiveTabId, setSidebarActiveTabId] = useState(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  // If linked to a specific annotation, scroll it into view
+  // Outline
+  const [outline, setOutline] = useState(null);
   useEffect(() => {
+    pdfViewerState.pdf?.getOutline().then(
+      o => {
+        setOutline(o);
+        window.outline = o;
+        window.scrollToDest = pdfViewerState.scrollToDest;
+      }
+    );
+  }, [pdfViewerState.pdf]);
+
+  // Process History change
+  const history = useHistory();
+  const [locationKeys, setLocationKeys] = useState([]);
+  useEffect(() => {
+    // See https://stackoverflow.com/a/60125216
+    const unlisten = history.listen(location => {
+      if (history.action === 'PUSH') {
+        setLocationKeys([location.key]);
+        // Handle push
+        handleHistoryPush(location);
+      } else if (history.action === 'POP') {
+        if (locationKeys[1] === location.key) {
+          setLocationKeys(([ _, ...keys ]) => keys);
+          // Handle forward event
+          handleHistoryForward(location);
+        } else {
+          setLocationKeys((keys) => [ location.key, ...keys ]);
+          // Handle back event
+          handleHistoryBack(location);
+        }
+      } else if (history.action === 'REPLACE') {
+        handleHistoryReplace(location);
+      }
+    });
+    return unlisten;
+  }, [locationKeys]);
+  function handleHistoryPush(location) {
     let params = parseQueryString(location.search);
     if (params['annotation']) {
       let id = parseInt(params['annotation']);
@@ -1094,13 +1129,60 @@ export default function PdfAnnotationPage(props) {
     if (params['page']) {
       let page = params['page'];
       pdfViewerState.scrollToPage(page);
+      scrolledSinceJump.current = -1;
     }
     if (params['dest']) {
       let dest = params['dest'];
       pdfViewerState.scrollToDest(dest);
+      scrolledSinceJump.current = -1;
     }
-  }, [location.state]);
+    if (params['y']) {
+      let scale = pdfViewerState.scale;
+      pdfViewerState.scrollTo({y: parseFloat(params['y'])*scale});
+    }
+  }
+  function handleHistoryBack(location) {
+    let params = parseQueryString(location.search);
+    if (params['annotation']) {
+      let id = parseInt(params['annotation']);
+      setActiveId(id);
+      annotationInView.setValue(id);
+    }
+    if (params['note']) {
+      let id = parseInt(params['note']);
+      cardInView.setValue(id);
+    }
+    if (params['tab']) {
+      // Ignore
+    }
+    if (params['page']) {
+      let page = params['page'];
+      pdfViewerState.scrollToPage(page);
+      scrolledSinceJump.current = -1;
+    }
+    if (params['dest']) {
+      let dest = params['dest'];
+      pdfViewerState.scrollToDest(dest);
+      scrolledSinceJump.current = -1;
+    }
+    if (params['y']) {
+      let scale = pdfViewerState.scale;
+      pdfViewerState.scrollTo({y: parseFloat(params['y'])*scale});
+    }
+  }
+  function handleHistoryForward(location) {
+    handleHistoryBack(location);
+  }
+  function handleHistoryReplace(location) {
+    let params = parseQueryString(location.search);
+    if (params['tab']) {
+      let id = params['tab'];
+      setSidebarActiveTabId(id);
+      setSidebarVisible(true);
+    }
+  }
 
+  // Scroll Position
   useEffect(() => { // Scroll annotation into view
     if (!annotationInView.changed) {
       return;
@@ -1113,7 +1195,7 @@ export default function PdfAnnotationPage(props) {
       annotationInView.done();
     }
   }, [annotationInView.changed, annotations]);
-  useEffect(() => { // Scroll card into view
+  useEffect(() => { // Scroll note card into view
     function scrollWhenFound() {
       if (!cardInView.changed) {
         return;
@@ -1497,7 +1579,6 @@ export default function PdfAnnotationPage(props) {
                 // Continue creating the annotation
                 return
               } else {
-                console.log('mousedown');
                 setToolState({
                   ...toolState,
                   dragStartCoord: data.coords
@@ -1664,6 +1745,33 @@ export default function PdfAnnotationPage(props) {
     setToolState(tools.read.initState());
   }, []);
 
+  // Scrolling
+  const scrolledSinceJump = useRef(0); // >0 = the user has scrolled since the last position jump (e.g. clicking a link).
+  function scrollToNextPage(e) {
+    // TODO
+  }
+  function scrollToPrevPage(e) {
+    // TODO
+  }
+  function handlePdfScroll(e) {
+    //scrolledSinceJump.current += 1;
+    //if (scrolledSinceJump.current > 0) {
+    //  if (scrolledSinceJump.current === 1) {
+    //    // Push history
+    //    qState.set(history, {
+    //      y: e.target.scrollTop/pdfViewerState.scale,
+    //      x: e.target.scrollLeft/pdfViewerState.scale,
+    //    });
+    //  } else {
+    //    // Replace history
+    //    qState.replace(history, {
+    //      y: e.target.scrollTop/pdfViewerState.scale,
+    //      x: e.target.scrollLeft/pdfViewerState.scale,
+    //    });
+    //  }
+    //}
+  }
+
   // Misc
   function activateAnnotation(annId) {
     setActiveId(annId);
@@ -1721,12 +1829,6 @@ export default function PdfAnnotationPage(props) {
       }
     }
   }
-  function scrollToNextPage(e) {
-    // TODO
-  }
-  function scrollToPrevPage(e) {
-    // TODO
-  }
 
   const tabs = useMemo(() => [
     {
@@ -1736,7 +1838,7 @@ export default function PdfAnnotationPage(props) {
     },{
       id: 'outline',
       title: 'Outline',
-      render: () => <Outline outline={outline} scrollToDest={pdfViewerState.scrollToDest} />
+      render: () => <Outline outline={outline} />
     },{
       id: 'annotation_notes',
       title: 'Annotation Notes',
@@ -1748,7 +1850,7 @@ export default function PdfAnnotationPage(props) {
       title: 'Notes',
       render: () => <DocNotes doc={doc} />
     }
-  ], [doc, annotations, pdfViewerState.scrollToDest, outline]);
+  ], [doc, annotations, outline]);
 
   // Context
   const context = useMemo( () => { 
