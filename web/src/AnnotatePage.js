@@ -602,8 +602,8 @@ function OutlineList(props) {
     <ul className='outline__list'>
       {
         outline.map(item => 
-          <li>
-            <span className='outline__link' key={item.dest} onClick={() => qState.set(history, {dest: item.dest})}>{item.title}</span>
+          <li key={item.dest}>
+            <span className='outline__link' onClick={() => qState.set(history, {dest: item.dest})}>{item.title}</span>
             {
               item.items &&
               <OutlineList outline={item.items} />
