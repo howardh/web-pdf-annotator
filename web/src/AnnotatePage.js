@@ -1887,7 +1887,7 @@ export default function PdfAnnotationPage(props) {
   }
   return (<main className='annotation-page'>
     <pdfAnnotationPageContext.Provider value={context}>
-      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers}/>
+      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers} textLayerOnTop={toolState.type === 'text'}/>
       <div className='sidebar-container'>
         <SideBar tabs={tabs} />
       </div>

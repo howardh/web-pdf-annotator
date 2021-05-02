@@ -305,6 +305,7 @@ function PdfPageContainer(props) {
   const {
     pdf,
     page,
+    textLayerOnTop,
     shouldBeRendered,
     customLayers,
     scale,
@@ -321,25 +322,53 @@ function PdfPageContainer(props) {
     <div className='pdf-viewer__page-container' style={style}>
       {
         shouldBeRendered ? (
-          <>
-            <MainLayer page={page}
-                pdf={pdf}
-                scale={scale}
-                shouldBeRendered={shouldBeRendered} />
-            <TextLayer page={page}
-                pdf={pdf}
-                scale={scale}
-                shouldBeRendered={shouldBeRendered} />
-            <AnnotationLayer page={page}
-                pdf={pdf}
-                scale={scale}
-                shouldBeRendered={shouldBeRendered}
-                scrollToDest={scrollToDest} />
-            {
-              customLayers &&
-              customLayers({page, scale})
-            }
-          </>
+          textLayerOnTop ? (
+            <>
+              <MainLayer key='main'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered} />
+              {
+                customLayers &&
+                customLayers({page, scale})
+              }
+              <TextLayer key='text'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered} />
+              <AnnotationLayer key='annotation'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered}
+                  scrollToDest={scrollToDest} />
+            </>
+          ) : (
+            <>
+              <MainLayer key='main'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered} />
+              <TextLayer key='text'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered} />
+              <AnnotationLayer key='annotation'
+                  page={page}
+                  pdf={pdf}
+                  scale={scale}
+                  shouldBeRendered={shouldBeRendered}
+                  scrollToDest={scrollToDest} />
+              {
+                customLayers &&
+                customLayers({page, scale})
+              }
+            </>
+          )
         ) : (
           <LoadingLayer page={page}
               pdf={pdf}
@@ -409,6 +438,7 @@ export function usePdfViewerState(doc) {
 function PdfViewer(props, forwardRef) {
   const {
     state,
+    textLayerOnTop,
     customLayers=null,
   } = props;
 
@@ -508,6 +538,7 @@ function PdfViewer(props, forwardRef) {
             scale={state.scale}
             pdf={state.pdf}
             page={page}
+            textLayerOnTop={textLayerOnTop}
             shouldBeRendered={i >= state.visiblePageRange[0] && i <= state.visiblePageRange[1]}
             customLayers={customLayers}
             scrollToDest={state.scrollToDest}
