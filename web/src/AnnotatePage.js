@@ -700,21 +700,12 @@ function NoteCard(props) {
     window.localStorage.setItem(localStorageId, JSON.stringify(data));
   }
 
-  const [refreshing,setRefreshing] = useState(false);
+  const [key,setKey] = useState(0);
   function refresh() {
-    // Momentarily hide the div to force a rerender
-    setRefreshing(true);
+    // Force a rerender
+    setKey(x => x+1);
   }
-  useEffect(()=>{
-    if (!refreshing) {
-      return;
-    }
-    setRefreshing(false);
-  },[refreshing]);
 
-  if (refreshing) {
-    return null;
-  }
   if (!note) {
     return null;
   }
@@ -733,7 +724,7 @@ function NoteCard(props) {
       },
       lineNumbers: false,
     };
-    return (<div className={classNames}
+    return (<div className={classNames} key={key}
         onClick={()=>setActive(true)} id={'card'+note.id}>
       <TextEditor
           onChangeText={handleChangeBody}
@@ -777,11 +768,18 @@ function NoteCard(props) {
       </div>
     </div>);
   } else {
-    return (<div className={classNames}
+    return (<div className={classNames} key={key}
         tabIndex={-1}
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       <NoteViewer note={note} />
       <div className='controls'>
+        {
+          annotationId &&
+          <Button onClick={scrollIntoView}>
+            <i className='material-icons'>navigate_before</i>
+            <Tooltip>View Annotation</Tooltip>
+          </Button>
+        }
         <GroupedInputs>
           <Button onClick={startEditing}>
             <i className='material-icons'>create</i>
@@ -796,12 +794,6 @@ function NoteCard(props) {
             <Tooltip>Refresh</Tooltip>
           </Button>
         </GroupedInputs>
-        {
-          annotationId &&
-          <Button onClick={scrollIntoView}>
-            Scroll into view
-          </Button>
-        }
         <Button to={'/notes/'+note?.id}>
           <i className='material-icons'>open_in_new</i>
           <Tooltip>Open in editor</Tooltip>
