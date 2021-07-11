@@ -64,7 +64,7 @@ export function SignupForm(props) {
     <div className='signup-form-container'>
       <div className='oauth-links-container'>
         <a href={process.env.REACT_APP_SERVER_ADDRESS+'/auth/login/github'}>
-          <img src='http://localhost:3000/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
+          <img src='/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
         </a>
       </div>
       <div className='error-message'>
