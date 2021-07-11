@@ -35,7 +35,7 @@ export default function LoginPage(props) {
       Via a third party app
       <div className='oauth-links-container'>
         <a href={process.env.REACT_APP_SERVER_ADDRESS+'/auth/login/github'}>
-          <img src='http://localhost:3000/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
+          <img src='/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
         </a>
       </div>
       Or by email
