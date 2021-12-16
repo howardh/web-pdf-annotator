@@ -27,6 +27,7 @@ body {
     padding: 0.5em 0;
     color: white;
     background-color: $colour-medium-dark-gray;
+    overflow: hidden;
     button {
       padding: 5px;
       i {
@@ -169,6 +170,33 @@ body {
     }
   }
 
+  svg.annotation {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1;
+    height: 1;
+    overflow: visible;
+    path {
+      stroke: yellow;
+      //stroke-width: 1em;
+      mix-blend-mode: multiply;
+      stroke-opacity: 0.3;
+      fill: none;
+      &.active {
+        stroke: green;
+        outline: none;
+      }
+      &.selected {
+        stroke: blue;
+        outline: none;
+      }
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+
   .card {
     box-sizing: border-box;
     width: 100%;
@@ -242,6 +270,8 @@ body {
       margin-bottom: 10px;
       padding-bottom: 10px;
       border-bottom: 1px solid grey;
+      max-width: 100%;
+      overflow: hidden;
       .active {
         background-color: $colour-medium-gray;
       }

@@ -85,6 +85,14 @@ const qState = (function(){
 // Annotations
 //////////////////////////////////////////////////
 
+function getClassNames(elem) {
+  if (elem.tagName === 'path') {
+    return elem.className.baseVal.split(' ');
+  } else {
+    return elem.className.split(' ');
+  }
+}
+
 function AnnotationLayer(props) { const {
     annotations,
     eventHandlers,
@@ -110,37 +118,6 @@ function AnnotationLayer(props) { const {
     const offsetY = (event.clientY - rect.top)/scale;
     return [offsetX,offsetY];
   }
-  function checkAnnotationCollision(coords) {
-    // Check the annotations drawn on the canvas for collision with the given coord
-    // Return the ID of the collided annotation, or null if no collision.
-    let radius = 10;
-    for (let ann of Object.values(annotations)) {
-      if (ann.type !== 'highlight') {
-        continue;
-      }
-      for (let i = 0; i < ann.position.points.length-1; i++) {
-        let p0 = ann.position.points[i];
-        let p1 = ann.position.points[i+1];
-        // Check that the length of the orthogonal projection is within the highlight width.
-        let p0c = [coords[0]-p0[0],coords[1]-p0[1]];
-        let p0p1 = [p1[0]-p0[0],p1[1]-p0[1]];
-        let p0p1o = [-p0p1[1],p0p1[0]]; // Orthogonal to p0p1
-        let len = Math.sqrt(p0p1[0]*p0p1[0]+p0p1[1]*p0p1[1]); // Len of p0p1
-        let dist = (p0c[0]*p0p1o[0]+p0c[1]*p0p1o[1])/len;
-        if (Math.abs(dist) > radius) {
-          continue;
-        }
-        // If the length of the projection is longer than the vector it's projected on, then we're too far from the segment.
-        let proj = (p0c[0]*p0p1[0]+p0c[1]*p0p1[1])/len;
-        if (proj > len || proj < 0) {
-          continue;
-        }
-        // Collision found
-        return ann.id;
-      }
-    }
-    return null;
-  }
   function handleClick(event, ann) {
     const coords = getCoordsFromEvent(event);
     const data = {
@@ -148,28 +125,10 @@ function AnnotationLayer(props) { const {
       coords,
       ann
     };
-    const classNames = event.target.className.split(' ');
+    const classNames = getClassNames(event.target);
 
     // Clicked on PDF
-    if (event.target === ref.current) {
-      // Check all annotations for click
-      let annId = checkAnnotationCollision(coords);
-      if (annId) {
-        setFocusedId(annId);
-        let callback = eventHandlers.annotation.onClick;
-        if (callback) {
-          callback({
-            event, 
-            data: {
-              ...data,
-              ann: annotations[annId],
-              id: annId
-            },
-            toolState, setToolState
-          });
-        }
-        return;
-      }
+    if (!ann) { // `ann` is null only if user clicked on the parent div
       setFocusedId(null); // Unfocus if nothing was clicked
       // If annotations haven't been clicked...
       let callback = eventHandlers.pdf.onClick;
@@ -196,22 +155,9 @@ function AnnotationLayer(props) { const {
       ann
     };
 
-    const classNames = event.target.className.split(' ');
+    const classNames = getClassNames(event.target);
     let callback = null;
-    if (event.target === ref.current) {
-      // Check all annotations for click
-      let annId = checkAnnotationCollision(coords);
-      if (annId) {
-        let callback = eventHandlers.annotation.onDoubleClick;
-        if (callback) {
-          callback({
-            event,
-            data: {...data, ann: annotations[annId]},
-            toolState, setToolState
-          });
-        }
-        return;
-      }
+    if (!ann) {
       callback = eventHandlers.pdf.onDoubleClick;
     } else if (classNames.indexOf('annotation') !== -1) {
       callback = eventHandlers.annotation.onDoubleClick;
@@ -230,7 +176,8 @@ function AnnotationLayer(props) { const {
       coords
     };
 
-    const classNames = event.target.className.split(' ');
+    const classNames = getClassNames(event.target);
+
     let callback = null;
     if (event.target === ref.current) {
       callback = eventHandlers.pdf.onMouseDown;
@@ -277,13 +224,14 @@ function AnnotationLayer(props) { const {
     }
   }
   function handleKeyDown(event, ann) {
-    const classNames = event.target.className.split(' ');
+    const classNames = getClassNames(event.target);
     const data = {
       page: pageNum,
     };
 
+    console.log('key');
     let callback = null;
-    if (event.target === ref.current) {
+    if (!ann) {
       if (focusedId) {
         callback = eventHandlers.annotation.onKeyPress;
         data['id'] = focusedId;
@@ -305,60 +253,12 @@ function AnnotationLayer(props) { const {
     }
   }
 
-  useEffect(()=>{
-    if (!ref.current) {
-      return;
-    }
-    if (!page) {
-      return;
-    }
-    let viewport = page.getViewport({ scale: scale, });
-    let canvas = ref.current;
-    let context = canvas.getContext('2d');
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-    // Render drawn markings
-    function renderLine(points, selected) {
-      if (selected) {
-        context.strokeStyle = 'rgba(100,255,100,0.3)';
-      } else {
-        context.strokeStyle = 'rgba(255,255,100,0.3)';
-      }
-      context.lineWidth = 20;
-      context.beginPath();
-      let p = points[0];
-      context.moveTo(p[0]*scale,p[1]*scale);
-      for (p of points.slice(1)) {
-        context.lineTo(p[0]*scale,p[1]*scale);
-      }
-      context.stroke();
-    }
-    for (let ann of Object.values(annotations)) {
-      if (ann.type === 'highlight') {
-        renderLine(
-          ann.position.points,
-          ann.id === toolState.selectedAnnotationId
-        );
-      }
-    }
-    // Render marking that's in the process of being drawn
-    if (toolState.type === 'highlight') {
-      if (toolState.points) {
-        if (toolState.keepStraight) {
-          let points = [toolState.points[0],toolState.points[toolState.points.length-1]];
-          renderLine(points);
-        } else {
-          renderLine(toolState.points);
-        }
-      }
-    }
-  },[page, ref.current, annotations, toolState, scale]);
-
-  return <div className='custom-annotation-layer'>
-    <canvas ref={ref} onDoubleClick={handleDoubleClick}
+  return <div className='custom-annotation-layer'
+        ref={ref}
+        onDoubleClick={handleDoubleClick}
         onKeyDown={handleKeyDown} tabIndex={-1}
         onClick={handleClick} onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} />
+        onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} >
     {
       Object.values(annotations).map(annotation =>
         activeId===annotation.id ? null :
@@ -378,6 +278,7 @@ function AnnotationLayer(props) { const {
     {
       activeId && annotations[activeId] &&
       <Annotation annotation={annotations[activeId]}
+        key={activeId}
         isActive={true}
         viewNote={()=>cardInView.setValue(annotations[activeId].note_id)}
         scale={scale}
@@ -495,6 +396,25 @@ function Annotation(props) {
           <AnnotationActions annotation={annotation} viewNote={viewNote}/>
         }
       </div>;
+    case 'highlight':
+      let d = 'M ' + ann.position.points.map(
+        ([x,y]) => (x*scale)+' '+(y*scale)
+      ).join(' L ');
+      return (<svg className='annotation' width='1' height='1'>
+        <path d={d} stroke-width={scale+'em'}
+          className={generateClassNames(classNames)}
+          id={'annotation'+ann.id}
+          tabIndex={-1}
+          style={style}
+          onClick={onClick}
+          onMouseDown={onMouseDown}
+          onMouseUp={onMouseUp}
+          onMouseMove={onMouseMove}
+          onKeyDown={onKeyDown}
+          onDoubleClick={e => onDoubleClick(e,ann)}
+        />
+      </svg>);
+      break;
     default:
       return null;
   }
@@ -1362,7 +1282,7 @@ export default function PdfAnnotationPage(props) {
                 return;
               } else {
                 // Start moving annotation if appropriate
-                const classNames = event.target.className.split(' ');
+                const classNames = getClassNames(event.target);
                 // Only move if the user selected it first
                 if (classNames.indexOf('selected') !== -1) {
                   const selId = toolState.selectedAnnotationId;
@@ -1400,7 +1320,7 @@ export default function PdfAnnotationPage(props) {
                 return;
               } else {
                 // Start resizing if appropriate
-                const classNames = event.target.className.split(' ');
+                const classNames = getClassNames(event.target);
                 const directions = ['nw','n','ne','w','e','sw','s','se'];
                 for (let d of directions) {
                   if (classNames.indexOf(d) !== -1) {
@@ -1659,8 +1579,15 @@ export default function PdfAnnotationPage(props) {
               } else {
                 setToolState({
                   ...toolState,
-                  points: [data.coords]
-                });
+                  points: [data.coords],
+                  tempAnnotation: {
+                    id: 'temp',
+                    type: 'highlight',
+                    position: {
+                      points: [data.coords]
+                    }
+                  }
+                })
               }
             },
           },
@@ -1675,7 +1602,16 @@ export default function PdfAnnotationPage(props) {
               setToolState({
                 ...toolState,
                 points: [...toolState.points, coords],
-                keepStraight: event.ctrlKey
+                keepStraight: event.ctrlKey,
+                tempAnnotation: {
+                  id: 'temp',
+                  type: 'highlight',
+                  position: {
+                    points: event.ctrlKey
+                      ? [toolState.points[0], coords]
+                      : [...toolState.points, coords]
+                  }
+                }
               });
             }
           },
@@ -1696,28 +1632,17 @@ export default function PdfAnnotationPage(props) {
                 // Too small. User probably didn't intend to create a marking.
                 // Ignore
               } else {
-                if (toolState.keepStraight) {
-                  createAnnotation({
-                    type: 'highlight',
-                    position: {
-                      points: [toolState.points[0],toolState.points[toolState.points.length-1]]
-                    },
-                    page: data.page
-                  });
-                } else {
-                  createAnnotation({
-                    type: 'highlight',
-                    position: {
-                      points: toolState.points
-                    },
-                    page: data.page
-                  });
-                }
+                createAnnotation({
+                  type: 'highlight',
+                  position: toolState.tempAnnotation.position,
+                  page: data.page
+                });
               }
             }
             setToolState({
               ...toolState,
               points: null,
+              tempAnnotation: null,
             })
           },
         }
