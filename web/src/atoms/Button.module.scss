@@ -1,0 +1,157 @@
+@import '../variables';
+@import '../mixins';
+
+
+%a-button {
+  /* <a> tags */
+  text-align: center;
+  align-items: flex-start;
+  box-sizing: border-box;
+  vertical-align: middle;
+
+  display: inline-flex;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  flex-direction: column;
+
+  text-decoration: none;
+}
+
+a.button {
+  @extend %a-button;
+}
+
+.button {
+  display: inline-block;
+  background-color: white;
+  color: black;
+  padding: 0.5em 1em;
+  border: None;
+  border-radius: 1em;
+  font-weight: 700;
+  font-family: $font-primary;
+  @include pxToRem(font-size, 14);
+  box-shadow: 0 3px 5px rgba(black,0.1);
+  cursor: pointer;
+  min-width: 10ch;
+  min-height: 44px; /* https://www.w3.org/WAI/WCAG21/Understanding/target-size.html */
+  outline-style: solid;
+  outline-color: transparent;
+  vertical-align: middle;
+  border: 1px solid $colour-white;
+
+  transition: 220ms all ease-in-out;
+  &:hover, &:active {
+    background-color: scale-color(white, $lightness: -10%);
+  }
+    
+  &:focus {
+    //box-shadow: 0 0 0 4px scale-color(white, $lightness: -40%);
+    text-decoration: underline;
+  }
+
+  &--success {
+    background-color: $colour-success;
+    &:hover, &:active {
+      background-color: scale-color($colour-success, $lightness: +40%);
+    }
+    &:focus {
+      //outline-style: solid;
+      //outline-color: transparent;
+      //box-shadow: 0 0 0 4px scale-color($colour-success, $lightness: -40%, $saturation: -50%);
+      text-decoration: underline;
+    }
+  }
+
+  &--error {
+    background-color: $colour-error;
+    &:hover, &:active {
+      background-color: scale-color($colour-error, $lightness: +40%);
+    }
+    &:focus {
+      //outline-style: solid;
+      //outline-color: transparent;
+      //box-shadow: 0 0 0 4px scale-color($colour-error, $lightness: -40%, $saturation: -50%);
+      text-decoration: underline;
+    }
+  }
+}
+
+.button-small {
+  @extend .button;
+  font-weight: 400;
+  @include pxToRem(font-size, 10);
+}
+
+.button-text {
+  @extend .button;
+  font-weight: 400;
+  @include pxToRem(font-size, 12);
+  background-color: inherit;
+  color: inherit;
+  box-shadow: none;
+  text-decoration: underline;
+
+  &:hover, &:active, &:focus {
+    background-color: white;
+    color: black;
+  }
+}
+
+a.button-text {
+  @extend %a-button;
+  font-weight: 400;
+  @include pxToRem(font-size, 12);
+  background-color: inherit;
+  color: inherit;
+  box-shadow: none;
+  text-decoration: underline;
+
+  &:hover, &:active, &:focus {
+    background-color: white;
+    color: black;
+  }
+}
+
+.button-icon {
+  @extend .button;
+  padding: 0;
+  min-width: 3em;
+  min-height: 44px;
+  position: relative;
+  font-weight: inherit;
+  > i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+    transition: linear 0.2s;
+    border: 1px solid transparent;
+  }
+  &:focus {
+    > i {
+      border: 1px solid $colour-medium-gray;
+    }
+  }
+}
+
+a.button-icon {
+  @extend %a-button;
+  padding: 0;
+  min-width: 3em;
+  min-height: 44px;
+  position: relative;
+  font-weight: inherit;
+  > i {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%,-50%);
+  }
+  &:focus {
+    > i {
+      border: 1px solid black;
+    }
+  }
+}

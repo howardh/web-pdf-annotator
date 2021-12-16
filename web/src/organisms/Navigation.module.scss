@@ -1,0 +1,14 @@
+@import '../variables';
+@import '../mixins';
+
+nav {
+  padding: 1em;
+  background-color: $colour-medium-dark-gray;
+  color: $colour-medium-gray;
+  text-align: right;
+  margin-bottom: 1em;
+  a {
+    margin: 0 0.6em;
+    color: $colour-light-gray;
+  }
+}

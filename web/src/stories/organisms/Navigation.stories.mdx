@@ -1,0 +1,29 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Navigation } from 'organisms/Navigation.js'
+
+<Meta title="Organisms/Navigation" />
+
+# Navigation Bar
+
+<Canvas>
+  <Story name='Signed out'>
+    <div className='background-light'>
+      <Navigation />
+      <div>
+         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi facilisis lobortis mi a tempus. Suspendisse quis pellentesque urna. Donec varius scelerisque tellus nec accumsan. Praesent sagittis laoreet tempus. Praesent nisi ligula, consequat eget laoreet porttitor, consectetur nec sapien. Nullam sit amet metus vitae arcu varius aliquet. Duis vehicula sit amet metus non dictum.
+      </div>
+    </div>
+  </Story>
+</Canvas>
+
+<Canvas>
+  <Story name='Signed in'>
+    <div className='background-light'>
+      <Navigation userId={1}/>
+      <div>
+         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi facilisis lobortis mi a tempus. Suspendisse quis pellentesque urna. Donec varius scelerisque tellus nec accumsan. Praesent sagittis laoreet tempus. Praesent nisi ligula, consequat eget laoreet porttitor, consectetur nec sapien. Nullam sit amet metus vitae arcu varius aliquet. Duis vehicula sit amet metus non dictum.
+      </div>
+    </div>
+  </Story>
+</Canvas>
+

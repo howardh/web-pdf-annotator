@@ -1,0 +1,136 @@
+@import '../variables';
+@import '../mixins';
+
+%placeholder {
+  font-family: $font-primary;
+  color: $colour-medium-dark-gray;
+  @include pxToRem(font-size, 14);
+  opacity: 0.8;
+}
+
+%error {
+  box-shadow: 0 0 0 4px scale-color($colour-error, $lightness: -40%, $saturation: -50%);
+}
+
+.input {
+  padding-left: 1em;
+  padding-right: 1em;
+  border: None;
+  border-radius: 1em;
+  box-sizing: border-box;
+  min-height: 44px; /* https://www.w3.org/WAI/WCAG21/Understanding/target-size.html */
+  outline-style: solid;
+  outline-color: transparent;
+  background-color: white;
+  border: 1px solid $colour-white;
+
+  font-family: $font-primary;
+  @include pxToRem(font-size, 14);
+  
+  transition: 220ms all ease-in-out;
+  &:focus, &:active {
+    //box-shadow: 0 0 0 4px scale-color(white, $lightness: -40%);
+  }
+
+  &::placeholder {
+    @extend %placeholder;
+  }
+
+  &--error {
+    @extend %error;
+  }
+
+}
+
+.labelled-input {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  flex-direction: row;
+  width: 15em;
+
+  font-family: $font-primary;
+  border-radius: 1em;
+
+  > input {
+    border-radius: inherit;
+  }
+
+  &--error {
+    @extend %error;
+  }
+
+  &__input {
+    @extend .input;
+    width: 100%;
+  }
+
+  &__label {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    margin-left: 1em;
+    transform: translateY(-50%);
+
+    @extend %placeholder;
+
+    transition: 220ms all ease-in-out;
+  }
+
+  &__input--filled ~ &__label,
+  &__input:placeholder-shown ~ &__label,
+  &__input:focus ~ &__label,
+  &__input:active ~ &__label {
+    top: -1em;
+    margin: 0;
+    margin-left: 1em;
+    @include pxToRem(font-size, 10);
+
+    color: inherit;
+    opacity: 1;
+  }
+
+  &__dropdown {
+    display: none;
+
+    position: absolute;
+    top: 100%;
+    left: 0;
+    box-sizing: border-box;
+    width: 100%;
+    background-color: white;
+    color: $colour-black;
+    padding: 1em;
+    border-radius: 1em;
+    z-index: 1;
+    box-shadow: 0 3px 5px rgba(black,0.1);
+    @include pxToRem(font-size, 14);
+  }
+  &__input:focus ~ &__dropdown,
+  &__input:active ~ &__dropdown {
+    display: inline-block;
+  }
+}
+
+.textarea {
+  transition: unset;
+  padding: 1em;
+  font-family: monospace;
+  &__label {
+    position: absolute;
+    left: 0;
+    //top: 50%;
+    margin-left: 1em;
+    transform: translateY(-50%);
+
+    top: -1em;
+    margin: 0;
+    margin-left: 1em;
+    @include pxToRem(font-size, 10);
+
+    color: inherit;
+    opacity: 1;
+  }
+}

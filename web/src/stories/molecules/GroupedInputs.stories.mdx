@@ -1,0 +1,125 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Button, ButtonSuccess, ButtonError, ButtonText, ButtonIcon } from 'atoms/Button.js';
+import { Input, LabelledInput } from 'atoms/Input.js';
+import { GroupedInputs } from 'molecules/GroupedInput.js';
+
+<Meta title="Molecules/GroupedInputs"
+  argTypes={{ onClick: { action: 'clicked' } }}
+/>
+
+# Buttons
+
+## Buttons
+
+<Canvas>
+  <Story name='Buttons'>
+    <div className='background-light'>
+      <GroupedInputs>
+        <Button>Button</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-light'>
+      <GroupedInputs>
+        <Button>Button 1</Button>
+        <Button>Button 2</Button>
+        <Button>Button 3</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-light'>
+      <GroupedInputs>
+        <Button to='#'>Button 1</Button>
+        <Button to='#'>Button 2</Button>
+        <Button to='#'>Button 3</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-light'>
+      <GroupedInputs>
+        <ButtonSuccess>Success</ButtonSuccess>
+        <ButtonError>Error</ButtonError>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <Button>Button 1</Button>
+        <Button>Button 2</Button>
+        <Button>Button 3</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <ButtonSuccess>Success</ButtonSuccess>
+        <ButtonError>Error</ButtonError>
+      </GroupedInputs>
+    </div>
+  </Story>
+</Canvas>
+
+## Text Field + Button
+
+<Canvas>
+  <Story name='Text Field + Button'>
+    <div className='background-light'>
+      <GroupedInputs>
+        <Input />
+        <Button>Button</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-light'>
+      <GroupedInputs>
+        <Input />
+        <ButtonIcon>
+          <i className='material-icons'>search</i>
+        </ButtonIcon>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <Input />
+        <Button>Button</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <Input />
+        <ButtonIcon>
+          <i className='material-icons'>search</i>
+        </ButtonIcon>
+      </GroupedInputs>
+    </div>
+  </Story>
+</Canvas>
+
+## Labelled Text Field + Button
+
+<Canvas>
+  <Story name='Labelled Text Field + Button'>
+    <div className='background-light'>
+      <GroupedInputs>
+        <LabelledInput label='label'/>
+        <Button>Button</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-light'>
+      <GroupedInputs>
+        <LabelledInput label='label'/>
+        <ButtonIcon>
+          <i className='material-icons'>search</i>
+        </ButtonIcon>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <LabelledInput label='label'/>
+        <Button>Button</Button>
+      </GroupedInputs>
+    </div>
+    <div className='background-dark'>
+      <GroupedInputs>
+        <LabelledInput label='label'/>
+        <ButtonIcon>
+          <i className='material-icons'>search</i>
+        </ButtonIcon>
+      </GroupedInputs>
+    </div>
+  </Story>
+</Canvas>

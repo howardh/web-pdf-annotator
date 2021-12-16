@@ -5,7 +5,11 @@ import { useParams, useLocation, useHistory } from "react-router-dom";
 import { createSelector } from 'reselect';
 import * as pdfjsLib from 'pdfjs-dist/webpack';
 
-import { Button, TextField, Checkbox, GroupedInputs, Tooltip } from './Inputs.js';
+import { LabelledCheckbox } from 'atoms/Checkbox.js';
+import { Input, LabelledInput, LabelledTextArea } from 'atoms/Input.js';
+import { Button, ButtonIcon } from 'atoms/Button.js';
+import { GroupedInputs } from 'molecules/GroupedInput.js';
+import { Tooltip } from 'atoms/Tooltip.js';
 import TextEditor from './TextEditor';
 import { NoteViewer } from './NoteEditor.js';
 import {
@@ -540,29 +544,29 @@ function AnnotationActions(props) {
     <div className='actions-container'>
       {
         annotation.note_id ?
-          <Button onClick={viewNote}>
+          <ButtonIcon onClick={viewNote}>
             <i className='material-icons'>description</i>
             <Tooltip>View Note</Tooltip>
-          </Button>
-        : <Button onClick={createNote}>
+          </ButtonIcon>
+        : <ButtonIcon onClick={createNote}>
             <i className='material-icons'>note_add</i>
             <Tooltip>Create Note</Tooltip>
-          </Button>
+          </ButtonIcon>
       }
-      <Button onClick={deleteAnnotation}>
+      <ButtonIcon onClick={deleteAnnotation}>
         <i className='material-icons'>delete</i>
         <Tooltip>Delete Note</Tooltip>
-      </Button>
+      </ButtonIcon>
       {
         annotation.type === 'rect' &&
         <GroupedInputs>
-          <TextField name='image-url' value={imageUrl}
+          <Input type='textfield' name='image-url' value={imageUrl}
             readOnly
             ref={imageUrlRef} />
-          <Button onClick={copyPhotoUrlToClipboard}>
+          <ButtonIcon onClick={copyPhotoUrlToClipboard}>
             <i className='material-icons'>photo</i>
             <Tooltip>Copy Image URL</Tooltip>
-          </Button>
+          </ButtonIcon>
         </GroupedInputs>
       }
     </div>
@@ -734,15 +738,15 @@ function NoteCard(props) {
           debounce={0}/>
       <div className='controls'>
         <GroupedInputs>
-          <Button onClick={saveChanges}>
+          <ButtonIcon onClick={saveChanges}>
             <i className='material-icons'>save</i>
-          </Button>
-          <Button onClick={discardChanges}>
+          </ButtonIcon>
+          <ButtonIcon onClick={discardChanges}>
             <i className='material-icons'>cancel</i>
-          </Button>
-          <Button onClick={deleteNote}>
+          </ButtonIcon>
+          <ButtonIcon onClick={deleteNote}>
             <i className='material-icons'>delete</i>
-          </Button>
+          </ButtonIcon>
         </GroupedInputs>
         {
           isVisibleAdvancedOptions ? (
@@ -775,29 +779,29 @@ function NoteCard(props) {
       <div className='controls'>
         {
           annotationId &&
-          <Button onClick={scrollIntoView}>
+          <ButtonIcon onClick={scrollIntoView}>
             <i className='material-icons'>navigate_before</i>
             <Tooltip>View Annotation</Tooltip>
-          </Button>
+          </ButtonIcon>
         }
         <GroupedInputs>
-          <Button onClick={startEditing}>
+          <ButtonIcon onClick={startEditing}>
             <i className='material-icons'>create</i>
             <Tooltip>Edit</Tooltip>
-          </Button>
-          <Button onClick={deleteNote}>
+          </ButtonIcon>
+          <ButtonIcon onClick={deleteNote}>
             <i className='material-icons'>delete</i>
             <Tooltip>Delete Note</Tooltip>
-          </Button>
-          <Button onClick={refresh}>
+          </ButtonIcon>
+          <ButtonIcon onClick={refresh}>
             <i className='material-icons'>sync</i>
             <Tooltip>Refresh</Tooltip>
-          </Button>
+          </ButtonIcon>
         </GroupedInputs>
-        <Button to={'/notes/'+note?.id}>
+        <ButtonIcon to={'/notes/'+note?.id}>
           <i className='material-icons'>open_in_new</i>
           <Tooltip>Open in editor</Tooltip>
-        </Button>
+        </ButtonIcon>
       </div>
     </div>);
   }
@@ -865,26 +869,15 @@ function DocInfoForm(props) {
   }
 
   return (<div className='doc-info-form'>
-    <label>
-      <span>Title</span>
-      <TextField name='title' value={doc['title'] || ''} onChange={handleChange} />
-    </label>
-    <label>
-      <span>Authors</span>
-      <TextField name='author' value={doc['author'] || ''} onChange={handleChange} />
-    </label>
-    <label>
-      <span>URL</span>
-      <TextField name='url' value={doc['url'] || ''} onChange={handleChange} />
-    </label>
-    <label>
-      <span>Bibtex</span>
-      <textarea name='bibtex' value={doc['bibtex'] || ''} onChange={handleChange} />
-    </label>
-    <label>
-      <Checkbox name='read' checked={doc['read']} onChange={handleChange} />
-      <span>Read</span>
-    </label>
+    <LabelledInput type='textfield' label='Title' name='title' placeholder='(Untitled)' value={doc['title'] || ''} onChange={handleChange} />
+    <LabelledInput type='textfield' label='Authors' name='author' placeholder='Anonymous' value={doc['author'] || ''} onChange={handleChange} />
+    <LabelledInput type='textfield' label='URL' name='url' placeholder='https://...' value={doc['url'] || ''} onChange={handleChange} />
+    <LabelledTextArea name='bibtex' label='Bibtex' value={doc['bibtex'] || ''} onChange={handleChange} />
+    <div>
+      <LabelledCheckbox name='read' checked={doc['read']} onChange={handleChange}>
+      Read
+      </LabelledCheckbox>
+    </div>
   </div>);
 }
 
@@ -963,24 +956,24 @@ function SideBar(props) {
         : <i className='material-icons'>navigate_before</i> 
     }
     </div>
-    <div className='tab-container'>
+    <GroupedInputs className='tab-container'>
       {
         tabs.map((tab,i) => {
           let classNames = generateClassNames({
             'tab': true,
             'active': activeTabId === tab.id
           });
-          return (<div key={tab.title}
+          return (<Button key={tab.title}
               data-tab-id={tab.id}
               className={classNames}
               tabIndex={0}
               onKeyDown={e=>handleKeyDown(e,i)}
               onClick={()=>setActiveTabId(tab.id)}>
             {tab.title}
-          </div>);
+          </Button>);
         })
       }
-    </div>
+    </GroupedInputs>
     {activeTab.render()}
   </div>);
 }
@@ -1009,7 +1002,7 @@ function PageSelector(props) {
 
   return (
     <div className='page-selector'>
-      <TextField value={displayPage}
+      <Input type='textfield' value={displayPage}
         onChange={e => setDisplayPage(e.target.value)}
         onKeyDown={handleKeyDown} />
       <span>/{totalPages}</span>
@@ -1905,24 +1898,24 @@ export default function PdfAnnotationPage(props) {
           </Button>
         </GroupedInputs>
         <GroupedInputs>
-          <Button onClick={zoomIn}>
+          <ButtonIcon onClick={zoomIn}>
             <i className='material-icons'>zoom_in</i>
             <Tooltip>Zoom in</Tooltip>
-          </Button>
-          <Button onClick={zoomOut}>
+          </ButtonIcon>
+          <ButtonIcon onClick={zoomOut}>
             <i className='material-icons'>zoom_out</i>
             <Tooltip>Zoom out</Tooltip>
-          </Button>
+          </ButtonIcon>
         </GroupedInputs>
         <GroupedInputs>
-          <Button onClick={()=>dispatch(annotationActions['undo']())}>
+          <ButtonIcon onClick={()=>dispatch(annotationActions['undo']())}>
             <i className='material-icons'>undo</i>
             <Tooltip>Undo</Tooltip>
-          </Button>
-          <Button onClick={()=>dispatch(annotationActions['redo']())}>
+          </ButtonIcon>
+          <ButtonIcon onClick={()=>dispatch(annotationActions['redo']())}>
             <i className='material-icons'>redo</i>
             <Tooltip>Redo</Tooltip>
-          </Button>
+          </ButtonIcon>
         </GroupedInputs>
         {
           <PageSelector pageNumber={pdfViewerState.visiblePageRange[0]+1}

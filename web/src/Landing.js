@@ -1,7 +1,10 @@
 import React from 'react';
+import { useState } from 'react';
 import {useSelector} from 'react-redux';
+import axios from 'axios';
+import { Button } from './atoms/Button.js'
+
 import {SignupForm} from './Signup.js';
-import {EmailVerificationWarning} from './App.js';
 
 import './Landing.scss';
 
@@ -32,5 +35,44 @@ export default function LandingPage(props) {
       </div>
     </main>);
   }
+}
+
+export function EmailVerificationWarning(props) {
+  const [sent,setSent] = useState(false);
+  const [error,setError] = useState(null);
+  function resend() {
+    return axios.post(
+      process.env.REACT_APP_SERVER_ADDRESS+"/auth/resend_confirmation",
+      {},
+      {withCredentials: true}
+    ).then(function(response){
+      setSent(true);
+    }).catch(function(error){
+      let message = "Unspecified error.";
+      if (error.response && error.response.data) {
+        message = error.response.data.error || message;
+      } else {
+        message = error.message || message;
+      }
+      setError(message);
+    });
+  }
+  if (sent) {
+    return <span className='email-verification-warning'>Verification email sent!</span>
+  }
+  if (error) {
+    return (<span className='email-verification-warning'>
+      {error}
+      <button onClick={resend}>
+        Resend Code
+      </button>
+    </span>);
+  }
+  return (<span className='email-verification-warning'>
+    <p>Your email has not been verified.</p>
+    <Button onClick={resend}>
+      Resend Code
+    </Button>
+  </span>);
 }
 

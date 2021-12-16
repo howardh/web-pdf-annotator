@@ -1,0 +1,37 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { TagSelect } from 'molecules/TagSelect.js';
+
+<Meta title="Molecules/TagSelect"
+  argTypes={{ onClick: { action: 'clicked' } }}
+/>
+
+export const tags = {
+  1: { id: 1, name: 'cat' },
+  2: { id: 2, name: 'dog' },
+  3: { id: 3, name: 'horse' },
+  4: { id: 4, name: 'cow' },
+  5: { id: 5, name: 'bird' },
+};
+
+# TagSelect
+
+## Empty
+
+<Canvas>
+  <Story name='Empty'>
+    <div className='background-light'>
+      <TagSelect
+        selected={new Set([1,3])}
+        tags={tags}
+      />
+    </div>
+    <div className='background-dark'>
+      <TagSelect
+        value={'c'}
+        selected={new Set([1,3])}
+        tags={tags}
+      />
+    </div>
+  </Story>
+</Canvas>
+

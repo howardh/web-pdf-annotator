@@ -1,0 +1,35 @@
+@import '../variables';
+@import '../mixins';
+
+.tooltip {
+  display: none;
+  z-index: $z-tooltip;
+  position: absolute;
+  background-color: black;
+  transform: translate(-50%,8px);
+  top: 100%;
+  left: 50%;
+  color: white;
+  padding: 0.5em 0.8em 0.4em 0.8em;
+  border-radius: 0.5em;
+  white-space: nowrap;
+  box-shadow: 0 3px 5px rgba(white,0.1);
+
+  font-family: $font-primary;
+  @include pxToRem(font-size, 12);
+
+  &__arrow {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    margin: 0;
+    margin-left: -5px;
+    border-color: transparent transparent black transparent;
+    border-width: 5px;
+    border-style: solid;
+  }
+}
+
+:hover > .tooltip {
+  display: block;
+}

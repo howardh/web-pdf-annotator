@@ -1,0 +1,26 @@
+@import '../variables';
+@import '../mixins';
+
+.checkbox {
+  display: inline-flex;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: nowrap;
+
+  font-family: $font-primary;
+  @include pxToRem(font-size, 14);
+
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+
+  input {
+    @extend %sr-only;
+  }
+
+  > span {
+    margin-left: 0.5em;
+  }
+}

@@ -1,16 +1,45 @@
+@import-normalize;
 @import 'variables';
+@import 'globals';
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy&display=swap');
 
 .App {
   text-align: center;
 }
 
+body {
+  background-color: $colour-white;
+  text-align: center;
+}
+
 nav {
   padding: 15px;
-  background-color: $primary-colour-dark;
-  color: $primary-colour-light;
+  background-color: $colour-medium-dark-gray;
+  color: $colour-medium-gray;
   text-align: right;
   a {
     margin: 0 10px;
-    color: $primary-colour-light;
+    color: $colour-light-gray;
   }
+  .logo {
+    float: left;
+    width: 32px;
+    height: 32px;
+    border: 1px solid black;
+    overflow: hidden;
+    font-size: 8pt;
+  }
+}
+
+main {
+  min-height: 100vh;
+  max-width: 100%;
+  margin: 0;
+}
+
+h1 {
+  margin: 1em 0;
 }

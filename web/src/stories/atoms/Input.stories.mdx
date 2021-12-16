@@ -1,0 +1,71 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Input, LabelledInput, DropdownInput } from 'atoms/Input.js'
+
+<Meta title="Atoms/Input/Input"
+  component={Input}
+  argTypes={{ onChange: { action: 'changed' } }}
+/>
+
+# Input
+
+## Filled
+<Canvas>
+  <Story name='Filled'>
+    <div className='background-light'>
+      <Input type='textfield' value='Lorem Ipsum'/>
+    </div>
+    <div className='background-dark'>
+      <Input type='textfield' value='Lorem Ipsum'/>
+    </div>
+  </Story>
+</Canvas>
+
+## Empty with Placeholder
+<Canvas>
+  <Story name='Empty with placeholder'>
+    <div className='background-light'>
+      <Input type='textfield' placeholder='Lorem Ipsum'/>
+    </div>
+    <div className='background-dark'>
+      <Input type='textfield' placeholder='Lorem Ipsum'/>
+    </div>
+  </Story>
+</Canvas>
+
+## Password
+<Canvas>
+  <Story name='Password'>
+    <div className='background-light'>
+      <Input type='password' value='Lorem Ipsum'/>
+    </div>
+    <div className='background-dark'>
+      <Input type='password' value='Lorem Ipsum'/>
+    </div>
+  </Story>
+</Canvas>
+
+## Error
+<Canvas>
+  <Story name='Error'>
+    <div className='background-light'>
+      <Input type='textfield' placeholder='Lorem Ipsum' error/>
+    </div>
+    <div className='background-dark'>
+      <Input type='textfield' placeholder='Lorem Ipsum' error/>
+    </div>
+  </Story>
+</Canvas>
+
+## Dropdown
+<Canvas>
+  <Story name='Dropdown'>
+    <div className='background-light'>
+      <DropdownInput type='textfield' label='Lorem Ipsum'
+        dropdown={val => <span>Doot doot</span>}/>
+    </div>
+    <div className='background-dark'>
+      <DropdownInput type='textfield' label='Lorem Ipsum'
+        dropdown={val => <span>Doot doot</span>}/>
+    </div>
+  </Story>
+</Canvas>

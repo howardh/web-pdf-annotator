@@ -95,15 +95,22 @@ function App() {
   );
 }
 
+function Logo(props) {
+  return (<div className='logo'>
+    <Link to='/'>Logo Placeholder</Link>
+  </div>)
+}
+
 function Navigation(props) {
   const {
     userId,
     confirmed
   } = props;
   if (userId) {
+    // <Link to='/notes'>Notes</Link>
     return (<nav>
+      <Logo />
       <Link to='/docs'>Documents</Link>
-      <Link to='/notes'>Notes</Link>
       <Link to='/logout'>Logout</Link>
       <span>
         Currently logged in as 
@@ -112,6 +119,7 @@ function Navigation(props) {
     </nav>);
   } else {
     return (<nav>
+      <Logo />
       <Link to='/signup'>Signup</Link>
       <Link to='/login'>Login</Link>
       <span>
@@ -119,45 +127,6 @@ function Navigation(props) {
       </span>
     </nav>);
   }
-}
-
-export function EmailVerificationWarning(props) {
-  const [sent,setSent] = useState(false);
-  const [error,setError] = useState(null);
-  function resend() {
-    return axios.post(
-      process.env.REACT_APP_SERVER_ADDRESS+"/auth/resend_confirmation",
-      {},
-      {withCredentials: true}
-    ).then(function(response){
-      setSent(true);
-    }).catch(function(error){
-      let message = "Unspecified error.";
-      if (error.response && error.response.data) {
-        message = error.response.data.error || message;
-      } else {
-        message = error.message || message;
-      }
-      setError(message);
-    });
-  }
-  if (sent) {
-    return <span className='email-verification-warning'>Verification email sent!</span>
-  }
-  if (error) {
-    return (<span className='email-verification-warning'>
-      {error}
-      <button onClick={resend}>
-        Resend Code
-      </button>
-    </span>);
-  }
-  return (<span className='email-verification-warning'>
-    <p>Your email has not been verified.</p>
-    <button onClick={resend}>
-      Resend Code
-    </button>
-  </span>);
 }
 
 export default App;

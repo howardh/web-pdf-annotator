@@ -1,0 +1,57 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { LabelledInput } from 'atoms/Input.js'
+
+<Meta title="Atoms/Input/Labelled"
+  component={LabelledInput}
+  argTypes={{ onChange: { action: 'changed' } }}
+/>
+
+# LabelledInput
+
+## Empty
+<Canvas>
+  <Story name='Labelled empty'>
+    <div className='background-light'>
+      <LabelledInput label='Label' type='textfield' />
+    </div>
+    <div className='background-dark'>
+      <LabelledInput label='Label' type='textfield' />
+    </div>
+  </Story>
+</Canvas>
+
+## Placeholder
+<Canvas>
+  <Story name='Placeholder'>
+    <div className='background-light'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder'/>
+    </div>
+    <div className='background-dark'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder'/>
+    </div>
+  </Story>
+</Canvas>
+
+## Filled
+<Canvas>
+  <Story name='Filled'>
+    <div className='background-light'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder' value='Lorem Ipsum'/>
+    </div>
+    <div className='background-dark'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder' value='Lorem Ipsum'/>
+    </div>
+  </Story>
+</Canvas>
+
+## Error
+<Canvas>
+  <Story name='Error'>
+    <div className='background-light'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder' value='Lorem Ipsum' error/>
+    </div>
+    <div className='background-dark'>
+      <LabelledInput label='Label' type='textfield' placeholder='placeholder' value='Lorem Ipsum' error/>
+    </div>
+  </Story>
+</Canvas>

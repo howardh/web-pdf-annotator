@@ -1,0 +1,12 @@
+@import '../variables';
+@import '../mixins';
+
+.message {
+  @include pxToRem(font-size,12);
+  &--error {
+    color: red;
+  }
+  &--success{
+    color: green;
+  }
+}

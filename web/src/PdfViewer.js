@@ -485,7 +485,7 @@ function PdfViewer(props, forwardRef) {
     return 0;
   }
   function handleScroll(e) {
-    let scrollPercent = e.target.scrollTop/e.target.scrollTopMax;
+    let scrollPercent = e.target.scrollTop/(e.target.scrollHeight-window.innerHeight);
     scrollPos.current = scrollPercent; // Save position
     let children = ref.current.children;
     let i = Math.min(

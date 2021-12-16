@@ -1,0 +1,23 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { ErrorMessage } from 'atoms/Message.js'
+
+<Meta title="Atoms/Message/ErrorMessage"
+  component={ErrorMessage}
+/>
+
+# Error Message
+
+<Canvas>
+  <Story name='Error Message'>
+    <div className='background-light'>
+      <ErrorMessage>
+        This is an error.
+      </ErrorMessage>
+    </div>
+    <div className='background-dark'>
+      <ErrorMessage>
+        This is an error.
+      </ErrorMessage>
+    </div>
+  </Story>
+</Canvas>

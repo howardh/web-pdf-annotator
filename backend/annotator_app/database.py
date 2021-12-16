@@ -115,6 +115,9 @@ class Document(db.Model, ModelMixin):
     tag_names = association_proxy('tags', 'name',
             creator=lambda name: db.session.query(Tag).filter_by(user_id=current_user.id,name=name).first()
     )
+    tag_ids = association_proxy('tags', 'id',
+            creator=lambda tag_id: db.session.query(Tag).filter_by(user_id=current_user.id,id=tag_id).first()
+    )
 
     def to_dict(self):
         return {
@@ -129,7 +132,8 @@ class Document(db.Model, ModelMixin):
                 'deleted_at': date_to_str(self.deleted_at),
                 'last_modified_at': datetime_to_str(self.last_modified_at),
                 'last_accessed_at': datetime_to_str(self.last_accessed_at),
-                'tag_names': list(self.tag_names)
+                'tag_names': list(self.tag_names),
+                'tag_ids': list(self.tag_ids),
         }
 
 class Annotation(db.Model, ModelMixin):
@@ -142,6 +146,8 @@ class Annotation(db.Model, ModelMixin):
     type = Column(String)
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
     deleted_at = Column(Date)
+    important = Column(Boolean) # If True, then this annotation marks something important
+    do_not_understand = Column(Boolean) # If True, then this annotation marks something the reader does not understand.
 
     document = db.relationship("Document")
     note = db.relationship('Note')

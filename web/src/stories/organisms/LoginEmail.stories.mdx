@@ -1,0 +1,46 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { LoginFormEmail } from 'organisms/Login.js'
+
+<Meta title="Organisms/Login/LoginFormEmail"/>
+
+# Email Login Form
+
+## Empty
+<Canvas>
+  <Story name='Empty'>
+    <div className='background-light'>
+      <LoginFormEmail />
+    </div>
+  </Story>
+</Canvas>
+
+## Filled
+<Canvas>
+  <Story name='Filled'>
+    <div className='background-light'>
+      <LoginFormEmail
+        value={{
+          email: 'me@example.com',
+          password:'hunter2',
+          remember:true
+        }} />
+    </div>
+  </Story>
+</Canvas>
+
+## Errored
+<Canvas>
+  <Story name='Errored'>
+    <div className='background-light'>
+      <LoginFormEmail
+        value={{
+          email: 'Lorem Ipsum',
+          password:'hunter2',
+          remember:true
+        }}
+        error={{
+          email: 'Invalid email'
+        }} />
+    </div>
+  </Story>
+</Canvas>

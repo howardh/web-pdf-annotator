@@ -30,10 +30,18 @@ Deployment: Create config file in `backend/instance/config.py`
   - Create config file as outlined above
 - Front end
   - `npm install`
+  - Storybook: `npm run storybook`
 - Database
   - Install postgres, create user and database
   - Set the `SQLALCHEMY_DATABASE_URI` config appropriately
   - Set up the database by running `flask db upgrade`
+
+## Virtualbox setup
+
+If you want to access the served pages on the host machine:
+- Add port forwarding rules for ports 5000 (Flask), 3000 (React), and 6006 (Storybook)
+- Run backend with `flask run --host=0.0.0.0`
+- Add an entry to host machine's host file to point `localhost.localdomain` to `127.0.0.1`
 
 # DB Migration
 

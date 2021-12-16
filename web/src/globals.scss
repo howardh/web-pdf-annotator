@@ -1,0 +1,46 @@
+@import 'variables';
+@import 'mixins';
+
+%body-text {
+  font-family: $font-primary;
+  font-weight: 400;
+  font-size: #{$rem-size}px;
+  line-height: 1.6;
+  letter-spacing: -0.02em;
+  color: $colour-black;
+  background: white;
+}
+
+%heading {
+  font-family: $font-secondary;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: $colour-black;
+  margin: 0;
+}
+
+html, body {
+  @extend %body-text;
+  margin: 0;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+h1 {
+  @extend %heading;
+  @include pxToRem(font-size, 36);
+}
+
+h2 {
+  @extend %heading;
+  @include pxToRem(font-size, 24);
+}
+
+h3,h4,h5,h6 {
+  @extend %heading;
+  @include pxToRem(font-size, 18);
+}

@@ -1,0 +1,56 @@
+@import-normalize;
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+@import url('https://fonts.googleapis.com/css2?family=Sorts+Mill+Goudy&display=swap');
+//@import url('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.15.4/css/fontawesome.min.css');
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css');
+//@import url('http://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
+
+@import '../variables';
+@import '../globals';
+
+.color-group{
+    margin-bottom: 10px;
+    display: flex;
+}
+
+.color-card{
+    width: 200px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+    text-align: center;
+}
+
+.color-card div{
+    flex-grow: 1;
+    border-radius: 100px;
+}
+
+.color-group-label{
+    font-weight: bold;
+}
+
+.pattern-container{
+    margin: 100px 20px;
+}
+
+.pattern-container > a{
+    display: inline-block;
+    margin-bottom: 40px;
+    font-size: 24px;
+    color: #000;
+}
+
+.background-light {
+  padding: 2em;
+  background-color: #E3EEEA;
+  color: black;
+}
+
+.background-dark{
+  padding: 2em;
+  background-color: #124559;
+  color: #E3EEEA;
+}

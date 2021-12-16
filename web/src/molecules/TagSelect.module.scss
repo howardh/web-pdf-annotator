@@ -1,0 +1,24 @@
+@import '../variables';
+
+.tag-select {
+  &__selected {
+    display: flex;
+    margin-top: 0.5em;
+    gap: 0.5em;
+  }
+  &__dropdown {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    > div {
+      background-color: $colour-light-gray;
+    }
+  }
+}
+
+.tag {
+  cursor: pointer;
+  &:hover {
+    background-color: $colour-white;
+  }
+}

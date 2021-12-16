@@ -1,0 +1,61 @@
+@import '../variables';
+@import '../mixins';
+
+.tag {
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  align-content: center;
+
+  background-color: white;
+  color: black;
+  padding: 0.5em 1em;
+  border: None;
+  border-radius: 1em;
+  box-sizing: border-box;
+  outline-style: solid;
+  outline-color: transparent;
+  border: 1px solid $colour-white;
+
+  @include pxToRem(font-size, 12);
+  font-family: $font-primary;
+
+  &-small {
+    padding: 0.1em 0.8em;
+  }
+
+  &-button__remove {
+    display: inline-block;
+    position: relative;
+
+    border: None;
+
+    margin-left: 0.5em;
+    margin-right: -0.2em;
+    width: 1em;
+    height: 1em;
+    border-radius: 1em;
+    cursor: pointer;
+
+    overflow: hidden;
+
+    > div {
+      position: absolute;
+      box-sizing: border-box;
+      left: 50%;
+      top: 50%;
+      border: 1px solid white;
+      width: 1em;
+      height: 1em;
+      background-color: $primary-colour-dark;
+      transform-origin: top left;
+
+      @for $n from 0 through 4 {
+        &:nth-child(#{$n}) {
+          transform: rotate(#{$n*90+45}deg);
+        }
+      }
+    }
+  }
+}

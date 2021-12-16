@@ -1,0 +1,88 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Button, ButtonSuccess, ButtonError, ButtonText, ButtonIcon } from 'atoms/Button.js'
+
+<Meta title="Atoms/Buttons"
+  argTypes={{ onClick: { action: 'clicked' } }}
+/>
+
+# Button
+
+export const Template = (args) => (
+  <div>
+    <button>Button</button>
+  </div>
+);
+
+## Normal Buttons
+
+<Canvas>
+  <Story name='Light background'>
+    <div className='background-light'>
+      <Button>Button</Button>
+    </div>
+    <div className='background-light'>
+      <Button to='#'>Button</Button>
+    </div>
+    <div className='background-light'>
+      <ButtonSuccess>Success</ButtonSuccess>
+    </div>
+    <div className='background-light'>
+      <ButtonError>Error</ButtonError>
+    </div>
+  </Story>
+</Canvas>
+
+<Canvas>
+  <Story name='Dark background'>
+    <div className='background-dark'>
+      <Button>Button</Button>
+    </div>
+    <div className='background-dark'>
+      <Button to='#'>Button</Button>
+    </div>
+    <div className='background-dark'>
+      <ButtonSuccess>Success</ButtonSuccess>
+    </div>
+    <div className='background-dark'>
+      <ButtonError>Error</ButtonError>
+    </div>
+  </Story>
+</Canvas>
+
+## Text Buttons
+
+<Canvas>
+  <Story name='Text Button'>
+    <div className='background-light'>
+      <ButtonText>Button</ButtonText>
+    </div>
+    <div className='background-light'>
+      <ButtonText to='#'>Button</ButtonText>
+    </div>
+    <div className='background-dark'>
+      <ButtonText>Button</ButtonText>
+    </div>
+    <div className='background-dark'>
+      <ButtonText to='#'>Button</ButtonText>
+    </div>
+  </Story>
+</Canvas>
+
+## Icon Buttons
+
+<Canvas>
+  <Story name='Icon Button'>
+    <div className='background-light'>
+      <ButtonIcon><i className='material-icons'>favorite_border</i></ButtonIcon>
+    </div>
+    <div className='background-light'>
+      <ButtonIcon to='#'><i className='material-icons'>favorite_border</i></ButtonIcon>
+    </div>
+    <div className='background-dark'>
+      <ButtonIcon><i className='material-icons'>favorite_border</i></ButtonIcon>
+    </div>
+    <div className='background-dark'>
+      <ButtonIcon to='#'><i className='material-icons'>favorite_border</i></ButtonIcon>
+    </div>
+  </Story>
+</Canvas>

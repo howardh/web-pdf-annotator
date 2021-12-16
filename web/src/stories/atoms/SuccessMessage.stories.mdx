@@ -1,0 +1,23 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { SuccessMessage } from 'atoms/Message.js'
+
+<Meta title="Atoms/Message/SuccessMessage"
+  component={SuccessMessage}
+/>
+
+# Success Message
+
+<Canvas>
+  <Story name='Success Message'>
+    <div className='background-light'>
+      <SuccessMessage>
+        This is a success.
+      </SuccessMessage>
+    </div>
+    <div className='background-dark'>
+      <SuccessMessage>
+        This is a success.
+      </SuccessMessage>
+    </div>
+  </Story>
+</Canvas>

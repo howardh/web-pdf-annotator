@@ -1,0 +1,28 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Tooltip } from 'atoms/Tooltip.js'
+
+<Meta title="Atoms/Tooltip"
+  component={Tooltip}
+  argTypes={{ onChange: { action: 'changed' } }}
+/>
+
+# Tag
+
+## Plain
+<Canvas>
+  <Story name='Tooltip'>
+    <div className='background-light'>
+      <span style={{position: 'relative'}}>
+        Mouseover me
+        <Tooltip>Lorem</Tooltip>
+      </span>
+    </div>
+    <div className='background-dark'>
+      <span style={{position: 'relative'}}>
+        Mouseover me
+        <Tooltip>Lorem</Tooltip>
+      </span>
+    </div>
+  </Story>
+</Canvas>
+

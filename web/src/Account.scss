@@ -1,5 +1,6 @@
 .account-page {
   .link-account-form {
+    margin: 2em;
     ul {
       padding: 0;
     }
@@ -12,12 +13,17 @@
     }
   }
   .password-change-form {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 2em;
+    margin: 2em;
   }
   label {
-    display: block;
-    margin: 10px;
-    .input {
-      display: block;
-    }
+    //margin: 10px;
+    //.input {
+    //  display: block;
+    //}
   }
 }

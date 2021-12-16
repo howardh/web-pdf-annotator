@@ -1,0 +1,102 @@
+@import '../variables';
+@import '../mixins';
+
+td .title {
+  font-weight: bold;
+}
+
+.empty {
+  text-align: center;
+}
+
+.table {
+  table-layout: fixed;
+  margin: 0;
+  border-collapse: collapse;
+  width: 100%;
+  overflow-x: scroll;
+  &-head {
+    background-color: $primary-colour-dark;
+    color: $primary-colour-light;
+  }
+  &-body {
+    text-align: left;
+  }
+  &-row {
+    background-color: white;
+    border-bottom: 1px solid $colour-white;
+    //&:nth-child(even) {
+    //  background-color: $colour-white;
+    //}
+    //&:nth-child(odd) {
+    //  background-color: white;
+    //}
+    &:hover {
+      background-color: $colour-light-gray;
+    }
+  }
+  &-cell {
+    padding: 0.5em 1em;
+    overflow-x: hidden;
+    white-space: nowrap;
+    height: 2em;
+    @include pxToRem(font-size, 12);
+    &__heading {
+      text-align: left;
+    }
+    &__checkbox {
+      text-align: center;
+      vertical-align: middle;
+      width: 3em;
+      padding: 0;
+      position: relative;
+      > * {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 2em;
+        transform: translate(-50%,-50%);
+      }
+    }
+    &__actions {
+      overflow: visible;
+      width: 3em;
+      i.material-icons {
+        color: black;
+        cursor: pointer;
+        &:hover {
+          color: $primary-colour-dark;
+        }
+      }
+    }
+    &__batch-actions {
+      display: flex;
+      gap: 0.5em;
+      padding: 1em 0;
+    }
+  }
+}
+
+.actions {
+  cursor: pointer;
+  position: relative;
+  user-select: none;
+  text-align: center;
+  &:hover {
+  }
+  &__popup {
+    position: absolute;
+    top: 50%;
+    right: 0%;
+    transform: translateY(-50%);
+    background-color: white;
+    z-index: $z-popup;
+    box-shadow: 0 3px 5px rgba(black,0.1);
+    border-radius: 1em;
+    > * {
+      display: inline-block;
+      vertical-align: middle;
+      margin: 0.5em;
+    }
+  }
+}

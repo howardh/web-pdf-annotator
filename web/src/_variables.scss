@@ -1,7 +1,30 @@
-$primary-colour-dark: #9a1f1f;
-$primary-colour-light: #ffcaca;
+/* Colours */
+$primary-colour-dark: #124559;
+$primary-colour-light: #92BFB1;
 
+$colour-black: #01161E;
+$colour-medium-dark-gray: #124559;
+$colour-medium-gray: #92BFB1;
+$colour-light-gray: #E3EEEA;
+$colour-white: #EBEDEC;
+
+$colour-primary: $colour-medium-dark-gray;
+
+$colour-background: $colour-light-gray;
+$colour-background-dark: $colour-black;
+
+$colour-error: #f7adac;
+$colour-success: #adf7ba;
+
+/* Sizes */
 $input-height: 32px;
 
+/* Fonts */
+$font-primary: 'Montserrat', sans-serif;
+$font-secondary: 'Sorts Mill Goudy', serif;
+$rem-size: 16;
+
+/* z-index */
 $z-dropdown: 1;
+$z-popup: 1;
 $z-tooltip: 2;

@@ -1,0 +1,34 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { Tag } from 'atoms/Tag.js'
+
+<Meta title="Atoms/Tag"
+  component={Tag}
+  argTypes={{ onChange: { action: 'changed' } }}
+/>
+
+# Tag
+
+## Plain
+<Canvas>
+  <Story name='Tag'>
+    <div className='background-light'>
+      <Tag>Lorem</Tag>
+    </div>
+    <div className='background-dark'>
+      <Tag>Lorem</Tag>
+    </div>
+  </Story>
+</Canvas>
+
+## Removable
+<Canvas>
+  <Story name='Removable'>
+    <div className='background-light'>
+      <Tag removable>Lorem</Tag>
+    </div>
+    <div className='background-dark'>
+      <Tag removable>Lorem</Tag>
+    </div>
+  </Story>
+</Canvas>
+

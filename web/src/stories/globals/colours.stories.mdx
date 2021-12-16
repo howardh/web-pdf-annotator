@@ -1,0 +1,76 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+
+<Meta title="Globals/Colors" />
+
+export const Template = (args) => (
+  <div className='color-group' style={{marginBottom: 10, display: 'flex'}}>
+    {args.colors.map(
+      ({variable, hex}) =>
+      <div className='color-card' >
+        <div style={{background: hex}}/>
+        <span>{variable}</span>
+      </div>
+    )}
+  </div>
+);
+
+# Colors
+
+## Brand Colors
+
+<Story name="Brand Colors" args={{
+  colors: [{
+    "variable":"$color-primary",
+    "hex":"#F4AC45"
+  },{
+    "variable":"$color-primary-dark",
+    "hex":"#7E5920"
+  }]
+}}>
+  {Template.bind({})}
+</Story>
+
+## Neutral Colors
+
+<Story name="Neutral Colors" args={{
+  colors: [{
+    "variable":"$color-black",
+    "hex":"#01161E"
+  },{
+    "variable":"$color-dark-gray",
+    "hex":"#???"
+  },{
+    "variable":"$color-medium-dark-gray",
+    "hex":"#124559"
+  },{
+    "variable":"$color-medium-gray",
+    "hex":"#92BFB1"
+  },{
+    "variable":"$color-light-gray",
+    "hex":"#???"
+  }]
+}}>
+  {Template.bind({})}
+</Story>
+
+## Utility Colors
+
+<Story name="Utility Colors" args={{
+  colors: [{
+    "variable":"$color-error (TODO)",
+    "hex":"#FF0000"
+  },{
+    "variable":"$color-success (TODO)",
+    "hex":"#00FF00"
+  },{
+    "variable":"$color-disabled (TODO)",
+    "hex":"#677687"
+  },{
+    "variable":"$color-mark (What is this?)",
+    "hex":"#FECA57"
+  }]
+}}>
+  {Template.bind({})}
+</Story>
+
+

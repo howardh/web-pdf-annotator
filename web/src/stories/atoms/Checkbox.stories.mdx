@@ -1,0 +1,45 @@
+import { Meta, Story, Canvas } from '@storybook/addon-docs/blocks';
+import { LabelledCheckbox } from 'atoms/Checkbox.js'
+
+<Meta title="Atoms/LabelledCheckbox"
+  component={LabelledCheckbox}
+  parameters={{ actions: { argTypesRegex: '^on.\*' } }}
+/>
+
+# Checkbox
+
+## Unchecked
+<Canvas>
+  <Story name='Unchecked'>
+    <div className='background-light'>
+      <LabelledCheckbox>Checkbox</LabelledCheckbox>
+    </div>
+    <div className='background-dark'>
+      <LabelledCheckbox>Checkbox</LabelledCheckbox>
+    </div>
+  </Story>
+</Canvas>
+
+## Checked
+<Canvas>
+  <Story name='Checked'>
+    <div className='background-light'>
+      <LabelledCheckbox checked>Checkbox</LabelledCheckbox>
+    </div>
+    <div className='background-dark'>
+      <LabelledCheckbox checked>Checkbox</LabelledCheckbox>
+    </div>
+  </Story>
+</Canvas>
+
+## Indeterminate
+<Canvas>
+  <Story name='Indeterminate'>
+    <div className='background-light'>
+      <LabelledCheckbox checked={true} indeterminate>Checkbox</LabelledCheckbox>
+    </div>
+    <div className='background-dark'>
+      <LabelledCheckbox checked={false} indeterminate>Checkbox</LabelledCheckbox>
+    </div>
+  </Story>
+</Canvas>

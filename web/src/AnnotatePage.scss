@@ -19,8 +19,14 @@ body {
   > .controls {
     grid-column: 1;
     grid-row: 1;
-    height: 40px;
-    border-bottom: 1px solid black;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.5em 0;
+    color: white;
+    background-color: $colour-medium-dark-gray;
     button {
       padding: 5px;
       i {
@@ -28,8 +34,8 @@ body {
       }
     }
     .active {
-      background-color: $primary-colour-dark;
-      color: $primary-colour-light;
+      background-color: $primary-colour-light;
+      color: $primary-colour-dark;
     }
     .page-selector {
       display: inline-block;
@@ -101,7 +107,7 @@ body {
         position: absolute;
         border-radius: 5px;
         background-color: white;
-        border: 1px solid black;
+        border: 1px solid grey;
         width: 10px;
         height: 10px;
         transform: translate(-5px,-5px);
@@ -236,30 +242,8 @@ body {
       margin-bottom: 10px;
       padding-bottom: 10px;
       border-bottom: 1px solid grey;
-      .tab {
-        border: 1px solid grey;
-        padding: 5px;
-        border-radius: 3px;
-        cursor: pointer;
-        margin-bottom: -1px;
-        margin-left: 5px;
-        background-color: rgb(240,240,240);
-        &.active {
-          background-color: white;
-        }
-      }
-    }
-    label {
-      display: block;
-      margin: 10px 0;
-      textarea {
-        height: 100px;
-      }
-      .input {
-        display: block;
-      }
-      .input.checkbox {
-        display: inline-block;
+      .active {
+        background-color: $colour-medium-gray;
       }
     }
     input, textarea {
@@ -309,6 +293,21 @@ body {
         cursor: pointer;
         color: $primary-colour-dark;
       }
+    }
+  }
+
+  .doc-info-form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    margin: 2em 0;
+    gap: 1.5em;
+    > label {
+      width: 100%;
+    }
+    textarea {
+      height: 100px;
     }
   }
 }

@@ -3,10 +3,13 @@ import React from 'react';
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
+import { LabelledInput } from 'atoms/Input.js';
+import { Button } from 'atoms/Button.js';
+
 import {updateSession} from './actions/index.js';
 
 import {
-  Button, Password
+  Password
 } from './Inputs.js';
 import {
   formChangeHandler
@@ -75,13 +78,12 @@ function LinkAccountForm(props) {
           }
         </li>
       </ul>
-      <label>
-        Current Password:
-        <Password
-            name='password'
-            value={password}
-            onChange={e=>setPassword(e.target.value)}/>
-      </label>
+      <LabelledInput
+          type='password'
+          label='Current Password'
+          name='password'
+          value={password}
+          onChange={e=>setPassword(e.target.value)}/>
     </div>
   );
 }
@@ -135,30 +137,27 @@ function PasswordChangeForm(props) {
   return (
     <div className='password-change-form'>
       <h2>Change Password</h2>
-      <label>
-        Current Password:
-        <Password
-            name='password'
-            value={formState['password']}
-            onKeyPress={handleKeyPress}
-            onChange={handleChange}/>
-      </label>
-      <label>
-        New Password:
-        <Password
-            name='password1'
-            value={formState['password1']}
-            onKeyPress={handleKeyPress}
-            onChange={handleChange}/>
-      </label>
-      <label>
-        Confirm New Password:
-        <Password
-            name='password2'
-            value={formState['password2']}
-            onKeyPress={handleKeyPress}
-            onChange={handleChange}/>
-      </label>
+      <LabelledInput
+          type='password'
+          name='password'
+          label='Current Password'
+          value={formState['password']}
+          onKeyPress={handleKeyPress}
+          onChange={handleChange}/>
+      <LabelledInput
+          type='password'
+          name='password1'
+          label='New Password'
+          value={formState['password1']}
+          onKeyPress={handleKeyPress}
+          onChange={handleChange}/>
+      <LabelledInput
+          type='password'
+          name='password2'
+          label='Confirm New Password'
+          value={formState['password2']}
+          onKeyPress={handleKeyPress}
+          onChange={handleChange}/>
       <Button onClick={submitChange}>Save Changes</Button>
     </div>
   );
