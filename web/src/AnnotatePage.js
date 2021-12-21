@@ -22,6 +22,13 @@ import { PdfViewer, usePdfViewerState } from './PdfViewer.js';
 
 import './AnnotatePage.scss';
 
+/*
+Misc notes:
+- Active vs Selected annotation
+  - Active means the user is working on something related to that annotation (e.g. working on the note associated with it)
+  - Selected means the user is actively working on the annotation itself (e.g. resizing, moving, deleting)
+*/
+
 const pdfAnnotationPageContext = React.createContext({});
 
 //////////////////////////////////////////////////
@@ -118,8 +125,16 @@ function AnnotationLayer(props) { const {
     const offsetY = (event.clientY - rect.top)/scale;
     return [offsetX,offsetY];
   }
-  function handleClick(event, ann) {
+  function getAnnotationFromElem(elem) {
+    const id = elem.dataset.annotationId;
+    if (!id || id === 'temp') {
+      return null;
+    }
+    return annotations[id];
+  }
+  function handleClick(event) {
     const coords = getCoordsFromEvent(event);
+    const ann = getAnnotationFromElem(event.target);
     const data = {
       page: pageNum,
       coords,
@@ -128,27 +143,23 @@ function AnnotationLayer(props) { const {
     const classNames = getClassNames(event.target);
 
     // Clicked on PDF
-    if (!ann) { // `ann` is null only if user clicked on the parent div
+    let callback = null;
+    if (!ann) {
       setFocusedId(null); // Unfocus if nothing was clicked
       // If annotations haven't been clicked...
-      let callback = eventHandlers.pdf.onClick;
-      if (callback) {
-        callback({event, data, toolState, setToolState});
-      }
+      callback = eventHandlers.pdf.onClick;
     } else if (classNames.indexOf('annotation') !== -1) {
-      if (ann.id === 'temp') {
-        return;
-      }
-      let callback = eventHandlers.annotation.onClick;
-      if (callback) {
-        callback({event, data, toolState, setToolState});
-      }
+      callback = eventHandlers.annotation.onClick;
     } else if (classNames.indexOf('control') !== -1) {
       // Nothing to do
     }
+    if (callback) {
+      callback({event, data, toolState, setToolState});
+    }
   }
-  function handleDoubleClick(event,ann) {
+  function handleDoubleClick(event) {
     const coords = getCoordsFromEvent(event);
+    const ann = getAnnotationFromElem(event.target);
     const data = {
       page: pageNum,
       coords,
@@ -223,40 +234,10 @@ function AnnotationLayer(props) { const {
       callback({event, data, toolState, setToolState});
     }
   }
-  function handleKeyDown(event, ann) {
-    const classNames = getClassNames(event.target);
-    const data = {
-      page: pageNum,
-    };
-
-    console.log('key');
-    let callback = null;
-    if (!ann) {
-      if (focusedId) {
-        callback = eventHandlers.annotation.onKeyPress;
-        data['id'] = focusedId;
-      } else {
-        callback = eventHandlers.pdf.onKeyPress;
-      }
-    } else if (classNames.indexOf('annotation') !== -1) {
-      if (ann.id === 'temp') {
-        return;
-      }
-      data['id'] = ann.id;
-      callback = eventHandlers.annotation.onKeyPress;
-    } else if (classNames.indexOf('control') !== -1) {
-      callback = eventHandlers.controlPoint.onKeyPress;
-    }
-
-    if (callback) {
-      callback({event, data, toolState, setToolState});
-    }
-  }
 
   return <div className='custom-annotation-layer'
         ref={ref}
         onDoubleClick={handleDoubleClick}
-        onKeyDown={handleKeyDown} tabIndex={-1}
         onClick={handleClick} onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp} onMouseMove={handleMouseMove} >
     {
@@ -266,13 +247,7 @@ function AnnotationLayer(props) { const {
           key={annotation.id}
           isActive={false}
           scale={scale}
-          toolState={toolState} 
-          onClick={e=>handleClick(e,annotation)}
-          onKeyDown={e=>handleKeyDown(e,annotation)} 
-          onDoubleClick={e=>handleDoubleClick(e,annotation)}
-          onMouseDown={handleMouseDown}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove} />
+          toolState={toolState} />
       )
     }
     {
@@ -282,26 +257,14 @@ function AnnotationLayer(props) { const {
         isActive={true}
         viewNote={()=>cardInView.setValue(annotations[activeId].note_id)}
         scale={scale}
-        toolState={toolState} 
-        onClick={e=>handleClick(e,annotations[activeId])}
-        onKeyDown={e=>handleKeyDown(e,annotations[activeId])} 
-        onDoubleClick={e=>handleDoubleClick(e,annotations[activeId])}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove} />
+        toolState={toolState} />
     }
     { 
       toolState.tempAnnotation && 
       <Annotation annotation={toolState.tempAnnotation} 
         key='temp'
         scale={scale}
-        toolState={toolState}
-        onClick={e=>handleClick(e,toolState.tempAnnotation)}
-        onKeyDown={e=>handleKeyDown(e,toolState.tempAnnotation)} 
-        onDoubleClick={e=>handleDoubleClick(e,toolState.tempAnnotation)}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove} />
+        toolState={toolState} />
     }
   </div>;
 }
@@ -346,15 +309,9 @@ function Annotation(props) {
       };
       classNames['point'] = true;
       return <div className={generateClassNames(classNames)}
+        data-annotation-id={ann.id}
         id={'annotation'+ann.id}
-        tabIndex={-1}
-        style={style}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseMove={onMouseMove}
-        onKeyDown={onKeyDown}
-        onDoubleClick={e => onDoubleClick(e,ann)}>
+        style={style}>
         {
           isActive && 
           <AnnotationActions annotation={annotation} viewNote={viewNote}/>
@@ -369,26 +326,20 @@ function Annotation(props) {
       };
       classNames['rect'] = true;
       return <div className={generateClassNames(classNames)}
+        data-annotation-id={ann.id}
         id={'annotation'+ann.id}
-        tabIndex={-1}
-        style={style}
-        onClick={onClick}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseMove={onMouseMove}
-        onKeyDown={onKeyDown}
-        onDoubleClick={e => onDoubleClick(e,ann)}>
+        style={style}>
         {
           selected &&
           <>
-          <div className='control nw' />
-          <div className='control n' />
-          <div className='control ne' />
-          <div className='control e' />
-          <div className='control w' />
-          <div className='control sw' />
-          <div className='control s' />
-          <div className='control se' />
+          <div className='control nw' data-annotation-id={ann.id} />
+          <div className='control n'  data-annotation-id={ann.id} />
+          <div className='control ne' data-annotation-id={ann.id} />
+          <div className='control e'  data-annotation-id={ann.id} />
+          <div className='control w'  data-annotation-id={ann.id} />
+          <div className='control sw' data-annotation-id={ann.id} />
+          <div className='control s'  data-annotation-id={ann.id} />
+          <div className='control se' data-annotation-id={ann.id} />
           </>
         }
         {
@@ -400,18 +351,12 @@ function Annotation(props) {
       let d = 'M ' + ann.position.points.map(
         ([x,y]) => (x*scale)+' '+(y*scale)
       ).join(' L ');
-      return (<svg className='annotation' width='1' height='1'>
+      return (<svg width='1' height='1'>
         <path d={d} stroke-width={scale+'em'}
           className={generateClassNames(classNames)}
+          data-annotation-id={ann.id}
           id={'annotation'+ann.id}
-          tabIndex={-1}
           style={style}
-          onClick={onClick}
-          onMouseDown={onMouseDown}
-          onMouseUp={onMouseUp}
-          onMouseMove={onMouseMove}
-          onKeyDown={onKeyDown}
-          onDoubleClick={e => onDoubleClick(e,ann)}
         />
       </svg>);
       break;
@@ -1254,7 +1199,6 @@ export default function PdfAnnotationPage(props) {
             },
             onMouseDown: function() {},
             onMouseMove: function() {},
-            onKeyPress: function() {},
           },
           // Handles events on the annotation
           annotation: {
@@ -1290,21 +1234,6 @@ export default function PdfAnnotationPage(props) {
                     ...toolState,
                     dragAction: 'move',
                     tempPosition: annotations[selId].position
-                  });
-                }
-              }
-            },
-            onKeyPress: function({event, data, toolState, setToolState}) {
-              if (event.key === 'Delete') {
-                const selId = toolState.selectedAnnotationId;
-                if (selId && selId !== data.id) {
-                  console.error('Mismatch between selected ID and focused DOM element. Not deleting anything until the conflict is resolved.');
-                } else {
-                  deleteAnnotation(data.id);
-                  setToolState({
-                    ...toolState,
-                    selectedAnnotationId: null,
-                    tempPosition: null
                   });
                 }
               }
@@ -1429,6 +1358,17 @@ export default function PdfAnnotationPage(props) {
               ...toolState,
               dragAction: null
             });
+          },
+          onKeyDown: function({event, data, toolState, setToolState}) {
+            if (event.key === 'Delete') {
+              const selId = toolState.selectedAnnotationId;
+              deleteAnnotation(selId);
+              setToolState({
+                ...toolState,
+                selectedAnnotationId: null,
+                tempPosition: null
+              });
+            }
           },
         },
       },
@@ -1649,6 +1589,25 @@ export default function PdfAnnotationPage(props) {
       },
     }
   }, [annotations]);
+  useEffect(() => { // Add keyboard event listener
+    if (!toolState) {
+      return;
+    }
+    const eventHandlers = tools[toolState.type].eventHandlers;
+    if (!eventHandlers.onKeyDown) {
+      return;
+    }
+    function callback(event) {
+      const data = {};
+      eventHandlers.onKeyDown({
+        event, data, toolState, setToolState
+      });
+    }
+    document.addEventListener('keydown',callback);
+    return () => {
+      document.removeEventListener('keydown',callback);
+    }
+  }, [tools,toolState]);
 
   // Initialize State
   useEffect(() => {
@@ -1739,6 +1698,12 @@ export default function PdfAnnotationPage(props) {
       }
     }
   }
+  useEffect(() => { // Add keyboard event listener
+    document.addEventListener('keydown',handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown',handleKeyDown);
+    }
+  })
 
   const tabs = useMemo(() => [
     {
@@ -1797,7 +1762,7 @@ export default function PdfAnnotationPage(props) {
   }
   return (<main className='annotation-page'>
     <pdfAnnotationPageContext.Provider value={context}>
-      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers} textLayerOnTop={toolState.type === 'text'}/>
+      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers} textLayerOnTop={toolState.type === 'text'} tabIndex={-1} />
       <div className='sidebar-container'>
         <SideBar tabs={tabs} />
       </div>

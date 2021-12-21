@@ -170,14 +170,14 @@ body {
     }
   }
 
-  svg.annotation {
+  svg {
     position: absolute;
     left: 0;
     top: 0;
     width: 1;
     height: 1;
     overflow: visible;
-    path {
+    path.annotation {
       stroke: yellow;
       //stroke-width: 1em;
       mix-blend-mode: multiply;
@@ -258,7 +258,7 @@ body {
     height: 100vh;
     box-sizing: border-box;
     background-color: white;
-    padding: 42px;
+    padding: 1em 2.5em;
     padding-right: 10px;
     overflow-y: scroll;
     overflow-x: hidden;
