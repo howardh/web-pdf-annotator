@@ -173,7 +173,7 @@ function MainLayer(props) {
   }
 }
 
-function TextLayer(props) {
+function TextLayer2(props) {
   const {
     page,
     scale,
@@ -243,6 +243,89 @@ function TextLayer(props) {
   })
   return (
     <div className={classNames} ref={ref}></div>
+  );
+}
+
+function TextLayer(props) {
+  const {
+    page,
+    scale,
+    shouldBeRendered,
+  } = props;
+
+  const ref = useRef(null);
+  const [ctx, setCtx] = useState(null);
+  const [textContent, setTextContent] = useState(null);
+
+  // Render PDF
+  const getContentTaskRef = useRef(null);
+  const renderTaskRef = useRef(null);
+  useEffect(() => {
+    if (!page) {
+      return;
+    }
+    if (getContentTaskRef.current) {
+      return; // Don't load twice simultaneously
+    }
+
+    let task = page.getTextContent();
+    getContentTaskRef.current = task;
+    task.then(content => {
+      setTextContent(content);
+      getContentTaskRef.current = null;
+    });
+  }, [page]);
+
+  useEffect(() => {
+    if (!ref.current) {
+      setCtx(null);
+    } else {
+      setCtx(ref.current.getContext('2d'));
+    }
+  }, [ref.current]);
+
+  let viewport = page.getViewport({ scale: scale });
+
+  let classNames = generateClassNames({
+    'pdf-viewer__text-layer-custom': true,
+  });
+  return (
+    <div className={classNames}>
+      <canvas ref={ref} />
+      {
+        textContent &&
+        textContent.items.map((item,index) => {
+          if (item.transform[1] !== 0 || item.transform[2] !== 0) {
+            // Ignore rotated text for now. I don't know how to handle these.
+            return null;
+          }
+
+          let fontFamily = textContent.styles[item.fontName].fontFamily;
+          let fontSize = (item.height)*scale;
+          let fontAscent = textContent.styles[item.fontName].ascent*fontSize;
+          let fontDescent = textContent.styles[item.fontName].descent*fontSize;
+
+          let left = item.transform[4]*scale;
+          let top = viewport.height-(item.transform[5]+item.height)*scale-fontDescent;
+          let width = item.width*scale;
+          let height = item.height*scale;
+
+          let transform = null;
+          let actualWidth = null;
+          if (ctx) {
+            ctx.font = `normal ${fontSize}px ${fontFamily}`;
+            let textSize = ctx.measureText(item.str);
+            actualWidth = textSize.width;
+            transform = 'scaleX('+(width/textSize.width)+')';
+          }
+
+          let style = {
+            left, top, fontSize, fontFamily, transform
+          };
+          return <span style={style} key={index} data-actual-width={actualWidth}>{item.str}</span>;
+        })
+      }
+    </div>
   );
 }
 

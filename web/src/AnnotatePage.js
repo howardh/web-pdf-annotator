@@ -352,7 +352,7 @@ function Annotation(props) {
         ([x,y]) => (x*scale)+' '+(y*scale)
       ).join(' L ');
       return (<svg width='1' height='1'>
-        <path d={d} stroke-width={scale+'em'}
+        <path d={d} strokeWidth={scale+'em'}
           className={generateClassNames(classNames)}
           data-annotation-id={ann.id}
           id={'annotation'+ann.id}
