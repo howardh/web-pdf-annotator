@@ -780,7 +780,7 @@ function DocNotes(props) {
       <NoteCard
         key={note.id}
         noteId={note.id}
-        isActive={false}
+        isActive={true}
         updateAnnotation={updateAnnotation}
       />
     }
@@ -798,6 +798,8 @@ function SideBar(props) {
 
   const history = useHistory();
   const setActiveTabId = id => qState.replace(history, {...qState.get(history), tab: id});
+  const [resizing, setResizing] = useState(false);
+  const [width, setWidth] = useState(null);
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -806,15 +808,46 @@ function SideBar(props) {
       e.preventDefault();
     }
   }
+  function handleClick(e) {
+    if (resizing) {
+      return;
+    }
+    onChangeVisible(!visible);
+  }
+  function handleMouseDown(e) {
+    setResizing(true);
+  }
+  useEffect(() => {
+    if (!resizing) {
+      return;
+    }
+    function handleMouseMove(e) {
+      setWidth(window.innerWidth-e.clientX+10);
+    }
+    function handleMouseUp(e) {
+      setResizing(false);
+      e.stopPropagation();
+    }
+    document.addEventListener('mousemove',handleMouseMove);
+    document.addEventListener('mouseup',handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove',handleMouseMove);
+      document.removeEventListener('mouseup',handleMouseUp);
+    }
+  }, [resizing]);
 
   let classNames = generateClassNames({
     'sidebar': true,
-    'hidden': !visible
-  })
+    'hidden': !visible,
+    'resizing': resizing,
+  });
   const activeTabIndex = tabs.map(t => t.id).indexOf(activeTabId);
   const activeTab = tabs[activeTabIndex];
-  return (<div className={classNames}>
-    <div className='controls' onClick={()=>onChangeVisible(!visible)}>
+  const style = {
+    width: visible ? width : 0,
+  };
+  return (<div className={classNames} style={style}>
+    <div className='controls' onClick={handleClick} onMouseDown={handleMouseDown} >
     {
       visible
         ? <i className='material-icons'>navigate_next</i>
