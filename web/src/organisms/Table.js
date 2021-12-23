@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom';
 
 import { toRelativeDateString } from 'Utils.js';
 import { LabelledCheckbox } from 'atoms/Checkbox.js';
-import { ButtonIcon } from 'atoms/Button.js';
 
 import styles from './Table.module.scss';
 
@@ -83,7 +82,7 @@ function Table(props) {
                 styles['table-cell'],
                 styles['table-cell__heading'],
                 col.classNameHeading
-              ].join(' ')}>
+              ].join(' ')} key={col.heading}>
               {col.heading}
             </th>
           )

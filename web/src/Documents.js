@@ -12,14 +12,10 @@ import { TagSelect } from 'molecules/TagSelect.js';
 import { GroupedInputs } from 'molecules/GroupedInput.js';
 import { Table } from 'organisms/Table.js';
 import {
-  filterDict,formChangeHandler,generateClassNames,removeFromList,toRelativeDateString
+  filterDict,formChangeHandler,generateClassNames,toRelativeDateString
 } from 'Utils.js';
-import {
-  Checkbox, TextField
-} from './Inputs.js';
-import { EntityTable } from './EntityTable.js';
-import { TagFilter, TagSelector } from './TagSelector.js';
-import {documentActions,tagActions,autofillDocumentInfo} from './actions/index.js';
+import { TagSelector } from './TagSelector.js';
+import {documentActions,tagActions} from './actions/index.js';
 
 import styles from './Documents.module.scss';
 
@@ -287,7 +283,6 @@ export function DocumentTable(props) {
       classNameHeading: styles['doc-table__title-heading'],
       classNameContent: styles['doc-table__title-content'],
       render: x => {
-        console.log(x);
         return (<div>
           <div><Link to={'/annotate/'+x.id}>{x['title']||'(Untitled)'}</Link></div>
           <div>{x['author']}</div>
@@ -313,13 +308,13 @@ export function DocumentTable(props) {
   const actions = [
     {
       condition: () => true,
-      render: doc => <ButtonIcon to={'/annotate/'+doc.id}>
+      render: doc => <ButtonIcon to={'/annotate/'+doc.id} key='create'>
         <i className='material-icons'>create</i>
       </ButtonIcon>
       
     },{
       condition: () => true,
-      render: doc => <ButtonIcon onClick={()=>deleteDoc(doc)}>
+      render: doc => <ButtonIcon onClick={()=>deleteDoc(doc)} key='delete'>
         <i className='material-icons'>delete</i>
       </ButtonIcon>
     }
@@ -330,7 +325,7 @@ export function DocumentTable(props) {
       render: () => {
         let id = Array.from(selected)[0];
         return (
-          <ButtonIcon onClick={()=>history.push('/annotate/'+id)}>
+          <ButtonIcon onClick={()=>history.push('/annotate/'+id)} key='open'>
             <i className='material-icons'>create</i>
             <Tooltip>Open Document</Tooltip>
           </ButtonIcon>
@@ -341,7 +336,7 @@ export function DocumentTable(props) {
       // Delete selected documents
       render: () => {
         return (
-          <ButtonIcon onClick={()=>deleteDoc(selectedDocs)}>
+          <ButtonIcon onClick={()=>deleteDoc(selectedDocs)} key='delete'>
             <i className='material-icons'>delete</i>
             <Tooltip>Delete Document</Tooltip>
           </ButtonIcon>
@@ -352,7 +347,8 @@ export function DocumentTable(props) {
       render: () => {
         // Change tags of selected documents
         return (
-          <TagSelectPopup docs={selectedDocs}
+          <TagSelectPopup key='tag'
+            docs={selectedDocs}
             tags={tags}
             updateEntity={updateDoc} />
         );
