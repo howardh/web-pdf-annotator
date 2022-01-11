@@ -146,8 +146,8 @@ class Annotation(db.Model, ModelMixin):
     type = Column(String)
     position = Column(String) # Coordinate for points, bounding box for rect. Format: json string.
     deleted_at = Column(Date)
-    important = Column(Boolean) # If True, then this annotation marks something important
-    do_not_understand = Column(Boolean) # If True, then this annotation marks something the reader does not understand.
+    #important = Column(Boolean) # If True, then this annotation marks something important
+    #do_not_understand = Column(Boolean) # If True, then this annotation marks something the reader does not understand.
 
     document = db.relationship("Document")
     note = db.relationship('Note')
