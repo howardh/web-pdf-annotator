@@ -362,7 +362,7 @@ export function DocumentTable(props) {
       cols={cols}
       actions={actions}
       batchActions={batchActions}
-      data={entities}
+      data={Object.values(entities).sort((a,b) => new Date(b.last_modified_at)-new Date(a.last_modified_at))}
       selectable={true}
       onChangeSelected={setSelected}
       selected={selected}

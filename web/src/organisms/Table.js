@@ -17,7 +17,7 @@ function Table(props) {
     //    classNameHeading: string
     //    classNameContent: string
     cols = [],
-    // List of datum
+    // List of data
     data = {},
     // List
     //  objects
@@ -100,15 +100,15 @@ function Table(props) {
     </thead>
     <tbody className={styles['table-body']}>
       {
-        Object.entries(data).map(
-          ([key,datum]) =>
-          <tr className={styles['table-row']} key={key}>
+        data.map(
+          (datum) =>
+          <tr className={styles['table-row']} key={datum.id}>
             { 
               selectable &&
               <td className={styles['table-cell__checkbox']}>
                 <LabelledCheckbox
-                  onClick={()=>toggleSelectedId(key)}
-                  checked={selected.has(key)}/>
+                  onClick={()=>toggleSelectedId(datum.id)}
+                  checked={selected.has(datum.id)}/>
               </td>
             }
             {
