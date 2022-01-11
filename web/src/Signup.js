@@ -3,7 +3,9 @@ import {useState} from 'react';
 import { useHistory } from "react-router-dom";
 import axios from 'axios';
 
-import { TextField, Password, Button } from './Inputs.js';
+import { LabelledInput } from 'atoms/Input.js';
+import { Button } from 'atoms/Button.js';
+import { SignupForm as SignupFormOrganism } from 'organisms/Signup.js';
 
 import './Signup.scss';
 
@@ -16,14 +18,19 @@ export default function SignupPage(props) {
 
 export function SignupForm(props) {
   const history = useHistory();
-  const [email,setEmail] = useState('');
-  const [password1,setPassword1] = useState('');
-  const [password2,setPassword2] = useState('');
-  const [error,setError] = useState('');
+  const [error,setError] = useState({});
 
-  function submit() {
+  function handleSignupByEmail(value) {
+    const {
+      email,
+      password1,
+      password2,
+    } = value;
     if (password1 !== password2) {
-      setError('Passwords do not match');
+      setError({
+        'password1': 'Passwords do not match',
+        'password2': 'Passwords do not match',
+      });
       return;
     }
     let data = {
@@ -37,10 +44,7 @@ export function SignupForm(props) {
     ).then(response => {
       window.response = response;
       console.log('Successful signup');
-      setError('');
-      setEmail('');
-      setPassword1('');
-      setPassword2('');
+      setError({});
       history.push('/login'); // Redirect to login
     }).catch(error => {
       window.error = error;
@@ -51,53 +55,11 @@ export function SignupForm(props) {
       } else {
         message = error.message || message;
       }
-      setError(message);
+      setError({
+        general: message
+      });
     });
   }
-  function handleKeyPress(e) {
-    if (e.which === 13) {
-      submit();
-    }
-  }
 
-  return (
-    <div className='signup-form-container'>
-      <div className='oauth-links-container'>
-        <a href={process.env.REACT_APP_SERVER_ADDRESS+'/auth/login/github'}>
-          <img src='/oauth_icons/GitHub-Mark/PNG/GitHub-Mark-64px.png' />
-        </a>
-      </div>
-      <div className='error-message'>
-        {error}
-      </div>
-      <label>
-        Email:
-        <TextField
-            autoFocus={true}
-            name='email'
-            value={email}
-            onKeyPress={handleKeyPress}
-            onChange={e=>setEmail(e.target.value)}/>
-      </label>
-      <label>
-        Password:
-        <Password
-            name='password1'
-            value={password1}
-            onKeyPress={handleKeyPress}
-            onChange={e=>setPassword1(e.target.value)}/>
-      </label>
-      <label>
-        Confirm Password:
-        <Password
-            name='password2'
-            value={password2}
-            onKeyPress={handleKeyPress}
-            onChange={e=>setPassword2(e.target.value)}/>
-      </label>
-      <Button onClick={submit}>
-        Sign Up
-      </Button>
-    </div>
-  );
+  return <SignupFormOrganism onSignupByEmail={handleSignupByEmail} error={error}/>;
 }

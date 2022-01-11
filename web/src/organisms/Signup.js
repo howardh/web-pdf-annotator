@@ -9,7 +9,11 @@ import { LabelledCheckbox } from '../atoms/Checkbox.js';
 import styles from './Signup.module.scss';
 
 function SignupForm(props) {
-  const { } = props;
+  const {
+    onSignupByEmail = ()=>null,
+    error = {},
+  } = props;
+
   const [value, setValue] = useState({
     email: '',
     password1: '',
@@ -18,6 +22,11 @@ function SignupForm(props) {
   const OAUTH = 0;
   const EMAIL = 1;
   const [form,setForm] = useState(OAUTH);
+
+  function handleSignupByEmail() {
+    onSignupByEmail(value);
+  }
+
   return (<div className={styles['signup-form']}>
     {
       form === OAUTH ? (<>
@@ -29,7 +38,7 @@ function SignupForm(props) {
         </div>
       </>) : (<>
         <div className={styles['signup-form__form']}>
-          <SignupFormEmail value={value} onChange={setValue} />
+          <SignupFormEmail value={value} onChange={setValue} onSignup={handleSignupByEmail} error={error} />
         </div>
         <div className={styles['signup-form__button']}>
           <ButtonText onClick={()=>setForm(OAUTH)}>Signup via oauth</ButtonText>
@@ -44,6 +53,7 @@ function SignupFormEmail(props) {
     value={},
     error={},
     onChange=console.log,
+    onSignup=()=>null,
   } = props;
   const {
     email,
@@ -85,7 +95,7 @@ function SignupFormEmail(props) {
         value={password2}
         error={error['password2']}
         onChange={handleChange} />
-    <Button>Signup</Button>
+    <Button onClick={onSignup}>Signup</Button>
   </div>);
 }
 

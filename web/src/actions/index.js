@@ -277,7 +277,7 @@ export const login = function(email, password, remember){
         type: 'LOGIN_SUCCESS',
         payload: response.data
       });
-      return true;
+      return {};
     }).catch(function(error){
       let message = "Unspecified error.";
       if (error.response && error.response.data) {
@@ -289,7 +289,9 @@ export const login = function(email, password, remember){
         type: 'LOGIN_FAILURE',
         payload: {error: message}
       });
-      return false;
+      return {
+        error: message
+      };
     });
   }
 }

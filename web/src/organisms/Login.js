@@ -9,7 +9,10 @@ import { LabelledCheckbox } from '../atoms/Checkbox.js';
 import styles from './Login.module.scss';
 
 function LoginForm(props) {
-  const { } = props;
+  const {
+    onLoginByEmail=()=>null,
+    error={},
+  } = props;
   const [value, setValue] = useState({
     email: '',
     password: '',
@@ -29,7 +32,10 @@ function LoginForm(props) {
         </div>
       </>) : (<>
         <div className={styles['login-form__form']}>
-          <LoginFormEmail value={value} onChange={setValue} />
+          <LoginFormEmail value={value}
+              error={error}
+              onChange={setValue}
+              onLogin={onLoginByEmail}/>
         </div>
         <div className={styles['login-form__button']}>
           <ButtonText onClick={()=>setForm(OAUTH)}>Login via oauth</ButtonText>
@@ -44,6 +50,7 @@ function LoginFormEmail(props) {
     value={},
     error={},
     onChange=console.log,
+    onLogin=()=>null,
   } = props;
   const {
     email,
@@ -61,6 +68,12 @@ function LoginFormEmail(props) {
     }
     onChange(newVal);
   }
+  function handleKeyPress(e) {
+    if (e.which === 13) {
+      onLogin(value);
+    }
+  }
+
   return (<div className={styles['login-form-email']}>
     {
       Object.values(error).map(e => <ErrorMessage>{e}</ErrorMessage>)
@@ -70,6 +83,7 @@ function LoginFormEmail(props) {
         name='email'
         value={email}
         error={error['email']}
+        onKeyPress={handleKeyPress}
         onChange={handleChange} />
     <LabelledInput
         type='password'
@@ -77,6 +91,7 @@ function LoginFormEmail(props) {
         label='password'
         value={password}
         error={error['password']}
+        onKeyPress={handleKeyPress}
         onChange={handleChange} />
     <LabelledCheckbox
         name='remember'
@@ -84,7 +99,7 @@ function LoginFormEmail(props) {
         onChange={handleChange} >
       Remember me
     </LabelledCheckbox>
-    <Button>Login</Button>
+    <Button onClick={()=>onLogin(value)}>Login</Button>
   </div>);
 }
 
