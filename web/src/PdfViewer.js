@@ -523,6 +523,7 @@ function PdfViewer(props, forwardRef) {
     state,
     textLayerOnTop,
     customLayers=null,
+    onSearch=null,
   } = props;
 
   const ref = useRef(null);
@@ -541,8 +542,8 @@ function PdfViewer(props, forwardRef) {
         return;
       }
       children[page].scrollIntoView();
-      if (x && y) {
-        ref.current.scrollBy(x,y);
+      if (x || y) {
+        ref.current.scrollBy(x||0,y||0);
       }
     } else {
       ref.current.scrollTo(x,y);
@@ -559,6 +560,14 @@ function PdfViewer(props, forwardRef) {
     let scrollTopMax = ref.current.scrollHeight - ref.current.clientHeight;
     ref.current.scrollTo(0,scrollTopMax * scrollPos.current);
   }, [state.scale]);
+
+  // KeyDown handler (ctrl+f)
+  function handleKeyDown(e) {
+    if (onSearch && e.key === 'f' && e.ctrlKey) {
+      onSearch();
+      e.preventDefault();
+    }
+  }
 
   // Pages in view
   function elementInViewport(el) {
@@ -611,7 +620,7 @@ function PdfViewer(props, forwardRef) {
   }
 
   return (
-    <div className='pdf-viewer' ref={ref} onScroll={handleScroll} tabIndex={-1}>
+    <div className='pdf-viewer' ref={ref} onScroll={handleScroll} onKeyDown={handleKeyDown} tabIndex={-1}>
       {
         state.pagesLoadingProgress &&
         state.pagesLoadingProgress.loadedPages !== state.pagesLoadingProgress.totalPages &&

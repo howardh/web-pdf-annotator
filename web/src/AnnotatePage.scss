@@ -342,4 +342,20 @@ body {
       height: 100px;
     }
   }
+
+  .search-doc-container {
+    .search-result-container {
+    }
+    .search-result{
+      font-size: 10pt;
+      background-color: white;
+      margin: 0.5em 0;
+      padding: 0.5em 1em;
+      border-radius: 1em;
+      cursor: pointer;
+      &:hover {
+        background-color: $colour-white;
+      }
+    }
+  }
 }

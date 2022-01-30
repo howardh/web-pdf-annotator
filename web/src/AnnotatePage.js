@@ -787,6 +787,82 @@ function DocNotes(props) {
   </div>);
 }
 
+function SearchDoc(props) {
+  const {
+    pdfViewerState,
+  } = props;
+  const dispatch = useDispatch();
+
+  const {
+    pages,
+    scale,
+    scrollTo,
+  } = pdfViewerState;
+
+  const [query,setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [lastQuery,setLastQuery] = useState(null);
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') {
+      search();
+    }
+  }
+
+  async function search() {
+    setLastQuery(query);
+    setSearchResults([]);
+    for (let page of pages) {
+      let textContent = await page.getTextContent();
+      let viewport = page.getViewport({ scale: scale });
+      for (let item of textContent.items) {
+        let pos = item.str.search(query);
+        if (pos !== -1) {
+          let top = viewport.height-(item.transform[5]+item.height)*scale;
+          let found = {
+            str: item.str,
+            pos,
+            pageIndex: page._pageIndex,
+            scrollPos: {
+              page: page._pageIndex,
+              x: 0,
+              y: top,
+            },
+          };
+          setSearchResults(x => [...x, found]);
+        }
+      }
+    }
+  }
+
+  return (<div className='search-doc-container'>
+    <GroupedInputs>
+      <Input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={handleKeyDown} autoFocus />
+      <ButtonIcon>
+        <i className='material-icons' onClick={search}>search</i>
+      </ButtonIcon>
+    </GroupedInputs>
+    <div>
+      <div>
+        {
+          lastQuery
+            ? `Search results: "${lastQuery}" (${searchResults.length})`
+            : `Type in a search term above and press "Enter" to search.`
+        } </div>
+      <div className='search-result-container'>
+      {
+        searchResults.map(
+          (result,i) => 
+            <div className='search-result' key={i} onClick={()=>scrollTo(result.scrollPos)}>
+              {result.str}
+            </div>
+        )
+      }
+      </div>
+    </div>
+  </div>);
+}
+
 function SideBar(props) {
   const {
     tabs = [],
@@ -1117,6 +1193,12 @@ export default function PdfAnnotationPage(props) {
   // Visible pages
   function scrollToPage(pageNum) {
     pdfViewerState.scrollToPage(pageNum-1);
+  }
+
+  // Search
+  function handleSearch() {
+    setSidebarActiveTabId('search');
+    setSidebarVisible(true);
   }
 
   // CRUD Functions
@@ -1757,6 +1839,10 @@ export default function PdfAnnotationPage(props) {
       id: 'notes',
       title: 'Notes',
       render: () => <DocNotes doc={doc} />
+    },{
+      id: 'search',
+      title: 'Search',
+      render: () => <SearchDoc pdfViewerState={pdfViewerState} />
     }
   ], [doc, annotations, outline]);
 
@@ -1795,7 +1881,7 @@ export default function PdfAnnotationPage(props) {
   }
   return (<main className='annotation-page'>
     <pdfAnnotationPageContext.Provider value={context}>
-      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers} textLayerOnTop={toolState.type === 'text'} tabIndex={-1} />
+      <PdfViewer state={pdfViewerState} customLayers={renderCustomLayers} textLayerOnTop={toolState.type === 'text'} onSearch={handleSearch} tabIndex={-1} />
       <div className='sidebar-container'>
         <SideBar tabs={tabs} />
       </div>
