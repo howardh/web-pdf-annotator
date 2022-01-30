@@ -556,7 +556,8 @@ function PdfViewer(props, forwardRef) {
     if (!ref.current) {
       return;
     }
-    ref.current.scrollTo(0,ref.current.scrollTopMax * scrollPos.current);
+    let scrollTopMax = ref.current.scrollHeight - ref.current.clientHeight;
+    ref.current.scrollTo(0,scrollTopMax * scrollPos.current);
   }, [state.scale]);
 
   // Pages in view
