@@ -235,6 +235,9 @@ class Note(db.Model, ModelMixin):
     created_at = Column(DateTime)
     last_modified_at = Column(DateTime)
     last_accessed_at = Column(DateTime)
+    parent_note_id = Column(Integer, ForeignKey('notes.id',name='fkey_parent_note_id'))
+    is_question = Column(Boolean)
+    is_answer = Column(Boolean)
 
     annotations = db.relationship('Annotation', lazy='dynamic')
     tags = db.relationship('Tag', secondary=lambda: notes_tags)
@@ -263,7 +266,10 @@ class Note(db.Model, ModelMixin):
                 'tag_names': list(self.tag_names),
                 'document_id': doc_id,
                 'annotation_id': ann_id,
-                'orphaned': len(annotations) > 0 and annotations[0].deleted_at is not None
+                'orphaned': len(annotations) > 0 and annotations[0].deleted_at is not None,
+                'parent_note_id': self.parent_note_id,
+                'is_question': self.is_question,
+                'is_answer': self.is_answer,
         }
 
 # Setup Flask-Security

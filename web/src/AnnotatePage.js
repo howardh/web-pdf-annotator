@@ -504,6 +504,7 @@ function NoteCard(props) {
   // Stores changes before they're saved
   const [updatedNote,setUpdatedNote] = useState(null);
   const [isEditing,setIsEditing] = useState(false);
+  const [isReplying,setIsReplying] = useState(false);
   const [isVisibleAdvancedOptions,setIsVisibleAdvancedOptions] = useState(false);
   const handleChange = formChangeHandler(updatedNote, x=>setUpdatedNote(x));
 
@@ -636,40 +637,131 @@ function NoteCard(props) {
         }
       </div>
     </div>);
+  } else if (isReplying) {
+    return (<div className={classNames} key={key}
+        tabIndex={-1}
+        onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
+      <NoteViewer note={note} />
+      <NoteReplyEditor docId={note.document_id} parentNoteId={note.id} onClose={()=>{setIsReplying(false)}} />
+    </div>);
   } else {
     return (<div className={classNames} key={key}
         tabIndex={-1}
         onClick={()=>isActive?null:setActive(true)} id={'card'+note.id}>
       <NoteViewer note={note} />
-      <div className='controls'>
-        {
-          annotationId &&
-          <ButtonIcon onClick={scrollIntoView}>
-            <i className='material-icons'>navigate_before</i>
-            <Tooltip>View Annotation</Tooltip>
+      {
+        isActive &&
+        <div className='controls'>
+          {
+            annotationId &&
+            <ButtonIcon onClick={scrollIntoView}>
+              <i className='material-icons'>navigate_before</i>
+              <Tooltip>View Annotation</Tooltip>
+            </ButtonIcon>
+          }
+          <GroupedInputs>
+            <ButtonIcon onClick={startEditing}>
+              <i className='material-icons'>create</i>
+              <Tooltip>Edit</Tooltip>
+            </ButtonIcon>
+            <ButtonIcon onClick={deleteNote}>
+              <i className='material-icons'>delete</i>
+              <Tooltip>Delete Note</Tooltip>
+            </ButtonIcon>
+            <ButtonIcon onClick={refresh}>
+              <i className='material-icons'>sync</i>
+              <Tooltip>Refresh</Tooltip>
+            </ButtonIcon>
+          </GroupedInputs>
+          <ButtonIcon onClick={()=>setIsReplying(true)}>
+            <i className='material-icons'>reply</i>
+            <Tooltip>Reply</Tooltip>
           </ButtonIcon>
-        }
-        <GroupedInputs>
-          <ButtonIcon onClick={startEditing}>
-            <i className='material-icons'>create</i>
-            <Tooltip>Edit</Tooltip>
+          <ButtonIcon to={'/notes/'+note?.id}>
+            <i className='material-icons'>open_in_new</i>
+            <Tooltip>Open in editor</Tooltip>
           </ButtonIcon>
-          <ButtonIcon onClick={deleteNote}>
-            <i className='material-icons'>delete</i>
-            <Tooltip>Delete Note</Tooltip>
-          </ButtonIcon>
-          <ButtonIcon onClick={refresh}>
-            <i className='material-icons'>sync</i>
-            <Tooltip>Refresh</Tooltip>
-          </ButtonIcon>
-        </GroupedInputs>
-        <ButtonIcon to={'/notes/'+note?.id}>
-          <i className='material-icons'>open_in_new</i>
-          <Tooltip>Open in editor</Tooltip>
-        </ButtonIcon>
-      </div>
+        </div>
+      }
+      <NoteThread parentNote={note} />
     </div>);
   }
+}
+
+function NoteReplyEditor(props) {
+  const {
+    docId,
+    parentNoteId,
+    onClose,
+  } = props;
+
+  const dispatch = useDispatch();
+  const [text, setText] = useState('');
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (text.trim().length === 0) {
+      return;
+    }
+    dispatch(noteActions['create']({
+      'document_id': docId,
+      'parent_note_id': parentNoteId,
+      'body': text,
+      'parser': 'markdown-it',
+    }));
+    setText('');
+    onClose();
+  }
+
+  const options = {
+    minimap: {
+      enabled: false
+    },
+    lineNumbers: false,
+  };
+  return (
+    <div className='note-reply-container'>
+      <span>Reply:</span>
+      <TextEditor
+          onChangeText={setText}
+          text={text}
+          onSave={handleSubmit}
+          options={options}
+          debounce={0}/>
+      <div className='controls'>
+        <Button onClick={handleSubmit}>
+          Post
+        </Button>
+        <Button onClick={onClose}>
+          Discard
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function NoteThread(props) {
+  const {
+    parentNote,
+  } = props;
+
+  const notes = useSelector(
+    state => Object.values(state.notes.entities)
+      .filter(note => note.parent_note_id === parentNote.id)
+  );
+
+  return (
+    <div className='note-thread'>
+      {
+        notes.map(note => (
+          <NoteCard
+            key={note.id}
+            noteId={note.id}
+          />
+        ))
+      }
+    </div>
+  );
 }
 
 function NoteCardsContainer(props) {

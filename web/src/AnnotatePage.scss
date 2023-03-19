@@ -243,7 +243,8 @@ body {
     .text-editor {
       width: 100%;
       resize: vertical;
-      max-height: 90vh;
+      max-height: calc(100vh - 20em);
+      min-height: 20em;
     }
 
     img {
@@ -310,6 +311,19 @@ body {
     .text-editor {
       max-height: calc(100vh - 250px);
     }
+  }
+
+  .note-reply-container {
+    margin-left: 1em;
+    margin-top: 1em;
+    padding-top: 1em;
+    border-top: 1px solid grey;
+  }
+
+  .note-thread {
+    margin-left: 1em;
+    margin-top: 1em;
+    padding-top: 1em;
   }
 
   .outline {
